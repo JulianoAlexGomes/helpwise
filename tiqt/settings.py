@@ -24,7 +24,7 @@ DATABASES = {
 
 AUTH_USER_MODEL = 'core.User'
 
-ALLOWED_HOSTS = ['10.0.0.97', '127.0.0.1']
+ALLOWED_HOSTS = ['10.0.0.97', '127.0.0.1', '185.137.92.173']
 
 STATIC_URL = '/static/'
 

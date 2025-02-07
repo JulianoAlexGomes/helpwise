@@ -1,0 +1,78 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+  <head>
+    <!--Import Google Icon Font-->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!--Import materialize.css-->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <!--Let browser know website is optimized for mobile-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    {% if user.is_authenticated %}
+      <style>
+       header, main, footer {
+	   padding-left: 300px;
+       }
+
+       @media only screen and (max-width: 992px) {
+	   header, main, footer {
+	       padding-left: 0px;
+	   }
+       }
+
+       @media only screen and (min-width: 993px) {
+	   .container {
+	       width: 80%; !important
+	   }
+       }
+      </style>
+    {% endif %}
+    <title>{% block title %}HelpWise{% endblock title %}</title>
+  </head>
+  <body>
+    <header>
+      <div class="navbar-fixed">
+	<nav class="teal">
+          <div class="nav-wrapper">
+ 	    <a href="/" class="brand-logo" style="padding: 0 16px;">HelpWise</a>
+            {% if user.is_authenticated %}
+	      <a href="#" data-target="slide-out" class="sidenav-trigger"><i class="material-icons">menu</i></a>
+	    {% endif %}
+	  </div>	
+	</nav>
+      </div>
+      {% if user.is_authenticated %}
+	<ul id="slide-out" class="sidenav sidenav-fixed z-depth-1" style="height: 100%; transform: translateX(0%);">
+	  <li>
+	    <div class="user-view">
+              <div class="background">
+		<img alt="" src="{% static 'core/defaultbg.jpg' %}"/>
+	      </div>
+              <img class="circle" alt="" src="{% static 'core/default_man.png' %}"/>
+	      <span class="name white-text">{{ user.get_full_name  }}</span>
+	      <span class="email white-text">{{ user.email|default:"- - -" }}</span>
+	    </div>
+	  </li>
+	  <li><a href="{% url 'home' %}"><i class="material-icons center">dashboard</i><span class="show-on-small">Início</span></a></li>
+	  <li><a href="{% url 'my_tickets' %}"><i class="material-icons center">assignment</i><span class="show-on-small">Meus Tickets</span></a></li>
+	  <li><a href="{% url 'open_tickets' %}"><i class="material-icons center">inbox</i><span class="show-on-small">Tickets Abertos</span></a></li>
+	  <li><a href="{% url 'closed_tickets' %}"><i class="material-icons center">assignment_turned_in</i><span class="show-on-small">Tickets Fechados</span></a></li>
+	  <li><div class="divider"></div></li>
+	  <li><a href="{% url 'new_ticket' %}"><i class="material-icons center">add</i><span class="show-on-small">Novo</span></a></li>
+	  <li><a href="{% url 'logout' %}"><i class="material-icons center">logout</i><span class="show-on-small">Sair</span></a></li>
+	</ul>
+      {% endif %}
+    </header>
+    <main>
+      <div class="container" style="margin-top: 20px;">
+      {% block content %}
+      {% endblock content %}
+      </div>
+    </main>
+    <!--JavaScript at end of body for optimized loading-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script>
+      M.AutoInit();
+    </script>
+  </body>
+</html>

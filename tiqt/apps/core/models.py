@@ -1,0 +1,118 @@
+from django.db import models
+from django.contrib.auth.models import AbstractUser
+from django.utils import timezone
+
+
+class User(AbstractUser):
+    pass
+
+
+class Departamento(models.Model):
+    nome = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.nome
+
+
+class Secretaria(models.Model):
+    nome = models.CharField(max_length=50)
+    sigla = models.CharField(max_length=10)
+
+    def __str__(self):
+        return self.nome
+
+
+class Setor(models.Model):
+
+    class Meta:
+        verbose_name_plural = 'Setores'
+
+    nome = models.CharField(max_length=50)
+    secretaria = models.ForeignKey(Secretaria, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.nome + ' - ' + self.secretaria.sigla
+    
+class Cliente(models.Model):
+    razao_social = models.CharField(max_length=50, null=True, blank=True)
+    fantasia = models.CharField(max_length=50, null=True, blank=True)
+    cnpj = models.CharField(max_length=14, null=True, blank=True)
+    telefone = models.CharField(max_length=11, null=True, blank=True)
+    email = models.EmailField(max_length=50, null=True, blank=True)
+    endereco = models.CharField(max_length=50, null=True, blank=True)
+    numero = models.CharField(max_length=10, null=True, blank=True)
+    bairro = models.CharField(max_length=50, null=True, blank=True)
+    cep = models.CharField(max_length=8, null=True, blank=True)
+    complemento = models.CharField(max_length=50, null=True, blank=True)
+    cidade = models.CharField(max_length=50, null=True, blank=True)
+    uf = models.CharField(max_length=2, null=True, blank=True)
+    responsavel = models.CharField(max_length=50, null=True, blank=True)
+    observacao = models.TextField(null=True, blank=True)
+    data_cadastro = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    data_alteracao = models.DateTimeField(auto_now=True, null=True, blank=True)
+    ativo = models.BooleanField(default=True, null=True, blank=True)
+    inativo = models.BooleanField(default=False, null=True, blank=True)
+    motivo_inativacao = models.TextField(null=True, blank=True)
+    data_inativacao = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        # return self.fantasia
+        # return self.fantasia + ' - ' + self.cidade + '/' + self.uf
+        return f"{self.fantasia or ''} - {self.cidade or ''}/{self.uf or ''}"
+
+
+class Ticket(models.Model):
+    ABERTO = 0
+    EM_ATENDIMENTO = 1
+    ENCERRADO = 2
+    CANCELADO = 3
+
+    STATUS = (
+        (ABERTO, 'Aberto'),
+        (EM_ATENDIMENTO, 'Em atendimento'),
+        (ENCERRADO, 'Encerrado'),
+        (CANCELADO, 'Cancelado')
+    )
+
+    departamento = models.ForeignKey(Departamento, on_delete=models.PROTECT, default=1)
+    responsavel = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True,related_name='responsavel_por', editable=False)
+    criado_em = models.DateTimeField(auto_now_add=True, editable=False)
+    iniciado_em = models.DateTimeField(null=True, blank=True, editable=False)
+    encerrado_em = models.DateTimeField(null=True, blank=True, editable=False)
+    # setor = models.ForeignKey(Setor, on_delete=models.PROTECT)
+    status = models.SmallIntegerField(choices=STATUS, default=ABERTO, editable=False)
+    # patrimonio = models.CharField(max_length=5)
+    # contato = models.CharField(max_length=10, null=True, blank=True)
+    cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT)
+
+    class Meta:
+        ordering = ["criado_em"]
+
+    def iniciar_atendimento(self, user):
+        self.responsavel = user
+        self.status = self.EM_ATENDIMENTO
+        self.iniciado_em = timezone.localtime()
+        self.save()
+
+    def encerrar_atendimento(self):
+        self.status = self.ENCERRADO
+        self.encerrado_em = timezone.localtime()
+        self.save()
+
+    def get_absolute_url(self):
+        from django.shortcuts import reverse
+        return reverse("ticket_detail", kwargs={"pk": self.pk})
+
+
+class Comentario(models.Model):
+    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    texto = models.TextField()
+    autor = models.ForeignKey(
+        User, on_delete=models.PROTECT, null=True, blank=True, editable=False)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return self.texto

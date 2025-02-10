@@ -46,6 +46,7 @@ class Cliente(models.Model):
     complemento = models.CharField(max_length=50, null=True, blank=True)
     cidade = models.CharField(max_length=50, null=True, blank=True)
     uf = models.CharField(max_length=2, null=True, blank=True)
+    tributacao = models.CharField(max_length=50, null=True, blank=True)
     responsavel = models.CharField(max_length=50, null=True, blank=True)
     observacao = models.TextField(null=True, blank=True)
     data_cadastro = models.DateTimeField(auto_now_add=True, null=True, blank=True)
@@ -56,8 +57,6 @@ class Cliente(models.Model):
     data_inativacao = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
-        # return self.fantasia
-        # return self.fantasia + ' - ' + self.cidade + '/' + self.uf
         return f"{self.fantasia or ''} - {self.cidade or ''}/{self.uf or ''}"
 
 

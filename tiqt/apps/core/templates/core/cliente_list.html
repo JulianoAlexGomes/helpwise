@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% load material_form %}
+{% load static %}
+
+{% block content %}
+<h5>Lista de Clientes:</h5>
+<table class="striped">
+    <thead>
+        <tr>
+            <th>Nome Fantasia</th>
+            <th>Razão Social</th>
+            <th>CNPJ</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for cliente in clientes %}
+        <tr>
+            <td>{{ cliente.fantasia }}</td>
+            <td>{{ cliente.razao_social }}</td>
+            <td>{{ cliente.cnpj }}</td>
+            <td>
+                <a href="{% url 'cliente_update' cliente.pk %}" class="btn-small">Editar</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<a href="{% url 'cliente_create' %}" class="btn">Novo Cliente</a>
+{% endblock content %}

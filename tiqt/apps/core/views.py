@@ -1,10 +1,11 @@
 from django.views import View
-from django.views.generic import TemplateView, DetailView
+from django.views.generic import TemplateView, DetailView, ListView
 from django.views.generic.edit import CreateView, UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.forms import modelform_factory
 from django.shortcuts import reverse
 from django.http import HttpResponseRedirect
+from django.urls import reverse_lazy
 
 from django_tables2 import SingleTableMixin
 
@@ -12,7 +13,8 @@ from tiqt.apps.core.models import Ticket
 from tiqt.apps.core.models import Comentario
 from tiqt.apps.core.tables import TicketTable
 
-from .forms import TicketForm
+from .forms import TicketForm, ClienteForm
+from .models import Cliente
 
 
 class HomeView(LoginRequiredMixin, TemplateView):
@@ -104,3 +106,20 @@ class CommentView(LoginRequiredMixin, View):
         comment.save()
         return HttpResponseRedirect(
             reverse("ticket_detail", kwargs={"pk": ticket_pk}))
+
+class ClienteListView(ListView):
+    model = Cliente
+    template_name = 'core/cliente_list.html'
+    context_object_name = 'clientes'
+
+class ClienteCreateView(CreateView):
+    model = Cliente
+    form_class = ClienteForm
+    template_name = 'core/cliente_form.html'
+    success_url = reverse_lazy('cliente_list')
+
+class ClienteUpdateView(UpdateView):
+    model = Cliente
+    form_class = ClienteForm
+    template_name = 'core/cliente_form.html'
+    success_url = reverse_lazy('cliente_list')

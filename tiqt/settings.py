@@ -24,7 +24,7 @@ DATABASES = {
 
 AUTH_USER_MODEL = 'core.User'
 
-ALLOWED_HOSTS = ['10.0.0.97', '127.0.0.1', '185.137.92.173']
+ALLOWED_HOSTS = ['10.0.0.97', '127.0.0.1', '185.137.92.173','www.brothersti.com','brothersti.com','app.brothersti.com']
 
 STATIC_URL = '/static/'
 
@@ -110,3 +110,5 @@ USE_I18N = True
 USE_L10N = True
 
 USE_TZ = True
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

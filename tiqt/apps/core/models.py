@@ -78,11 +78,12 @@ class Ticket(models.Model):
     criado_em = models.DateTimeField(auto_now_add=True, editable=False)
     iniciado_em = models.DateTimeField(null=True, blank=True, editable=False)
     encerrado_em = models.DateTimeField(null=True, blank=True, editable=False)
-    # setor = models.ForeignKey(Setor, on_delete=models.PROTECT)
     status = models.SmallIntegerField(choices=STATUS, default=ABERTO, editable=False)
+    cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT)
+
+    # setor = models.ForeignKey(Setor, on_delete=models.PROTECT)
     # patrimonio = models.CharField(max_length=5)
     # contato = models.CharField(max_length=10, null=True, blank=True)
-    cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT)
 
     class Meta:
         ordering = ["criado_em"]

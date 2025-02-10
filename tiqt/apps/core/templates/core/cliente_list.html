@@ -8,8 +8,9 @@
     <thead>
         <tr>
             <th>Nome Fantasia</th>
-            <th>Razão Social</th>
             <th>CNPJ</th>
+            <th>Cidade</th>
+            <th>UF</th>
             <th>Ações</th>
         </tr>
     </thead>
@@ -17,8 +18,9 @@
         {% for cliente in clientes %}
         <tr>
             <td>{{ cliente.fantasia }}</td>
-            <td>{{ cliente.razao_social }}</td>
             <td>{{ cliente.cnpj }}</td>
+            <td>{{ cliente.cidade }}</td>
+            <td>{{ cliente.uf }}</td>
             <td>
                 <a href="{% url 'cliente_update' cliente.pk %}" class="btn-small">Editar</a>
             </td>

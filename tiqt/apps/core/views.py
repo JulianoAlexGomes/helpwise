@@ -12,6 +12,8 @@ from tiqt.apps.core.models import Ticket
 from tiqt.apps.core.models import Comentario
 from tiqt.apps.core.tables import TicketTable
 
+from .forms import TicketForm
+
 
 class HomeView(LoginRequiredMixin, TemplateView):
     template_name = 'core/home.html'
@@ -50,11 +52,14 @@ class ClosedTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
                                      responsavel=self.request.user)
 
 
+# class NewTicketView(LoginRequiredMixin, CreateView):
+#     template_name = 'core/ticket_form.html'
+#     model = Ticket
+#     fields = ['departamento', 'cliente']
+
 class NewTicketView(LoginRequiredMixin, CreateView):
     template_name = 'core/ticket_form.html'
-    model = Ticket
-    fields = ['departamento', 'cliente']
-
+    form_class = TicketForm
 
 class TicketUpdateView(LoginRequiredMixin, UpdateView):
     template_name = 'core/ticket_form.html'

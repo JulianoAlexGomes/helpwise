@@ -9,3 +9,8 @@ class TicketForm(forms.ModelForm):
         widgets = {
             'cliente': ModelSelect2Widget(model=Cliente, search_fields=['fantasia__icontains', 'razao_social__icontains']),
         }
+
+class ClienteForm(forms.ModelForm):
+    class Meta:
+        model = Cliente
+        fields = ['fantasia', 'razao_social', 'cnpj', 'endereco', 'telefone', 'email']

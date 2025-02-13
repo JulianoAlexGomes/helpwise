@@ -1,5 +1,6 @@
 from pathlib import Path
 from decouple import config
+import os
 # import dj_database_url
 
 # Project Path
@@ -27,6 +28,14 @@ AUTH_USER_MODEL = 'core.User'
 ALLOWED_HOSTS = ['10.0.0.97', '127.0.0.1', '185.137.92.173','www.brothersti.com','brothersti.com','app1.brothersti.com']
 
 STATIC_URL = '/static/'
+
+STATIC_ROOT = os.path.join(PROJECT_DIR, 'staticfiles')
+
+# Diretórios adicionais onde Django deve procurar arquivos estáticos
+STATICFILES_DIRS = [
+    os.path.join(PROJECT_DIR, 'tiqt/apps/core/static'),
+]
+
 
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'

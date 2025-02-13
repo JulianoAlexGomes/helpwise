@@ -78,6 +78,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'tiqt.wsgi.application'
 
+CSRF_TRUSTED_ORIGINS = ["https://app1.brothersti.com"]
 
 # Password validation
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-password-validators

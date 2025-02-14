@@ -1,5 +1,3 @@
-{% load static %}
-<!DOCTYPE html>
 <html>
   <head>
     <!--Import Google Icon Font-->
@@ -11,19 +9,19 @@
     {% if user.is_authenticated %}
       <style>
        header, main, footer {
-	   padding-left: 300px;
+       padding-left: 300px;
        }
 
        @media only screen and (max-width: 992px) {
-	   header, main, footer {
-	       padding-left: 0px;
-	   }
+       header, main, footer {
+           padding-left: 0px;
+       }
        }
 
        @media only screen and (min-width: 993px) {
-	   .container {
-	       width: 80%; !important
-	   }
+       .container {
+           width: 80%; !important
+       }
        }
       </style>
     {% endif %}
@@ -32,37 +30,37 @@
   <body>
     <header>
       <div class="navbar-fixed">
-	<nav class="teal">
+    <nav class="teal">
           <div class="nav-wrapper">
- 	    <a href="/" class="brand-logo" style="padding: 0 16px;">HelpWise</a>
+         <a href="/" class="brand-logo" style="padding: 0 16px;">HelpWise</a>
             {% if user.is_authenticated %}
-	      <a href="#" data-target="slide-out" class="sidenav-trigger"><i class="material-icons">menu</i></a>
-	    {% endif %}
-	  </div>	
-	</nav>
+          <a href="#" data-target="slide-out" class="sidenav-trigger"><i class="material-icons">menu</i></a>
+        {% endif %}
+      </div>	
+    </nav>
       </div>
       {% if user.is_authenticated %}
-	<ul id="slide-out" class="sidenav sidenav-fixed z-depth-1" style="height: 100%; transform: translateX(0%);">
-	  <li>
-	    <div class="user-view">
+    <ul id="slide-out" class="sidenav sidenav-fixed z-depth-1" style="height: 100%; transform: translateX(0%);">
+      <li>
+        <div class="user-view">
               <div class="background">
-		<img alt="" src="{% static 'core/defaultbg.jpg' %}"/>
-	      </div>
+        <img alt="" src="https://via.placeholder.com/300x200/00796b/00796b"/>
+          </div>
         <img class="circle" alt="" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde"/>
-	      <span class="name white-text">{{ user.get_full_name  }}</span>
-	      <span class="email white-text">{{ user.email|default:"- - -" }}</span>
-	    </div>
-	  </li>
-	  <li><a href="{% url 'home' %}"><i class="material-icons center">dashboard</i><span class="show-on-small">Início</span></a></li>
+          <span class="name white-text">{{ user.get_full_name  }}</span>
+          <span class="email white-text">{{ user.email|default:"- - -" }}</span>
+        </div>
+      </li>
+      <li><a href="{% url 'home' %}"><i class="material-icons center">dashboard</i><span class="show-on-small">Início</span></a></li>
     <li><a href="{% url 'cliente_list' %}"><i class="material-icons center">people</i><span class="show-on-small">Clientes</span></a></li>
     <li><a href="{% url 'cliente_create' %}"><i class="material-icons center">person_add</i><span class="show-on-small">Novo Cliente</span></a></li>
-	  <li><a href="{% url 'my_tickets' %}"><i class="material-icons center">assignment</i><span class="show-on-small">Meus Tickets</span></a></li>
-	  <li><a href="{% url 'open_tickets' %}"><i class="material-icons center">inbox</i><span class="show-on-small">Tickets Abertos</span></a></li>
-	  <li><a href="{% url 'closed_tickets' %}"><i class="material-icons center">assignment_turned_in</i><span class="show-on-small">Tickets Fechados</span></a></li>
-	  <li><div class="divider"></div></li>
-	  <li><a href="{% url 'new_ticket' %}"><i class="material-icons center">add</i><span class="show-on-small">Novo</span></a></li>
-	  <li><a href="{% url 'logout' %}"><i class="material-icons center">logout</i><span class="show-on-small">Sair</span></a></li>
-	</ul>
+      <li><a href="{% url 'my_tickets' %}"><i class="material-icons center">assignment</i><span class="show-on-small">Meus Tickets</span></a></li>
+      <li><a href="{% url 'open_tickets' %}"><i class="material-icons center">inbox</i><span class="show-on-small">Tickets Abertos</span></a></li>
+      <li><a href="{% url 'closed_tickets' %}"><i class="material-icons center">assignment_turned_in</i><span class="show-on-small">Tickets Fechados</span></a></li>
+      <li><div class="divider"></div></li>
+      <li><a href="{% url 'new_ticket' %}"><i class="material-icons center">add</i><span class="show-on-small">Novo</span></a></li>
+      <li><a href="{% url 'logout' %}"><i class="material-icons center">logout</i><span class="show-on-small">Sair</span></a></li>
+    </ul>
       {% endif %}
     </header>
     <main>

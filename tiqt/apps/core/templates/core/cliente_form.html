@@ -6,42 +6,9 @@
 <form method="post"> {% csrf_token %}
     {{ form.as_p }}
     <button class="btn" type="submit">Salvar</button>
+    {% if object %}
+        <a href="{% url 'cliente_delete' object.pk %}" class="btn right red lighten-1">Excluir</a>
+    {% endif %}
     <a href="{% url 'cliente_list' %}" class="btn right red lighten-1">Cancelar</a>
 </form>
 {% endblock content %}
-
-{% block extra_js %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var cepField = document.getElementById('id_cep');
-        if (cepField) {
-            cepField.addEventListener('blur', buscarCep);
-        }
-    });
-
-    function buscarCep() {
-        var cep = document.getElementById('id_cep').value;
-        if (cep.length !== 8) {
-            alert('CEP inválido');
-            return;
-        }
-        var url = 'https://viacep.com.br/ws/' + cep + '/json/';
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                if (data.erro) {
-                    alert('CEP não encontrado');
-                    return;
-                }
-                document.getElementById('id_rua').value = data.logradouro;
-                document.getElementById('id_bairro').value = data.bairro;
-                document.getElementById('id_cidade').value = data.localidade;
-                document.getElementById('id_estado').value = data.uf;
-            })
-            .catch(error => {
-                console.error('Erro ao buscar o CEP:', error);
-                alert('Erro ao buscar o CEP');
-            });
-    }
-</script>
-{% endblock extra_js %}

@@ -1,6 +1,6 @@
 from django.views import View
 from django.views.generic import TemplateView, DetailView, ListView
-from django.views.generic.edit import CreateView, UpdateView
+from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.forms import modelform_factory
 from django.shortcuts import reverse
@@ -123,3 +123,14 @@ class ClienteUpdateView(UpdateView):
     form_class = ClienteForm
     template_name = 'core/cliente_form.html'
     success_url = reverse_lazy('cliente_list')
+
+class ClienteDeleteView(LoginRequiredMixin, DeleteView):
+    model = Cliente
+    template_name = 'core/cliente_confirm_delete.html'
+    success_url = reverse_lazy('cliente_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['cliente'] = self.object
+        return context
+

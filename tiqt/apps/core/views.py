@@ -40,6 +40,14 @@ class OpenTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
         'per_page': 15
     }
 
+class InProgressTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
+    template_name = 'core/tickets_list.html'
+    table_class = TicketTable
+    table_data = Ticket.objects.filter(status=Ticket.EM_ATENDIMENTO)
+    table_pagination = {
+        'per_page': 15
+    }
+
 
 class ClosedTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     template_name = 'core/tickets_list.html'
@@ -64,7 +72,7 @@ class NewTicketView(LoginRequiredMixin, CreateView):
 class TicketUpdateView(LoginRequiredMixin, UpdateView):
     template_name = 'core/ticket_form.html'
     model = Ticket
-    fields = ['departamento', 'cliente']
+    fields = ['tipo','departamento','cliente','prioridade']
 
 
 class TicketDetailView(LoginRequiredMixin, DetailView):

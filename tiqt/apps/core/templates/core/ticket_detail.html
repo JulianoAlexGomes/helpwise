@@ -27,15 +27,14 @@
     <div class="col l4 m4 z-depth-1">
       <H5>Detalhes:</H5>
       <p><b>Número: </b>{{ object.id }}</p>
+      <p><b>Cliente: </b>{{ object.cliente }}</p>
       <p><b>Responsável: </b>{{ object.responsavel|default_if_none:"- - -" }}</p>
       <p><b>Criado em: </b>{{ object.criado_em|date:"d/m/y à\s H:i" }}</p>
       <p><b>Iniciado em: </b>{{ object.iniciado_em|date:"d/m/y à\s H:i"|default:"- - -" }}</p>
       <p><b>Encerrado em: </b>{{ object.encerrado_em|date:"d/m/y à\s H:i"|default:"- - -" }}</p>
       <p><b>Idade: </b>{{ object.criado_em|timesince:object.encerrado_em }}</p>
-      {% comment %} <p><b>Setor: </b>{{ object.setor }}</p> {% endcomment %}
       <p><b>Status: </b>{{ object.get_status_display }}</p>
-      {% comment %} <p><b>Patrimonio: </b>{{ object.patrimonio }}</p> {% endcomment %}
-      {% comment %} <p><b>Contato: </b>{{ object.contato|default_if_none:"- - -" }}</p> {% endcomment %}
+
     </div>
   </div>
   <div class="fixed-action-btn">

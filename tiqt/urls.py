@@ -8,6 +8,7 @@ urlpatterns = [
     path('ticket/new/', views.NewTicketView.as_view(), name='new_ticket'),
     path('ticket/my/', views.MyTicketsView.as_view(), name='my_tickets'),
     path('ticket/open/', views.OpenTicketsView.as_view(), name='open_tickets'),
+    path('ticket/inprogress/', views.InProgressTicketsView.as_view(), name='inprogress_tickets'),
     path('ticket/closed/', views.ClosedTicketsView.as_view(), name='closed_tickets'),
     path('ticket/<int:pk>/', views.TicketDetailView.as_view(), name='ticket_detail'),
     path('ticket/<int:pk>/update/', views.TicketUpdateView.as_view(), name='ticket_update'),

@@ -10,7 +10,7 @@ class TicketTable(Table):
     class Meta:
         model = Ticket
         template_name = 'django_tables2/bootstrap.html'
-        fields = ('id', 'responsavel', 'status', 'cliente', 'ultimo_comentario')
+        fields = ('id','tipo','prioridade','status','cliente','ultimo_comentario','responsavel')
         attrs = {'class': 'striped responsive-table'}
 
     # def render(self):

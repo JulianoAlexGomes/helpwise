@@ -34,6 +34,8 @@
       <p><b>Encerrado em: </b>{{ object.encerrado_em|date:"d/m/y à\s H:i"|default:"- - -" }}</p>
       <p><b>Idade: </b>{{ object.criado_em|timesince:object.encerrado_em }}</p>
       <p><b>Status: </b>{{ object.get_status_display }}</p>
+      <p><b>Tipo: </b>{{ object.tipo }}</p>
+      <p><b>Prioridade: </b>{{ object.prioridade }}</p>
 
     </div>
   </div>

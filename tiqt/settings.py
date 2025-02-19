@@ -23,10 +23,10 @@ ALLOWED_HOSTS = ['10.0.0.97', '127.0.0.1', '185.137.92.173','www.brothersti.com'
 
 STATIC_URL = '/static/'
 
-STATIC_ROOT = os.path.join(PROJECT_DIR, 'staticfiles')
+# STATIC_ROOT = os.path.join(PROJECT_DIR, 'staticfiles')
 
 # Diretórios adicionais onde Django deve procurar arquivos estáticos
-STATIC_ROOT = os.path.join(PROJECT_DIR, 'staticfiles')
+STATIC_ROOT = '/root/projetos/oficial/helpwise/staticfiles/'
 
 
 LOGIN_REDIRECT_URL = '/'

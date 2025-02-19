@@ -1,9 +1,28 @@
 {% extends 'base.html' %}
 {% load django_tables2 %}
+{% load crispy_forms_tags %}
 
 {% block content %}
   <div>
     <h5>Tickets:</h5>
+    <form method="get">
+      <div class="row">
+        <div class="input-field col s4">
+          {{ filter_form.cliente }}
+        </div>
+        <div class="input-field col s4">
+          {{ filter_form.tipo }}
+        </div>
+        <div class="input-field col s4">
+          {{ filter_form.prioridade }}
+        </div>
+      </div>
+      {% if request.path == '/ticket/open/' %}
+        <div class="input-field col s12 left-align">
+          <button type="submit" class="btn">Filtrar</button>
+        </div>
+      {% endif %}
+    </form>
     {% render_table table %}
     <div class="divider"></div>
   </div>

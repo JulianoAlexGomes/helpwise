@@ -17,12 +17,6 @@ DATABASES = {
     }
 }
 
-# DATABASES = {
-#     'default': dj_database_url.parse(config('DATABASE_URL'))
-# }
-
-# DATABASES['default']['ATOMIC_REQUESTS'] = True
-
 AUTH_USER_MODEL = 'core.User'
 
 ALLOWED_HOSTS = ['10.0.0.97', '127.0.0.1', '185.137.92.173','www.brothersti.com','brothersti.com','app1.brothersti.com']
@@ -32,12 +26,11 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(PROJECT_DIR, 'staticfiles')
 
 # Diretórios adicionais onde Django deve procurar arquivos estáticos
-STATICFILES_DIRS = [
-    os.path.join(PROJECT_DIR, 'tiqt/apps/core/static'),
-]
+STATIC_ROOT = os.path.join(PROJECT_DIR, 'staticfiles')
 
 
 LOGIN_REDIRECT_URL = '/'
+
 LOGOUT_REDIRECT_URL = '/'
 
 
@@ -55,6 +48,8 @@ INSTALLED_APPS = [
     'django_tables2',
     # My apps
     'tiqt.apps.core',
+    'crispy_forms',
+    'django_select2',
 ]
 
 MIDDLEWARE = [
@@ -122,3 +117,4 @@ USE_L10N = True
 USE_TZ = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+

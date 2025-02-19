@@ -7,16 +7,13 @@ class User(AbstractUser):
     pass
 
 class Departamento(models.Model):
-    nome = models.CharField(max_length=100)
+    descricao = models.CharField(max_length=100)
 
     def __str__(self):
-        return self.nome
+        return self.descricao
+
 
 class Tipo(models.Model):
-    choices = (
-        (0, 'Manutenção/Correção'),
-        (1, 'Evolução'),
-    )
 
     descricao = models.CharField(max_length=100)
     departamento = models.ForeignKey(Departamento, on_delete=models.CASCADE)
@@ -24,13 +21,38 @@ class Tipo(models.Model):
     def __str__(self):
         return self.descricao
 
+
 class Prioridade(models.Model):
     descricao = models.CharField(max_length=20, null=True, blank=True)
     observacoes = models.TextField(max_length= 100, null=True, blank=True, default=1)
 
     def __str__(self):
         return self.descricao
+
+
+class Uf(models.Model):
+    descricao = models.CharField(max_length=50, null=True, blank=True)
+    sigla = models.CharField(max_length=2, null=True, blank=True)
+
+    def __str__(self):
+        return self.sigla
+
+
+class Cidade(models.Model):
+    codigo = models.CharField(max_length=7, null=True, blank=True)
+    descricao = models.CharField(max_length=50, null=True, blank=True)
+
+    def __str__(self):
+        return self.descricao
+
+
+class Tributacao(models.Model):
+    descricao = models.CharField(max_length=50, null=True, blank=True)
+
+    def __str__(self):
+        return self.descricao
     
+
 class Cliente(models.Model):
     razao_social = models.CharField(max_length=50, null=True, blank=True)
     fantasia = models.CharField(max_length=50, null=True, blank=True)
@@ -42,20 +64,21 @@ class Cliente(models.Model):
     bairro = models.CharField(max_length=50, null=True, blank=True)
     cep = models.CharField(max_length=8, null=True, blank=True)
     complemento = models.CharField(max_length=50, null=True, blank=True)
-    cidade = models.CharField(max_length=50, null=True, blank=True)
-    uf = models.CharField(max_length=2, null=True, blank=True)
+    cidade = models.ForeignKey(Cidade, on_delete=models.PROTECT, null=True, blank=True)
+    uf = models.ForeignKey(Uf, on_delete=models.PROTECT, null=True, blank=True)
     tributacao = models.CharField(max_length=50, null=True, blank=True)
     responsavel = models.CharField(max_length=50, null=True, blank=True)
     observacao = models.TextField(null=True, blank=True)
     data_cadastro = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     data_alteracao = models.DateTimeField(auto_now=True, null=True, blank=True)
     ativo = models.BooleanField(default=True, null=True, blank=True)
-    inativo = models.BooleanField(default=False, null=True, blank=True)
     motivo_inativacao = models.TextField(null=True, blank=True)
     data_inativacao = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.fantasia or ''} - {self.cidade or ''}/{self.uf or ''}"
+    
+
 
 class Ticket(models.Model):
     ABERTO = 0
@@ -71,7 +94,7 @@ class Ticket(models.Model):
     )
 
     departamento = models.ForeignKey(Departamento, on_delete=models.PROTECT, default=1)
-    responsavel = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True,related_name='responsavel_por', editable=False)
+    responsavel = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='responsavel_por', editable=False)
     criado_em = models.DateTimeField(auto_now_add=True, editable=False)
     iniciado_em = models.DateTimeField(null=True, blank=True, editable=False)
     encerrado_em = models.DateTimeField(null=True, blank=True, editable=False)
@@ -79,7 +102,7 @@ class Ticket(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT)
     tipo = models.ForeignKey(Tipo, on_delete=models.PROTECT, default=1)
     prioridade = models.ForeignKey(Prioridade, on_delete=models.PROTECT, default=1)
-
+    # solucao = models.ForeignKey(Solucao, on_delete=models.PROTECT, null=True, blank=True, editable=False)
     class Meta:
         ordering = ["criado_em"]
 
@@ -98,6 +121,15 @@ class Ticket(models.Model):
         from django.shortcuts import reverse
         return reverse("ticket_detail", kwargs={"pk": self.pk})
 
+    def ultimo_comentario(self):
+            ultimo_comentario = self.comentario_set.order_by('-id').first()
+            return ultimo_comentario.texto if ultimo_comentario else ''
+    
+    def get_solucao(self):
+        solucao = self.solucao_set.order_by('-criado_em').first()
+        return solucao.texto if solucao else ''
+
+
 class Comentario(models.Model):
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE)
     criado_em = models.DateTimeField(auto_now_add=True)
@@ -110,22 +142,15 @@ class Comentario(models.Model):
     def __str__(self):
         return self.texto
 
+class Solucao(models.Model):
+    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    texto = models.TextField()
+    autor = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, editable=False)
 
+    class Meta:
+        ordering = ["-criado_em"]
 
-# class Secretaria(models.Model):
-#     nome = models.CharField(max_length=50)
-#     sigla = models.CharField(max_length=10)
-
-#     def __str__(self):
-#         return self.nome
-
-# class Setor(models.Model):
-
-#     class Meta:
-#         verbose_name_plural = 'Setores'
-
-#     nome = models.CharField(max_length=50)
-#     secretaria = models.ForeignKey(Secretaria, on_delete=models.CASCADE)
-
-#     def __str__(self):
-#         return self.nome + ' - ' + self.secretaria.sigla
+    def __str__(self):
+        return self.texto
+    

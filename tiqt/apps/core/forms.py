@@ -1,12 +1,15 @@
 from django import forms
 from django_select2.forms import ModelSelect2Widget
-from .models import Ticket, Cliente
+from .models import Ticket, Cliente, Uf, Cidade, Tributacao, Solucao
 
 class ClienteForm(forms.ModelForm):
+    uf = forms.ModelChoiceField(queryset=Uf.objects.all(), required=False, label='UF')
+    cidade = forms.ModelChoiceField(queryset=Cidade.objects.all(), required=False, label='Cidade')
+    tributacao = forms.ModelChoiceField(queryset=Tributacao.objects.all(), required=False, label='Tributação')
+    
     class Meta:
         model = Cliente
-        fields = [
-                    
+        fields = [                    
                     'fantasia',
                     'cnpj',
                     'cidade',
@@ -25,4 +28,15 @@ class TicketForm(forms.ModelForm):
     class Meta:
         model = Ticket
         fields = ['tipo', 'departamento', 'cliente', 'prioridade']
-        widgets = {'cliente': ModelSelect2Widget(model=Cliente, search_fields=['fantasia__icontains', 'razao_social__icontains']),}
+
+# class TicketCloseForm(forms.ModelForm):
+#     class Meta:
+#         model = Solucao
+#         fields = ['solucao']
+
+# class TicketCloseForm(forms.Form):
+#     solucao = forms.CharField(widget=forms.Textarea, label='Solução')
+
+
+class TicketCloseForm(forms.Form):
+    solucao = forms.CharField(widget=forms.Textarea, label='Solução')

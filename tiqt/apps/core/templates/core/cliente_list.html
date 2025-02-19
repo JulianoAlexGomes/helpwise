@@ -7,11 +7,12 @@
 <table class="striped">
     <thead>
         <tr>
-            <th>Nome Fantasia</th>
-            <th>CNPJ</th>
-            <th>Cidade</th>
-            <th>UF</th>
-            <th>Ações</th>
+            <th style="font-weight: bold">Nome Fantasia</th>
+            <th style="font-weight: bold">CNPJ</th>
+            <th style="font-weight: bold">Cidade</th>
+            <th style="font-weight: bold">UF</th>
+            <th style="font-weight: bold">Tributação</th>
+            <th style="font-weight: bold">Ações</th>
         </tr>
     </thead>
     <tbody>
@@ -21,8 +22,9 @@
             <td>{{ cliente.cnpj }}</td>
             <td>{{ cliente.cidade }}</td>
             <td>{{ cliente.uf }}</td>
+            <td>{{ cliente.tributacao }}</td>
             <td>
-                <a href="{% url 'cliente_update' cliente.pk %}" class="btn-small">Editar</a>
+                <a href="{% url 'cliente_update' cliente.pk %}"><i class="material-icons center">edit</i>
             </td>
         </tr>
         {% endfor %}

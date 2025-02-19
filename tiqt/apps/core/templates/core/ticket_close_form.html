@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h5>Encerrar Ticket</h5>
+<form method="post"> {% csrf_token %}
+    {{ form.as_p }}
+    <button class="btn" type="submit">Encerrar</button>
+    <a href="{% url 'ticket_detail' ticket.pk %}" class="btn right red lighten-1">Cancelar</a>
+</form>
+{% endblock content %}

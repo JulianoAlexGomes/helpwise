@@ -1,10 +1,10 @@
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from tiqt.apps.core import views
 
 urlpatterns = [
-    path('', views.HomeView.as_view(), name='home'),
+    path('', views.HomeView, name='home'),
     path('ticket/new/', views.NewTicketView.as_view(), name='new_ticket'),
     path('ticket/my/', views.MyTicketsView.as_view(), name='my_tickets'),
     path('ticket/open/', views.OpenTicketsView.as_view(), name='open_tickets'),
@@ -22,4 +22,5 @@ urlpatterns = [
     path('accounts/login/', auth_views.LoginView.as_view(redirect_authenticated_user=True),name='login'), 
     path('accounts/logout', auth_views.LogoutView.as_view(), name='logout'),
     path('admin/', admin.site.urls),
+    path('select2/', include('django_select2.urls')), 
 ]

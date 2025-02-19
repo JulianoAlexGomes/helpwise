@@ -1,5 +1,73 @@
 {% extends 'base.html' %}
 
 {% block content %}
-  <p>Em desenvolvimento...</p>
+  <div class="row">
+    <div class="col s12 m4">
+      <div class="card teal">
+        <div class="card-content white-text">
+          <span class="card-title - center">Em Aberto</span>
+          <h2 class="center">{{ atendimentos_aberto }}</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col s12 m4">
+      <div class="card orange">
+        <div class="card-content white-text">
+          <span class="card-title - center">Em Andamento</span>
+          <h2 class="center">{{ atendimentos_andamento }}</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col s12 m4">
+      <div class="card green">
+        <div class="card-content white-text">
+          <span class="card-title - center">Finalizados</span>
+          <h2 class="center">{{ atendimentos_finalizados }}</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col s12">
+      <canvas id="atendimentosChart"></canvas>
+    </div>
+  </div>
 {% endblock content %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var ctx = document.getElementById('atendimentosChart').getContext('2d');
+    var atendimentosChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['Aberto', 'Em Andamento', 'Finalizado'],
+        datasets: [{
+          label: 'Atendimentos',
+          data: [{{ atendimentos_aberto }}, {{ atendimentos_andamento }}, {{ atendimentos_finalizados }}],
+          backgroundColor: [
+            'rgba(0, 150, 136, 0.6)',
+            'rgba(255, 152, 0, 0.6)',
+            'rgba(76, 175, 80, 0.6)'
+          ],
+          borderColor: [
+            'rgba(0, 150, 136, 1)',
+            'rgba(255, 152, 0, 1)',
+            'rgba(76, 175, 80, 1)'
+          ],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        scales: {
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
+  });
+</script>
+{% endblock extra_js %}

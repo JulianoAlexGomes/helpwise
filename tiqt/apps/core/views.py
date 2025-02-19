@@ -3,9 +3,10 @@ from django.views.generic import TemplateView, DetailView, ListView
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.forms import modelform_factory
-from django.shortcuts import reverse
+from django.shortcuts import reverse, render
 from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy
+from .models import Ticket, Solucao
 
 from django_tables2 import SingleTableMixin
 
@@ -13,12 +14,26 @@ from tiqt.apps.core.models import Ticket
 from tiqt.apps.core.models import Comentario
 from tiqt.apps.core.tables import TicketTable
 
-from .forms import TicketForm, ClienteForm
+from .forms import TicketForm, ClienteForm, TicketCloseForm
 from .models import Cliente
+from .filters import TicketFilterForm
+
+# class HomeView(LoginRequiredMixin, TemplateView):
+#     template_name = 'core/home.html'
 
 
-class HomeView(LoginRequiredMixin, TemplateView):
-    template_name = 'core/home.html'
+def HomeView(request):
+    atendimentos_aberto = Ticket.objects.filter(status=Ticket.ABERTO).count()
+    atendimentos_andamento = Ticket.objects.filter(status=Ticket.EM_ATENDIMENTO).count()
+    atendimentos_finalizados = Ticket.objects.filter(status=Ticket.ENCERRADO).count()
+
+    context = {
+        'atendimentos_aberto': atendimentos_aberto,
+        'atendimentos_andamento': atendimentos_andamento,
+        'atendimentos_finalizados': atendimentos_finalizados,
+    }
+
+    return render(request, 'core/home.html', context)
 
 
 class MyTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
@@ -31,14 +46,35 @@ class MyTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     def get_table_data(self, **kwargs):
         return Ticket.objects.filter(status=Ticket.EM_ATENDIMENTO, responsavel=self.request.user)
 
-
 class OpenTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     template_name = 'core/tickets_list.html'
     table_class = TicketTable
-    table_data = Ticket.objects.filter(status=Ticket.ABERTO)
-    table_pagination = {
-        'per_page': 15
-    }
+
+    def get_table_data(self):
+        queryset = Ticket.objects.filter(status=Ticket.ABERTO)
+        form = TicketFilterForm(self.request.GET)
+        if form.is_valid():
+            if form.cleaned_data['cliente']:
+                queryset = queryset.filter(cliente=form.cleaned_data['cliente'])
+            if form.cleaned_data['tipo']:
+                queryset = queryset.filter(tipo=form.cleaned_data['tipo'])
+            if form.cleaned_data['prioridade']:
+                queryset = queryset.filter(prioridade=form.cleaned_data['prioridade'])
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['filter_form'] = TicketFilterForm(self.request.GET)
+        context['request'] = self.request
+        return context
+
+# class OpenTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
+#     template_name = 'core/tickets_list.html'
+#     table_class = TicketTable
+#     table_data = Ticket.objects.filter(status=Ticket.ABERTO)
+#     table_pagination = {
+#         'per_page': 15
+#     }
 
 class InProgressTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     template_name = 'core/tickets_list.html'
@@ -52,27 +88,21 @@ class InProgressTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
 class ClosedTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     template_name = 'core/tickets_list.html'
     table_class = TicketTable
+    table_data = Ticket.objects.filter(status=Ticket.ENCERRADO)
     table_pagination = {
         'per_page': 15
     }
 
-    def get_table_data(self):
-        return Ticket.objects.filter(status=Ticket.ENCERRADO)
-
-
-# class NewTicketView(LoginRequiredMixin, CreateView):
-#     template_name = 'core/ticket_form.html'
-#     model = Ticket
-#     fields = ['departamento', 'cliente']
 
 class NewTicketView(LoginRequiredMixin, CreateView):
     template_name = 'core/ticket_form.html'
     form_class = TicketForm
 
+
 class TicketUpdateView(LoginRequiredMixin, UpdateView):
-    template_name = 'core/ticket_form.html'
     model = Ticket
-    fields = ['tipo','departamento','cliente','prioridade']
+    form_class = TicketForm
+    template_name = 'core/ticket_form.html'
 
 
 class TicketDetailView(LoginRequiredMixin, DetailView):
@@ -99,8 +129,35 @@ class CloseTicketView(LoginRequiredMixin, View):
 
     def get(self, request, pk):
         ticket = Ticket.objects.get(pk=pk)
-        ticket.encerrar_atendimento()
-        return HttpResponseRedirect(reverse("ticket_detail", kwargs={"pk": pk}))
+        form = TicketCloseForm()
+        return render(request, 'core/ticket_close_form.html', {'form': form, 'ticket': ticket})
+
+    def post(self, request, pk):
+        ticket = Ticket.objects.get(pk=pk)
+        form = TicketCloseForm(request.POST)
+        if form.is_valid():
+            solucao_texto = form.cleaned_data['solucao']
+            solucao = Solucao.objects.create(ticket=ticket, texto=solucao_texto, autor=request.user)
+            ticket.encerrar_atendimento()
+            return HttpResponseRedirect(reverse("ticket_detail", kwargs={"pk": pk}))
+        return render(request, 'core/ticket_close_form.html', {'form': form, 'ticket': ticket})
+
+
+# class CloseTicketView(LoginRequiredMixin, View):
+
+#     def get(self, request, pk):
+#         ticket = Ticket.objects.get(pk=pk)
+#         form = TicketCloseForm(instance=ticket)
+#         return render(request, 'core/ticket_close_form.html', {'form': form, 'ticket': ticket})
+
+#     def post(self, request, pk):
+#         ticket = Ticket.objects.get(pk=pk)
+#         form = TicketCloseForm(request.POST, instance=ticket)
+#         if form.is_valid():
+#             ticket = form.save(commit=False)
+#             ticket.encerrar_atendimento()
+#             return HttpResponseRedirect(reverse("ticket_detail", kwargs={"pk": pk}))
+#         return render(request, 'core/ticket_close_form.html', {'form': form, 'ticket': ticket})
 
 
 class CommentView(LoginRequiredMixin, View):
@@ -139,4 +196,3 @@ class ClienteDeleteView(LoginRequiredMixin, DeleteView):
         context = super().get_context_data(**kwargs)
         context['cliente'] = self.object
         return context
-

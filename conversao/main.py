@@ -25,10 +25,10 @@ def excel_to_sql_insert(excel_file: str, output_file: str, table_name: str, colu
     print(f"Arquivo '{output_file}' gerado com sucesso!")
 
 # Exemplo de uso:
-excel_file = "D:/Projetos/TIQT/tiqt-master/conversao/arquivo.xlsx"
-output_file = "D:/Projetos/TIQT/tiqt-master/conversao/arquivo.txt"
+excel_file = "D:/Projetos/TIQT/tiqt-master/helpwise/conversao/arquivo.xlsx"
+output_file = "D:/Projetos/TIQT/tiqt-master/helpwise/conversao/arquivo.txt"
 table_name = "table"
-selected_columns = ["cliente", "cidade","trib"]  # Coloque os nomes reais das colunas desejadas
+selected_columns = []  # Todas as colunas  do arquivo Excel    
 start_id = 1
 
 excel_to_sql_insert(excel_file, output_file, table_name, selected_columns, start_id)

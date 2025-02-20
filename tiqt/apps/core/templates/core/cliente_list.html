@@ -4,6 +4,7 @@
 
 {% block content %}
 <h5>Lista de Clientes:</h5>
+{% comment %} <a href="{% url 'cliente_create' %}" class="btn">Novo Cliente</a> {% endcomment %}
 <table class="striped">
     <thead>
         <tr>
@@ -30,5 +31,4 @@
         {% endfor %}
     </tbody>
 </table>
-<a href="{% url 'cliente_create' %}" class="btn">Novo Cliente</a>
 {% endblock content %}

@@ -66,7 +66,7 @@ class Cliente(models.Model):
     complemento = models.CharField(max_length=50, null=True, blank=True)
     cidade = models.ForeignKey(Cidade, on_delete=models.PROTECT, null=True, blank=True)
     uf = models.ForeignKey(Uf, on_delete=models.PROTECT, null=True, blank=True)
-    tributacao = models.CharField(max_length=50, null=True, blank=True)
+    tributacao = models.ForeignKey(Tributacao, on_delete=models.PROTECT, null=True, blank=True)
     responsavel = models.CharField(max_length=50, null=True, blank=True)
     observacao = models.TextField(null=True, blank=True)
     data_cadastro = models.DateTimeField(auto_now_add=True, null=True, blank=True)

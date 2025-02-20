@@ -26,7 +26,7 @@ STATIC_URL = '/static/'
 # STATIC_ROOT = os.path.join(PROJECT_DIR, 'staticfiles')
 
 # Diretórios adicionais onde Django deve procurar arquivos estáticos
-STATIC_ROOT = '/root/projetos/oficial/helpwise/staticfiles/'
+STATIC_ROOT = '/root/projetos/oficial/helpwise/tiqt/staticfiles/'
 
 
 LOGIN_REDIRECT_URL = '/'

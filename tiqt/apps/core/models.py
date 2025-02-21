@@ -101,7 +101,7 @@ class Ticket(models.Model):
     status = models.SmallIntegerField(choices=STATUS, default=ABERTO, editable=False)
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT)
     tipo = models.ForeignKey(Tipo, on_delete=models.PROTECT, default=3)
-    prioridade = models.ForeignKey(Prioridade, on_delete=models.PROTECT, default=1)
+    prioridade = models.ForeignKey(Prioridade, on_delete=models.PROTECT, default=2)
     
     class Meta:
         ordering = ["criado_em"]

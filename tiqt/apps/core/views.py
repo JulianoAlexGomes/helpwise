@@ -18,9 +18,6 @@ from .forms import TicketForm, ClienteForm, TicketCloseForm
 from .models import Cliente
 from .filters import TicketFilterForm
 
-# class HomeView(LoginRequiredMixin, TemplateView):
-#     template_name = 'core/home.html'
-
 
 def HomeView(request):
     atendimentos_aberto = Ticket.objects.filter(status=Ticket.ABERTO).count()
@@ -40,7 +37,7 @@ class MyTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     template_name = 'core/tickets_list.html'
     table_class = TicketTable
     table_pagination = {
-        'per_page': 15
+        'per_page': 10
     }
 
     def get_table_data(self, **kwargs):
@@ -68,20 +65,16 @@ class OpenTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
         context['request'] = self.request
         return context
 
-# class OpenTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
-#     template_name = 'core/tickets_list.html'
-#     table_class = TicketTable
-#     table_data = Ticket.objects.filter(status=Ticket.ABERTO)
-#     table_pagination = {
-#         'per_page': 15
-#     }
+    table_pagination = {
+        'per_page': 10
+    }   
 
 class InProgressTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     template_name = 'core/tickets_list.html'
     table_class = TicketTable
     table_data = Ticket.objects.filter(status=Ticket.EM_ATENDIMENTO)
     table_pagination = {
-        'per_page': 15
+        'per_page': 10
     }
 
 
@@ -90,7 +83,7 @@ class ClosedTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     table_class = TicketTable
     table_data = Ticket.objects.filter(status=Ticket.ENCERRADO)
     table_pagination = {
-        'per_page': 15
+        'per_page': 10
     }
 
 
@@ -141,23 +134,6 @@ class CloseTicketView(LoginRequiredMixin, View):
             ticket.encerrar_atendimento()
             return HttpResponseRedirect(reverse("ticket_detail", kwargs={"pk": pk}))
         return render(request, 'core/ticket_close_form.html', {'form': form, 'ticket': ticket})
-
-
-# class CloseTicketView(LoginRequiredMixin, View):
-
-#     def get(self, request, pk):
-#         ticket = Ticket.objects.get(pk=pk)
-#         form = TicketCloseForm(instance=ticket)
-#         return render(request, 'core/ticket_close_form.html', {'form': form, 'ticket': ticket})
-
-#     def post(self, request, pk):
-#         ticket = Ticket.objects.get(pk=pk)
-#         form = TicketCloseForm(request.POST, instance=ticket)
-#         if form.is_valid():
-#             ticket = form.save(commit=False)
-#             ticket.encerrar_atendimento()
-#             return HttpResponseRedirect(reverse("ticket_detail", kwargs={"pk": pk}))
-#         return render(request, 'core/ticket_close_form.html', {'form': form, 'ticket': ticket})
 
 
 class CommentView(LoginRequiredMixin, View):

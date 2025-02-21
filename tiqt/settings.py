@@ -8,7 +8,10 @@ PROJECT_DIR = Path(__file__).parent
 
 SECRET_KEY = config('SECRET_KEY')
 
-DEBUG = config('DEBUG', default=False, cast=bool)
+# DEBUG = config('DEBUG', default=False, cast=bool)
+
+DEBUG = False
+
 
 DATABASES = {
     'default': {

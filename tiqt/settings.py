@@ -34,8 +34,7 @@ STATIC_ROOT = '/root/projetos/oficial/helpwise/tiqt/staticfiles/'
 
 LOGIN_REDIRECT_URL = '/'
 
-LOGOUT_REDIRECT_URL = '/'
-
+LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 # Application definition
 

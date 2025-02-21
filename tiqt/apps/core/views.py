@@ -1,22 +1,24 @@
 from django.views import View
 from django.views.generic import TemplateView, DetailView, ListView
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
+from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.views import LogoutView as BaseLogoutView
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.cache import never_cache
 from django.forms import modelform_factory
-from django.shortcuts import reverse, render
+from django.shortcuts import reverse, render, resolve_url
 from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy
-from .models import Ticket, Solucao
-
 from django_tables2 import SingleTableMixin
-
 from tiqt.apps.core.models import Ticket
 from tiqt.apps.core.models import Comentario
 from tiqt.apps.core.tables import TicketTable
-
 from .forms import TicketForm, ClienteForm, TicketCloseForm
-from .models import Cliente
+from .models import Cliente, Ticket, Solucao
 from .filters import TicketFilterForm
+import tiqt.settings as settings
 
 
 def HomeView(request):
@@ -172,3 +174,32 @@ class ClienteDeleteView(LoginRequiredMixin, DeleteView):
         context = super().get_context_data(**kwargs)
         context['cliente'] = self.object
         return context
+
+
+class LogoutView(BaseLogoutView):
+    http_method_names = ["post", "options"]
+    template_name = "registration/logged_out.html"
+    extra_context = None
+
+    @method_decorator(csrf_protect)
+    @method_decorator(never_cache)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        """Logout may be done via POST."""
+        auth_logout(request)
+        redirect_to = self.get_success_url()
+        if redirect_to != request.get_full_path():
+            # Redirect to target page once the session has been cleared.
+            return HttpResponseRedirect(redirect_to)
+        return super().get(request, *args, **kwargs)
+
+    def get_default_redirect_url(self):
+        """Return the default redirect URL."""
+        if self.next_page:
+            return resolve_url(self.next_page)
+        elif settings.LOGOUT_REDIRECT_URL:
+            return resolve_url(settings.LOGOUT_REDIRECT_URL)
+        else:
+            return self.request.path

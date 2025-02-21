@@ -55,6 +55,8 @@ class OpenTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
         if form.is_valid():
             if form.cleaned_data['cliente']:
                 queryset = queryset.filter(cliente=form.cleaned_data['cliente'])
+            if form.cleaned_data['departamento']:
+                queryset = queryset.filter(departamento=form.cleaned_data['departamento'])
             if form.cleaned_data['tipo']:
                 queryset = queryset.filter(tipo=form.cleaned_data['tipo'])
             if form.cleaned_data['prioridade']:

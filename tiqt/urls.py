@@ -19,8 +19,8 @@ urlpatterns = [
     path('cliente/novo/', views.ClienteCreateView.as_view(), name='cliente_create'),
     path('cliente/<int:pk>/editar/', views.ClienteUpdateView.as_view(), name='cliente_update'),
     path('cliente/<int:pk>/delete/', views.ClienteDeleteView.as_view(), name='cliente_delete'),
-    path('accounts/login/', auth_views.LoginView.as_view(redirect_authenticated_user=True),name='login'), 
-    path('accounts/logout', auth_views.LogoutView.as_view(), name='logout'),
+    path('login/', auth_views.LoginView.as_view(redirect_authenticated_user=True),name='login'), 
+    path('logout', auth_views.LogoutView.as_view(), name='logout'),
     path('admin/', admin.site.urls),
     path('select2/', include('django_select2.urls')), 
 ]

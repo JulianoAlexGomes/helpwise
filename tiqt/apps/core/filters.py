@@ -1,12 +1,13 @@
 from django import forms
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit
-from .models import Cliente, Tipo, Prioridade
+from .models import Cliente, Tipo, Prioridade, Departamento
 
 class TicketFilterForm(forms.Form):
     cliente = forms.ModelChoiceField(queryset=Cliente.objects.all(), required=False, label='Cliente')
     tipo = forms.ModelChoiceField(queryset=Tipo.objects.all(), required=False, label='Tipo')
     prioridade = forms.ModelChoiceField(queryset=Prioridade.objects.all(), required=False, label='Prioridade')
+    departamento = forms.ModelChoiceField(queryset=Departamento.objects.all(), required=False, label='Departamento')
 
     def __init__(self, *args, **kwargs):
         super(TicketFilterForm, self).__init__(*args, **kwargs)

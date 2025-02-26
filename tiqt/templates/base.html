@@ -13,7 +13,7 @@
        }
 
        @media only screen and (max-width: 992px) {
-       header, main, footer {
+       header, main, footer {s
            padding-left: 0px;
        }
        }
@@ -32,7 +32,8 @@
       <div class="navbar-fixed">
     <nav class="teal">
           <div class="nav-wrapper">
-         <a href="/" class="brand-logo" style="padding: 0 10px;">Sinos HelpDesk</a>
+         {% comment %} <a href="/" class="brand-logo" style="padding: 0 10px;">Sinos HelpDesk</a> {% endcomment %}
+         <a href="/" class="brand-logo" style="padding: 0 10px;" >Sinos HelpDesk</a>
             {% if user.is_authenticated %}
           <a href="#" data-target="slide-out" class="sidenav-trigger"><i class="material-icons">menu</i></a>
         {% endif %}

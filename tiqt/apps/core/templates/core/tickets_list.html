@@ -6,6 +6,7 @@
   <div>
     <h5>Tickets:</h5>
     <form method="get">
+      {% if request.path == '/ticket/open/' %}
       <div class="row">
         <div class="input-field col s4">
           <h6>Cliente</h6>
@@ -20,7 +21,6 @@
           {{ filter_form.prioridade }}
         </div>
       </div>
-      {% if request.path == '/ticket/open/' %}
         <div class="input-field col s12 left-align">
           <button type="submit" class="btn">Filtrar</button>
         </div>

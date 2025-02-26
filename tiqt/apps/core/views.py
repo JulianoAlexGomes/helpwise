@@ -38,9 +38,9 @@ def HomeView(request):
 class MyTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     template_name = 'core/tickets_list.html'
     table_class = TicketTable
-    table_pagination = {
-        'per_page': 10
-    }
+    # table_pagination = {
+    #     'per_page': 10
+    # }
 
     def get_table_data(self, **kwargs):
         return Ticket.objects.filter(status=Ticket.EM_ATENDIMENTO, responsavel=self.request.user)
@@ -69,26 +69,26 @@ class OpenTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
         context['request'] = self.request
         return context
 
-    table_pagination = {
-        'per_page': 10
-    }   
+    # table_pagination = {
+    #     'per_page': 10
+    # }   
 
 class InProgressTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     template_name = 'core/tickets_list.html'
     table_class = TicketTable
     table_data = Ticket.objects.filter(status=Ticket.EM_ATENDIMENTO)
-    table_pagination = {
-        'per_page': 10
-    }
+    # table_pagination = {
+    #     'per_page': 10
+    # }
 
 
 class ClosedTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     template_name = 'core/tickets_list.html'
     table_class = TicketTable
     table_data = Ticket.objects.filter(status=Ticket.ENCERRADO)
-    table_pagination = {
-        'per_page': 10
-    }
+    # table_pagination = {
+    #     'per_page': 10
+    # }
 
 
 class NewTicketView(LoginRequiredMixin, CreateView):

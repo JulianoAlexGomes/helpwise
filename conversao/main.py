@@ -1,17 +1,13 @@
 import pandas as pd
 
 def excel_to_sql_insert(excel_file: str, output_file: str, table_name: str, columns: list[str] = None, start_id: int = 1) -> None:
-    # Lê o arquivo Excel
     df = pd.read_excel(excel_file)
     
-    # Filtra apenas as colunas desejadas, se especificadas
     if columns:
         df = df[columns]
 
-    # Adiciona o campo `id` sequencial ao DataFrame
     df.insert(0, "id", range(start_id, start_id + len(df)))
 
-    # Gera os comandos INSERT com base nos dados do DataFrame
     with open(output_file, "w") as file:
         for _, row in df.iterrows():
             column_names = ", ".join(df.columns)
@@ -27,8 +23,8 @@ def excel_to_sql_insert(excel_file: str, output_file: str, table_name: str, colu
 # Exemplo de uso:
 excel_file = "D:/Projetos/TIQT/tiqt-master/helpwise/conversao/arquivo.xlsx"
 output_file = "D:/Projetos/TIQT/tiqt-master/helpwise/conversao/arquivo.txt"
-table_name = "table"
-selected_columns = []  # Todas as colunas  do arquivo Excel    
+table_name = "temp_storage"
+selected_columns = []  
 start_id = 1
 
 excel_to_sql_insert(excel_file, output_file, table_name, selected_columns, start_id)

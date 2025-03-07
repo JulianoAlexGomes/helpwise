@@ -1,6 +1,8 @@
 from pathlib import Path
 from decouple import config
 import os
+import pymysql
+pymysql.install_as_MySQLdb()
 # import dj_database_url
 
 # Project Path
@@ -13,12 +15,27 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = True
 
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': 'db.sqlite3',
+#     }
+# }
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'prd1',
+        'USER': 'admin',
+        'PASSWORD': 'Desenv@112025',
+        'HOST': 'localhost',
+        'PORT': '3306',
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
+        }
     }
 }
+
 
 AUTH_USER_MODEL = 'core.User'
 
@@ -46,13 +63,18 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # 3rd party apps
-    'material',
+    # 'material',
     'django_tables2',
     # My apps
     'tiqt.apps.core',
     'crispy_forms',
     'django_select2',
+    'dbbackup',
+    "crispy_bootstrap5",  # Ou outro tema, como 'crispy_tailwind'
 ]
+
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

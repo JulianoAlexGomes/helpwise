@@ -23,6 +23,7 @@ class Tipo(models.Model):
 
 
 class Prioridade(models.Model):
+    id = models.AutoField(primary_key=True)
     descricao = models.CharField(max_length=20, null=True, blank=True)
     observacoes = models.TextField(max_length= 100, null=True, blank=True, default=1)
 
@@ -54,20 +55,20 @@ class Tributacao(models.Model):
     
 
 class Cliente(models.Model):
-    razao_social = models.CharField(max_length=50, null=True, blank=True)
-    fantasia = models.CharField(max_length=50, null=True, blank=True)
+    razao_social = models.CharField(max_length=120, null=True, blank=True)
+    fantasia = models.CharField(max_length=120, null=True, blank=True)
     cnpj = models.CharField(max_length=14, null=True, blank=True)
     telefone = models.CharField(max_length=11, null=True, blank=True)
-    email = models.EmailField(max_length=50, null=True, blank=True)
-    endereco = models.CharField(max_length=50, null=True, blank=True)
+    email = models.EmailField(max_length=120, null=True, blank=True)
+    endereco = models.CharField(max_length=120, null=True, blank=True)
     numero = models.CharField(max_length=10, null=True, blank=True)
-    bairro = models.CharField(max_length=50, null=True, blank=True)
+    bairro = models.CharField(max_length=120, null=True, blank=True)
     cep = models.CharField(max_length=8, null=True, blank=True)
-    complemento = models.CharField(max_length=50, null=True, blank=True)
+    complemento = models.CharField(max_length=120, null=True, blank=True)
     cidade = models.ForeignKey(Cidade, on_delete=models.PROTECT, null=True, blank=True)
     uf = models.ForeignKey(Uf, on_delete=models.PROTECT, null=True, blank=True)
     tributacao = models.ForeignKey(Tributacao, on_delete=models.PROTECT, null=True, blank=True)
-    responsavel = models.CharField(max_length=50, null=True, blank=True)
+    responsavel = models.CharField(max_length=120, null=True, blank=True)
     observacao = models.TextField(null=True, blank=True)
     data_cadastro = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     data_alteracao = models.DateTimeField(auto_now=True, null=True, blank=True)

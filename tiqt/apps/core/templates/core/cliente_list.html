@@ -8,6 +8,7 @@
 <table class="striped">
     <thead>
         <tr>
+            <th style="font-weight: bold">Uid</th>
             <th style="font-weight: bold">Nome Fantasia</th>
             <th style="font-weight: bold">CNPJ</th>
             <th style="font-weight: bold">Cidade</th>
@@ -19,6 +20,7 @@
     <tbody>
         {% for cliente in clientes %}
         <tr>
+            <td>{{ cliente.uid }}</td>
             <td>{{ cliente.fantasia }}</td>
             <td>{{ cliente.cnpj }}</td>
             <td>{{ cliente.cidade }}</td>

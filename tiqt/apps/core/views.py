@@ -155,6 +155,9 @@ class ClienteListView(ListView):
     template_name = 'core/cliente_list.html'
     context_object_name = 'clientes'
 
+    def get_queryset(self):
+        return Cliente.objects.all().order_by('fantasia')
+
 class ClienteCreateView(CreateView):
     model = Cliente
     form_class = ClienteForm

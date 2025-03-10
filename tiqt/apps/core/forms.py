@@ -15,27 +15,21 @@ class ClienteForm(forms.ModelForm):
                     'cidade',
                     'uf',
                     'tributacao',
+                    'uid',
                 ]
         widgets = {
-            'fantasia': forms.TextInput(attrs={'id': 'id_fantasia'}),
+            'fantasia': forms.TextInput(attrs={'id': 'id_fantasia'},),
             'cnpj': forms.TextInput(attrs={'id': 'id_cnpj'}),
             'cidade': forms.TextInput(attrs={'id': 'id_cidade'}),
             'uf': forms.TextInput(attrs={'id': 'id_uf'}),
             'tributacao': forms.TextInput(attrs={'id': 'id_tributacao'}),
+            'uid': forms.TextInput(attrs={'id': 'id_uid'}),
         }
 
 class TicketForm(forms.ModelForm):
     class Meta:
         model = Ticket
         fields = ['tipo', 'departamento', 'cliente', 'prioridade']
-
-# class TicketCloseForm(forms.ModelForm):
-#     class Meta:
-#         model = Solucao
-#         fields = ['solucao']
-
-# class TicketCloseForm(forms.Form):
-#     solucao = forms.CharField(widget=forms.Textarea, label='Solução')
 
 
 class TicketCloseForm(forms.Form):

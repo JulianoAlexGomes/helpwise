@@ -75,6 +75,7 @@ class Cliente(models.Model):
     ativo = models.BooleanField(default=True, null=True, blank=True)
     motivo_inativacao = models.TextField(null=True, blank=True)
     data_inativacao = models.DateTimeField(null=True, blank=True)
+    uid = models.CharField(max_length=120, null=True, blank=True)
 
     def __str__(self):
         return f"{self.fantasia or ''} - {self.cidade or ''}/{self.uf or ''}"

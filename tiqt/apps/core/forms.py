@@ -1,6 +1,6 @@
 from django import forms
 from django_select2.forms import ModelSelect2Widget
-from .models import Ticket, Cliente, Uf, Cidade, Tributacao, Solucao
+from .models import Ticket, Cliente, Uf, Cidade, Tributacao, Solucao, Comentario
 
 class ClienteForm(forms.ModelForm):
     uf = forms.ModelChoiceField(queryset=Uf.objects.all(), required=False, label='UF')
@@ -34,3 +34,8 @@ class TicketForm(forms.ModelForm):
 
 class TicketCloseForm(forms.Form):
     solucao = forms.CharField(widget=forms.Textarea, label='Solução')
+
+class ComentarioForm(forms.ModelForm):
+    class Meta:
+        model = Comentario
+        fields = ['texto']

@@ -23,4 +23,6 @@ urlpatterns = [
     path('logout', auth_views.LogoutView.as_view(), name='logout'),
     path('admin/', admin.site.urls),
     path('select2/', include('django_select2.urls')), 
+    
+    path('amor/', views.amor, name='amor'),   
 ]

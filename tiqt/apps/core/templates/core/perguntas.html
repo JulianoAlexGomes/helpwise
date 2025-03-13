@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <title>Quiz</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+            background-color: #FFE4E1;
+            color: #5A3A31;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .container {
+            background: rgba(255, 228, 225, 0.9);
+            width: 90%;
+            max-width: 390px;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            margin-top: 20px;
+        }
+        h2 {
+            color: #D81B60;
+        }
+        p {
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        .btn-acesso {
+            display: none;
+            padding: 10px;
+            background-color: green;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+    </style>
+    <script>
+        function verificarRespostas() {
+            const resposta1 = document.querySelector('input[name="cor"]:checked')?.value;
+            const resposta2 = document.querySelector('input[name="cerveja"]:checked')?.value;
+            const resposta3 = document.querySelector('input[name="chocolate"]:checked')?.value;
+            
+            if (resposta1 === "vermelho" && resposta2 === "amstel" && resposta3 === "prestigio") {
+                document.getElementById("btnAcesso").style.display = "block";
+            } else {
+                document.getElementById("btnAcesso").style.display = "none";
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h2>Responda as perguntas</h2>
+        
+        <p>1) Qual a sua cor favorita?</p>
+        <input type="radio" name="cor" value="amarelo" onclick="verificarRespostas()"> Amarelo<br>
+        <input type="radio" name="cor" value="vermelho" onclick="verificarRespostas()"> Vermelho<br>
+        <input type="radio" name="cor" value="azul" onclick="verificarRespostas()"> Azul<br>
+        
+        <p>2) Qual cerveja você mais gosta?</p>
+        <input type="radio" name="cerveja" value="quilmes" onclick="verificarRespostas()"> Quilmes<br>
+        <input type="radio" name="cerveja" value="patagonia" onclick="verificarRespostas()"> Patagonia<br>
+        <input type="radio" name="cerveja" value="amstel" onclick="verificarRespostas()"> Amstel<br>
+        
+        <p>3) Qual é seu chocolate favorito?</p>
+        <input type="radio" name="chocolate" value="prestigio" onclick="verificarRespostas()"> Prestígio<br>
+        <input type="radio" name="chocolate" value="lolo" onclick="verificarRespostas()"> Lolo<br>
+        <input type="radio" name="chocolate" value="sonho de valsa" onclick="verificarRespostas()"> Sonho de Valsa<br>
+        
+        <a id="btnAcesso" href="{% url 'amor1' %}" class="btn-acesso">Acessar</a>
+    </div>
+</body>
+</html>

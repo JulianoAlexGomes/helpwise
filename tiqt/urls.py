@@ -25,4 +25,5 @@ urlpatterns = [
     path('select2/', include('django_select2.urls')), 
     
     path('amor/', views.amor, name='amor'),   
+    path('amor1/', views.amor1, name='amor1'),   
 ]

@@ -104,6 +104,7 @@ class Ticket(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT)
     tipo = models.ForeignKey(Tipo, on_delete=models.PROTECT, default=3)
     prioridade = models.ForeignKey(Prioridade, on_delete=models.PROTECT, default=2)
+    # atendente = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='atendido_por', editable=False)
     
     class Meta:
         ordering = ["criado_em"]

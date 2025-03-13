@@ -34,6 +34,9 @@ def HomeView(request):
 
     return render(request, 'core/home.html', context)
 
+def amor(request):
+    return render(request, 'core/amor.html')
+
 
 class MyTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     template_name = 'core/tickets_list.html'

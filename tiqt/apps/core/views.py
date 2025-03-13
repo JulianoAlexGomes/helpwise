@@ -7,13 +7,11 @@ from django.contrib.auth.views import LogoutView as BaseLogoutView
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.cache import never_cache
-from django.forms import modelform_factory
 from django.shortcuts import reverse, render, resolve_url, get_object_or_404
 from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy
 from django_tables2 import SingleTableMixin
-from tiqt.apps.core.models import Ticket
-from tiqt.apps.core.models import Comentario
+from tiqt.apps.core.models import Ticket, Comentario
 from tiqt.apps.core.tables import TicketTable
 from .forms import TicketForm, ClienteForm, TicketCloseForm, ComentarioForm
 from .models import Cliente, Ticket, Solucao
@@ -97,8 +95,23 @@ class ClosedTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
 
 
 class NewTicketView(LoginRequiredMixin, CreateView):
-    template_name = 'core/ticket_form.html'
+    model = Ticket
     form_class = TicketForm
+    template_name = 'core/ticket_form.html'
+    success_url = reverse_lazy('ticket_list')
+
+# class NewTicketView(View):
+#     def get(self, request):
+#         form = TicketForm()
+#         return render(request, 'core/ticket_form.html', {'form': form})
+
+#     def post(self, request):
+#         form = TicketForm(request.POST)
+#         if form.is_valid():
+#             form.save()
+#             return HttpResponseRedirect('/')
+#         return render(request, 'core/ticket_form.html', {'form': form})
+ 
 
 
 class TicketUpdateView(LoginRequiredMixin, UpdateView):
@@ -125,18 +138,6 @@ class TicketDetailView(View):
             return HttpResponseRedirect(reverse('ticket_detail', kwargs={'pk': pk}))
         comments = Comentario.objects.filter(ticket=ticket).order_by('-criado_em')
         return render(request, 'core/ticket_detail.html', {'object': ticket, 'comments': comments, 'form': form})
-
-# class TicketDetailView(LoginRequiredMixin, DetailView):
-#     template_name = 'core/ticket_detail.html'
-#     model = Ticket
-
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         context["comment_form"] = modelform_factory(
-#             Comentario, exclude=('criado_em', 'ticket', ))
-#         context["comments"] = self.object.comentario_set.all()
-#         return context
-
 
 class TicketAcceptView(LoginRequiredMixin, View):
 

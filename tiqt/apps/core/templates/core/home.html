@@ -5,7 +5,7 @@
     <div class="col s12 m4">
       <div class="card teal">
         <div class="card-content white-text">
-          <span class="card-title - center">Em Aberto</span>
+          <span class="card-title center">Em Aberto</span>
           <h2 class="center">{{ atendimentos_aberto }}</h2>
         </div>
       </div>
@@ -13,7 +13,7 @@
     <div class="col s12 m4">
       <div class="card orange">
         <div class="card-content white-text">
-          <span class="card-title - center">Em Andamento</span>
+          <span class="card-title center">Em Andamento</span>
           <h2 class="center">{{ atendimentos_andamento }}</h2>
         </div>
       </div>
@@ -21,7 +21,7 @@
     <div class="col s12 m4">
       <div class="card green">
         <div class="card-content white-text">
-          <span class="card-title - center">Finalizados</span>
+          <span class="card-title center">Finalizados</span>
           <h2 class="center">{{ atendimentos_finalizados }}</h2>
         </div>
       </div>
@@ -61,6 +61,8 @@
         }]
       },
       options: {
+        responsive: true,
+        maintainAspectRatio: false,
         scales: {
           y: {
             beginAtZero: true

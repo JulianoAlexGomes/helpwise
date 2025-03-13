@@ -35,6 +35,8 @@ def HomeView(request):
     return render(request, 'core/home.html', context)
 
 def amor(request):
+    return render(request, 'core/perguntas.html')
+def amor1(request):
     return render(request, 'core/amor.html')
 
 

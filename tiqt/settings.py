@@ -28,8 +28,8 @@ DATABASES = {
         'NAME': 'prd1',
         'USER': 'admin',
         'PASSWORD': 'Desenv@112025',
-        # 'HOST': '185.137.92.173',
-        'HOST': 'localhost',
+        'HOST': '185.137.92.173',
+        # 'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
@@ -43,11 +43,7 @@ AUTH_USER_MODEL = 'core.User'
 ALLOWED_HOSTS = ['10.0.0.97', '127.0.0.1', '185.137.92.173','www.brothersti.com','brothersti.com','app1.brothersti.com']
 
 STATIC_URL = '/static/'
-
-# STATIC_ROOT = os.path.join(PROJECT_DIR, 'staticfiles')
-
-# Diretórios adicionais onde Django deve procurar arquivos estáticos
-STATIC_ROOT = '/root/projetos/oficial/helpwise/tiqt/staticfiles/'
+STATIC_ROOT = os.path.join(PROJECT_DIR, 'staticfiles')
 
 
 LOGIN_REDIRECT_URL = '/'
@@ -63,10 +59,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # 3rd party apps
-    # 'material',
     'django_tables2',
-    # My apps
     'tiqt.apps.core',
     'crispy_forms',
     'django_select2',

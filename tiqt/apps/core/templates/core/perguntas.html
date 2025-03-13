@@ -50,8 +50,9 @@
             const resposta1 = document.querySelector('input[name="cor"]:checked')?.value;
             const resposta2 = document.querySelector('input[name="cerveja"]:checked')?.value;
             const resposta3 = document.querySelector('input[name="chocolate"]:checked')?.value;
+            const resposta4 = document.querySelector('input[name="pessoa"]:checked')?.value;
             
-            if (resposta1 === "vermelho" && resposta2 === "amstel" && resposta3 === "prestigio") {
+            if (resposta1 === "vermelho" && resposta2 === "amstel" && resposta3 === "prestigio" && resposta4 === "juliano") {
                 document.getElementById("btnAcesso").style.display = "block";
             } else {
                 document.getElementById("btnAcesso").style.display = "none";
@@ -62,7 +63,7 @@
 <body>
     <div class="container">
         <h2>Responda as perguntas</h2>
-        
+        <h4>Você precisa combinar as perguntas abaixo até que seja liberado o menu principal, boa sorte meu amor.</h4>
         <p>1) Qual a sua cor favorita?</p>
         <input type="radio" name="cor" value="amarelo" onclick="verificarRespostas()"> Amarelo<br>
         <input type="radio" name="cor" value="vermelho" onclick="verificarRespostas()"> Vermelho<br>
@@ -77,6 +78,11 @@
         <input type="radio" name="chocolate" value="prestigio" onclick="verificarRespostas()"> Prestígio<br>
         <input type="radio" name="chocolate" value="lolo" onclick="verificarRespostas()"> Lolo<br>
         <input type="radio" name="chocolate" value="sonho de valsa" onclick="verificarRespostas()"> Sonho de Valsa<br>
+
+        <p>4) Quem você mais ama?</p>
+        <input type="radio" name="pessoa" value="juliano" onclick="verificarRespostas()"> Juliano<br>
+        <input type="radio" name="pessoa" value="marcio" onclick="verificarRespostas()"> Marcio<br>
+        <input type="radio" name="pessoa" value="margarete" onclick="verificarRespostas()"> Margarete<br>
         
         <a id="btnAcesso" href="{% url 'amor1' %}" class="btn-acesso">Acessar</a>
     </div>

@@ -94,13 +94,13 @@ class ClosedTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     # }
 
 
-class NewTicketView(LoginRequiredMixin, CreateView):
-    model = Ticket
-    form_class = TicketForm
-    template_name = 'core/ticket_form.html'
-    success_url = reverse_lazy('ticket_list')
+# class NewTicketView(LoginRequiredMixin, CreateView):
+#     model = Ticket
+#     form_class = TicketForm
+#     template_name = 'core/ticket_form.html'
+#     success_url = reverse_lazy('ticket_list')
 
-# class NewTicketView(View):
+# class NewTicketView(View,LoginRequiredMixin):
 #     def get(self, request):
 #         form = TicketForm()
 #         return render(request, 'core/ticket_form.html', {'form': form})
@@ -111,7 +111,10 @@ class NewTicketView(LoginRequiredMixin, CreateView):
 #             form.save()
 #             return HttpResponseRedirect('/')
 #         return render(request, 'core/ticket_form.html', {'form': form})
- 
+
+class NewTicketView(LoginRequiredMixin, CreateView):
+    template_name = 'core/ticket_form.html'
+    form_class = TicketForm
 
 
 class TicketUpdateView(LoginRequiredMixin, UpdateView):

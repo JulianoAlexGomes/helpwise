@@ -32,8 +32,8 @@
   </head>
   <body>
     <header>
-      <div class="navbar-fixed">
-    <nav class="teal">
+      <div class="navbar black" >
+    <nav class="black" >
           <div class="nav-wrapper">
          <a href="/" class="brand-logo" style="padding: 0 10px;">Sinos HelpDesk</a>
             {% if user.is_authenticated %}
@@ -46,7 +46,7 @@
     <ul id="slide-out" class="sidenav sidenav-fixed z-depth-1" style="height: 100%; transform: translateX(0%);">
       <li>
         <div class="user-view">
-              <div class="background">
+              <div class="background black">
         <img alt="" src="https://via.placeholder.com/300x200/00796b/00796b"/>
           </div>
         <img class="circle" alt="" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde"/>
@@ -60,10 +60,11 @@
       <li><a href="{% url 'my_tickets' %}"><i class="material-icons center">assignment</i><span class="show-on-small">Meus Tickets</span></a></li>
       <li><a href="{% url 'open_tickets' %}"><i class="material-icons center">inbox</i><span class="show-on-small">Tickets Abertos</span></a></li>
       <li><a href="{% url 'inprogress_tickets' %}"><i class="material-icons center">assignment_ind</i><span class="show-on-small">Tickets em Atendimento</span></a></li>
-      <li><a href="{% url 'closed_tickets' %}"><i class="material-icons center">assignment_turned_in</i><span class="show-on-small">Tickets Fechados</span></a></li>
+      <li><a href="{% url 'closed_tickets' %}"><i class="material-icons center">assignment_turned_in</i><span class="show-on-small">Tickets Encerrados</span></a></li>
+      <li><a href="{% url 'canceled_tickets' %}"><i class="material-icons center">event_busy</i><span class="show-on-small">Tickets Cancelados</span></a></li>
+      <li><a href="{% url 'everyone_tickets' %}"><i class="material-icons center">article</i><span class="show-on-small">Todos Tickets</span></a></li>
       <li><div class="divider"></div></li>
       <li><a href="{% url 'new_ticket' %}"><i class="material-icons center">add</i><span class="show-on-small">Novo</span></a></li>
-      {% comment %} <li><a href="{% url 'logout' %}"><i class="material-icons center">logout</i><span class="show-on-small">Sair</span></a></li> {% endcomment %}
       <div class="center">
         <form  method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit" class="btn">Logoff</button></form>
       </div>

@@ -1,7 +1,12 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
-
+from django.core.exceptions import ValidationError
+from django.contrib.auth.models import User
+from PIL import Image
+import os
+import uuid
+from django.conf import settings
 
 class User(AbstractUser):
     pass
@@ -17,6 +22,13 @@ class Tipo(models.Model):
 
     descricao = models.CharField(max_length=100)
     departamento = models.ForeignKey(Departamento, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.descricao
+
+class TipoAcao(models.Model):
+
+    descricao = models.CharField(max_length=100)
 
     def __str__(self):
         return self.descricao
@@ -48,6 +60,12 @@ class Cidade(models.Model):
 
 
 class Tributacao(models.Model):
+    descricao = models.CharField(max_length=50, null=True, blank=True)
+
+    def __str__(self):
+        return self.descricao
+    
+class Situacao(models.Model):
     descricao = models.CharField(max_length=50, null=True, blank=True)
 
     def __str__(self):
@@ -96,16 +114,22 @@ class Ticket(models.Model):
     )
 
     departamento = models.ForeignKey(Departamento, on_delete=models.PROTECT, default=1)
-    responsavel = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='responsavel_por', editable=False)
+    responsavel = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='responsavel_por', editable=True)
     criado_em = models.DateTimeField(auto_now_add=True, editable=False)
     iniciado_em = models.DateTimeField(null=True, blank=True, editable=False)
     encerrado_em = models.DateTimeField(null=True, blank=True, editable=False)
+    cancelado_em = models.DateTimeField(null=True, blank=True, editable=False)
     status = models.SmallIntegerField(choices=STATUS, default=ABERTO, editable=False)
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT)
     tipo = models.ForeignKey(Tipo, on_delete=models.PROTECT, default=3)
     prioridade = models.ForeignKey(Prioridade, on_delete=models.PROTECT, default=2)
-    # atendente = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='atendido_por', editable=False)
-    
+    atendente = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='atendido_por', editable=False)
+    protocolo = models.CharField(max_length=20, null=True, blank=True)
+    titulo = models.CharField(max_length=60, null=True, blank=True)
+    situacao = models.ForeignKey(Situacao, on_delete=models.PROTECT, default=1)
+    cancelado = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='cancelado_por', editable=True)
+
+
     class Meta:
         ordering = ["criado_em"]
 
@@ -120,6 +144,12 @@ class Ticket(models.Model):
         self.encerrado_em = timezone.localtime()
         self.save()
 
+    def cancelar_atendimento(self, user):
+        self.cancelado = user
+        self.status = self.CANCELADO
+        self.cancelado_em = timezone.localtime()
+        self.save()
+
     def get_absolute_url(self):
         from django.shortcuts import reverse
         return reverse("ticket_detail", kwargs={"pk": self.pk})
@@ -132,18 +162,36 @@ class Ticket(models.Model):
         solucao = self.solucao_set.order_by('-criado_em').first()
         return solucao.texto if solucao else ''
 
+    def get_solucoes(self):
+        return self.solucao_set.all()
 
-class Comentario(models.Model):
-    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE)
-    criado_em = models.DateTimeField(auto_now_add=True)
-    texto = models.TextField()
-    autor = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, editable=False)
 
-    class Meta:
-        ordering = ["-criado_em"]
+def validate_file_size(value):
+    filesize = value.size
+    
+    # Garantir que estamos lidando com um arquivo carregado na request
+    if hasattr(value, 'content_type'):
+        content_type = value.content_type
+    else:
+        content_type = ''
 
-    def __str__(self):
-        return self.texto
+    if content_type.startswith('image'):
+        if filesize > 300 * 1024:
+            raise ValidationError("A imagem não pode ser maior que 300KB")
+    else:
+        if filesize > 30 * 1024 * 1024:
+            raise ValidationError("O arquivo não pode ser maior que 30MB")
+
+def upload_to(instance, filename):
+    ext = filename.split('.')[-1]
+    filename = f"{uuid.uuid4()}.{ext}"  # Garante nomes únicos
+    return os.path.join('comentarios', filename)
+
+def resize_image(self):
+    img = Image.open(self.imagem.path)
+    if img.size > (300, 300):
+        img.thumbnail((300, 300), Image.LANCZOS)
+        img.save(self.imagem.path)
 
 class Solucao(models.Model):
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE)
@@ -156,4 +204,30 @@ class Solucao(models.Model):
 
     def __str__(self):
         return self.texto
-    
+
+class Comentario(models.Model):
+    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name="comentarios")  # 🔥 Adicionando a ForeignKey
+    texto = models.TextField()
+    proximo_contato = models.DateTimeField(null=True, blank=True)
+    tipo = models.ForeignKey(TipoAcao, on_delete=models.PROTECT, null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    autor = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"Comentário de {self.autor} no Ticket #{self.ticket.id}"
+
+class ComentarioArquivo(models.Model):
+    comentario = models.ForeignKey(Comentario, on_delete=models.CASCADE, related_name='arquivos')
+    arquivo = models.FileField(upload_to='comentarios_arquivos/')
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Arquivo ({self.arquivo.name})"
+
+class ComentarioImagem(models.Model):
+    comentario = models.ForeignKey(Comentario, on_delete=models.CASCADE, related_name='imagens')
+    imagem = models.ImageField(upload_to='comentarios_imagens/')
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Imagem ({self.imagem.name})"

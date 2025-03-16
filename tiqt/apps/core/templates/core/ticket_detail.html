@@ -4,46 +4,87 @@
 {% block content %}
   <div class="row">
     <div class="col l8 m8">
-      <form method="post" action="{% url 'ticket_comment' object.id %}"> {% csrf_token %}
+      <form method="post" action="{% url 'ticket_detail' object.id %}" enctype="multipart/form-data">
+        {% csrf_token %}
         {{ form|crispy }}
+
+        <label for="id_arquivos">Anexar arquivos:</label>
+        <input type="file" name="arquivos" id="id_arquivos" multiple>
+
+        <label for="id_imagens">Anexar imagens:</label>
+        <input type="file" name="imagens" id="id_imagens" multiple accept="image/*">
+
         <button class="btn" type="submit">Salvar</button>
-      </form>
-      
+      </form method="post" enctype="multipart/form-data">
       {% for comment in comments %}
-        <div class="section">
-          <div class="row">
-            <div class="col l3">
-              <b>Em:</b> {{ comment.criado_em|date:"d/m/y à\s H:i" }}</br>
-              <b>Por:</b> {{ comment.autor.username|default:"Anonimo" }}
-            </div>
-            <div class="col l9">
-              <p>{{ comment.texto }}</p>
-            </div>
+      <div class="section">
+        <div class="row">
+          <div class="col l3">
+            <b>Em:</b> {{ comment.criado_em|date:"d/m/y à\s H:i" }}</br>
+            <b>Por:</b> {{ comment.autor.username|default:"Anônimo" }}
+
+            {% if comment.imagens.all %}
+              <p><b>Imagens:</b></p>
+              <div>
+                {% for imagem in comment.imagens.all %}
+                  <img src="{{ imagem.imagem.url }}" alt="Imagem do comentário" width="100">
+                  <a href="{{ imagem.imagem.url }}" download>Baixar</a>
+                {% endfor %}
+              </div>
+            {% endif %}
+    
+            {% if comment.arquivos.all %}
+              <p><b>Arquivos:</b></p>
+              <ul>
+                {% for arquivo in comment.arquivos.all %}
+                  <li><a href="{{ arquivo.arquivo.url }}" download>{{ arquivo.arquivo.name }}</a></li>
+                {% endfor %}
+              </ul>
+            {% endif %}
           </div>
-          <div class="divider"></div>
+          <div class="col l9">
+            {{ comment.texto }}
+          </div>
         </div>
-      {% endfor %}
+      </div>
+    {% endfor %}
+    
     </div>
     <div class="col l4 m4 z-depth-1">
-      <H5>Detalhes:</H5>
+      <h5>Detalhes:</h5>
       <p><b>Número: </b>{{ object.id }}</p>
+      <p><b>Atendente: </b>{{ object.atendente }}</p>
       <p><b>Cliente: </b>{{ object.cliente }}</p>
-      <p><b>Responsável: </b>{{ object.responsavel|default_if_none:"- - -" }}</p>
+      <p><b>Responsável: </b>{{ object.responsavel|default_if_none:" " }}</p>
       <p><b>Criado em: </b>{{ object.criado_em|date:"d/m/y à\s H:i" }}</p>
-      <p><b>Iniciado em: </b>{{ object.iniciado_em|date:"d/m/y à\s H:i"|default:"- - -" }}</p>
-      <p><b>Encerrado em: </b>{{ object.encerrado_em|date:"d/m/y à\s H:i"|default:"- - -" }}</p>
+      <p><b>Iniciado em: </b>{{ object.iniciado_em|date:"d/m/y à\s H:i"|default:" " }}</p>
+      <p><b>Encerrado em: </b>{{ object.encerrado_em|date:"d/m/y à\s H:i"|default:" " }}</p>
       <p><b>Idade: </b>{{ object.criado_em|timesince:object.encerrado_em }}</p>
       <p><b>Status: </b>{{ object.get_status_display }}</p>
       <p><b>Tipo: </b>{{ object.tipo }}</p>
       <p><b>Prioridade: </b>{{ object.prioridade }}</p>
+      <p><b>Cancelado por: </b>{{ object.cancelado|default_if_none:" " }}</p>
+      <p><b>Cancelado em: </b>{{ object.cancelado_em|date:"d/m/y à\s H:i"|default:" " }}</p>
+      {% if solucoes %}
+        <h5>Solução:</h5>
+        {% for solucao in solucoes %}
+          <p><b>Autor: </b>{{ solucao.autor }}</p>
+          <p><b>Data: </b>{{ solucao.criado_em|date:"d/m/y à\s H:i" }}</p>
+          <p><b>Descrição: </b>{{ solucao.texto }}</p>
+          <div class="divider"></div>
+        {% endfor %}
+      {% endif %}
     </div>
     <div class="fixed-action-btn">
-      <a class="btn-floating btn-large red {% if object.encerrado_em %} disabled {% endif %}" href="{% url 'ticket_update' object.id %}"><i class="material-icons large">edit</i></a>
+      <a class="btn-floating btn-large red {% if object.encerrado_em or object.cancelado %} disabled {% endif %}" href="{% url 'ticket_update' object.id %}"><i class="material-icons large">edit</i></a>
       <ul>
-        {% if not object.responsavel %}
+        {% if not object.cancelado and not object.encerrado_em%}
+          <li><a class="btn-floating teal" href="{% url 'ticket_cancel' object.id %}"><i class="material-icons">cancel</i></a></li>
+        {% endif %}
+        {% if not object.cancelado and not object.iniciado_em %}
           <li><a class="btn-floating teal" href="{% url 'ticket_accept' object.id %}"><i class="material-icons">playlist_add</i></a></li>
         {% endif %}
-        {% if object.responsavel and not object.encerrado_em %}
+        {% if object.responsavel and not object.encerrado_em and not object.cancelado and object.iniciado_em  %}
           <li><a class="btn-floating teal" href="{% url 'ticket_close' object.id %}"><i class="material-icons">check</i></a></li>
         {% endif %}
       </ul>

@@ -3,30 +3,72 @@
 {% load crispy_forms_tags %}
 
 {% block content %}
-  <div>
+  <div class="container-fluid">
     <h5>Tickets:</h5>
     <form method="get">
-      {% if request.path == '/ticket/open/' %}
+      {% if request.path != '/ticket/my/' %}
       <div class="row">
-        <div class="input-field col s4">
+        <div class="col s12 m4">
           <h6>Cliente</h6>
           {{ filter_form.cliente }}
         </div>
-        <div class="input-field col s4">
+        <div class="col s12 m2">
+          <h6>Tipo</h6>
+          {{ filter_form.tipo }}
+        </div>
+        <div class="col s12 m2">
           <h6>Departamento</h6>
           {{ filter_form.departamento }}
         </div>
-        <div class="input-field col s4">
+        <div class="col s12 m2">
           <h6>Prioridade</h6>
           {{ filter_form.prioridade }}
         </div>
+        <div class="col s12 m2">
+          <h6>Situação</h6>
+          {{ filter_form.situacao }}
+        </div>
       </div>
-        <div class="input-field col s12 left-align">
+      <div class="row">
+        <div class="col s12 m2">
+          <h6>Criado</h6>
+          {{ filter_form.criado_em_inicio }}
+        </div>
+        <div class="col s12 m2">
+            <h6 style="color: white;">111111</h6>
+          {{ filter_form.criado_em_fim }}
+        </div>
+        <div class="col s12 m2">
+          <h6>Encerrado</h6>
+          {{ filter_form.encerrado_em_inicio }}
+        </div>
+        <div class="col s12 m2">
+          <h6 style="color: white;">111111</h6>
+          {{ filter_form.encerrado_em_fim }}
+        </div>
+        <div class="col s12 m2">
+          <h6>Solução</h6>
+          {{ filter_form.solucao_criado_em_inicio }}
+        </div>
+        <div class="col s12 m2">
+          <h6 style="color: white;">111111</h6>
+          {{ filter_form.solucao_criado_em_fim }}
+        </div>
+      </div>
+      <div class="row">
+        <div class="col s12 left-align">
           <button type="submit" class="btn">Filtrar</button>
         </div>
-      {% endif %}
+      </div>
+      {% endif %}   
     </form>
-    {% render_table table %}
-    <div class="divider"></div>
+    <div class="row">
+      <div class="col s12 center">
+        {% render_table table %}
+      </div>
+    </div>
+    <div class="row">
+    </div>
+    <div class="divider white"></div>
   </div>
 {% endblock content %}

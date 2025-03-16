@@ -2,7 +2,7 @@
 
 {% block content %}
   <div class="row">
-    <div class="col s12 m4">
+    <div class="col s12 m3">
       <div class="card teal">
         <div class="card-content white-text">
           <span class="card-title center">Em Aberto</span>
@@ -10,7 +10,7 @@
         </div>
       </div>
     </div>
-    <div class="col s12 m4">
+    <div class="col s12 m3">
       <div class="card orange">
         <div class="card-content white-text">
           <span class="card-title center">Em Andamento</span>
@@ -18,11 +18,19 @@
         </div>
       </div>
     </div>
-    <div class="col s12 m4">
+    <div class="col s12 m3">
       <div class="card green">
         <div class="card-content white-text">
-          <span class="card-title center">Finalizados</span>
-          <h2 class="center">{{ atendimentos_finalizados }}</h2>
+          <span class="card-title center">Encerrados</span>
+          <h2 class="center">{{ atendimentos_encerrados }}</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col s12 m3">
+      <div class="card red">
+        <div class="card-content white-text">
+          <span class="card-title center">Cancelados</span>
+          <h2 class="center">{{ atendimentos_cancelados }}</h2>
         </div>
       </div>
     </div>
@@ -43,25 +51,26 @@
     var atendimentosChart = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: ['Aberto', 'Em Andamento', 'Finalizado'],
+        labels: ['Aberto', 'Em Andamento', 'Finalizado', 'Cancelados'],
         datasets: [{
           label: 'Atendimentos',
-          data: [{{ atendimentos_aberto }}, {{ atendimentos_andamento }}, {{ atendimentos_finalizados }}],
+          data: [{{ atendimentos_aberto }}, {{ atendimentos_andamento }}, {{ atendimentos_encerrados }}, {{ atendimentos_cancelados }}],
           backgroundColor: [
             'rgba(0, 150, 136, 0.6)',
             'rgba(255, 152, 0, 0.6)',
-            'rgba(76, 175, 80, 0.6)'
+            'rgba(76, 175, 80, 0.6)',
+            'rgba(231, 70, 70, 0.6)'
           ],
           borderColor: [
             'rgba(0, 150, 136, 1)',
             'rgba(255, 152, 0, 1)',
-            'rgba(76, 175, 80, 1)'
+            'rgba(76, 175, 80, 1)',
+            'rgb(200, 98, 98)'
           ],
           borderWidth: 1
         }]
       },
       options: {
-
         scales: {
           y: {
             beginAtZero: true

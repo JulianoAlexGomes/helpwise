@@ -12,7 +12,7 @@ SECRET_KEY = config('SECRET_KEY')
 
 # DEBUG = config('DEBUG', default=False, cast=bool)
 
-DEBUG = True
+DEBUG = False
 
 
 # DATABASES = {
@@ -27,9 +27,9 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'prd1',
         'USER': 'admin',
-        'PASSWORD': 'Desenv@112025',
+        # 'PASSWORD': 'Desenv@112025',
         'HOST': '185.137.92.173',
-        # 'HOST': 'localhost',
+        'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
@@ -136,3 +136,5 @@ USE_TZ = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(PROJECT_DIR, 'media')

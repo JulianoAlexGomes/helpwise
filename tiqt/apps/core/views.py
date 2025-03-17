@@ -19,6 +19,8 @@ from .models import Cliente, Ticket, Solucao, ComentarioArquivo, ComentarioImage
 from .filters import TicketFilterForm
 from datetime import datetime
 import tiqt.settings as settings
+import os
+from django.http import JsonResponse
 
 
 def HomeView(request):
@@ -36,10 +38,24 @@ def HomeView(request):
 
     return render(request, 'core/home.html', context)
 
-from datetime import datetime
+def excluir_arquivo(request, comentario_id, tipo):
+    comentario = get_object_or_404(Comentario, id=comentario_id)
 
-from datetime import datetime, timedelta
-from django.utils.timezone import now
+    if tipo == 'imagem' and comentario.imagem:
+        caminho_arquivo = os.path.join(settings.MEDIA_ROOT, str(comentario.imagem))
+        if os.path.exists(caminho_arquivo):
+            os.remove(caminho_arquivo)
+        comentario.imagem = None
+
+    elif tipo == 'arquivo' and comentario.arquivo:
+        caminho_arquivo = os.path.join(settings.MEDIA_ROOT, str(comentario.arquivo))
+        if os.path.exists(caminho_arquivo):
+            os.remove(caminho_arquivo)
+        comentario.arquivo = None
+
+    comentario.save()
+    return JsonResponse({'status': 'Arquivo excluído com sucesso'})
+
 
 def apply_filters(queryset, form):
     if form.is_valid():

@@ -4,6 +4,7 @@ from django.contrib.auth import views as auth_views
 from tiqt.apps.core import views
 from django.conf import settings
 from django.conf.urls.static import static
+from tiqt.apps.core.views import excluir_arquivo
 
 urlpatterns = [
     path('', views.HomeView, name='home'),
@@ -28,7 +29,9 @@ urlpatterns = [
     path('logout', auth_views.LogoutView.as_view(), name='logout'),
     path('admin/', admin.site.urls),
     path('select2/', include('django_select2.urls')), 
+    path('comentario/<int:comentario_id>/excluir/<str:tipo>/', excluir_arquivo, name='excluir_arquivo'),
+
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)                                 

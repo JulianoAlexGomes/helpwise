@@ -109,4 +109,6 @@ venv.bak/
 # vscode files
 .vscode/
 
-/conversao/
+\conversao
+
+\media

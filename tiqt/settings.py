@@ -12,7 +12,7 @@ SECRET_KEY = config('SECRET_KEY')
 
 # DEBUG = config('DEBUG', default=False, cast=bool)
 
-DEBUG = True
+DEBUG = False
 
 
 # DATABASES = {
@@ -28,8 +28,8 @@ DATABASES = {
         'NAME': 'prd1',
         'USER': 'admin',
         'PASSWORD': 'Desenv@112025',
-        # 'HOST': '185.137.92.173',
-        'HOST': 'localhost',
+        'HOST': '185.137.92.173',
+        # 'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"

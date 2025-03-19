@@ -3,24 +3,14 @@ from decouple import config
 import os
 import pymysql
 pymysql.install_as_MySQLdb()
-# import dj_database_url
+from django.contrib.messages import constants as messages
 
 # Project Path
 PROJECT_DIR = Path(__file__).parent
 
 SECRET_KEY = config('SECRET_KEY')
 
-# DEBUG = config('DEBUG', default=False, cast=bool)
-
 DEBUG = False
-
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': 'db.sqlite3',
-#     }
-# }
 
 DATABASES = {
     'default': {
@@ -45,10 +35,6 @@ ALLOWED_HOSTS = ['10.0.0.97', '127.0.0.1', '185.137.92.173','www.brothersti.com'
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(PROJECT_DIR, 'staticfiles')
 
-MEDIA_URL = '/media/'
-# MEDIA_ROOT = os.path.join(PROJECT_DIR, 'media')
-
-MEDIA_ROOT = "/var/www/tiqt/media/"
 
 LOGIN_REDIRECT_URL = '/'
 
@@ -83,6 +69,15 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+
+MESSAGE_TAGS = {
+    messages.DEBUG: 'debug',
+    messages.INFO: 'info',
+    messages.SUCCESS: 'success',
+    messages.WARNING: 'warning',
+    messages.ERROR: 'error',
+}
 
 ROOT_URLCONF = 'tiqt.urls'
 
@@ -140,3 +135,5 @@ USE_TZ = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(PROJECT_DIR, 'media')

@@ -215,6 +215,15 @@ class Comentario(models.Model):
 
     def __str__(self):
         return f"Comentário de {self.autor} no Ticket #{self.ticket.id}"
+    
+    def delete(self, *args, **kwargs):
+        # Deletar todas as imagens associadas
+        for imagem in self.imagens.all():
+            imagem.delete()
+        # Deletar todos os arquivos associados
+        for arquivo in self.arquivos.all():
+            arquivo.delete()
+        super().delete(*args, **kwargs)
 
 class ComentarioArquivo(models.Model):
     comentario = models.ForeignKey(Comentario, on_delete=models.CASCADE, related_name='arquivos')

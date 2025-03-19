@@ -7,44 +7,77 @@
       <form method="post" action="{% url 'ticket_detail' object.id %}" enctype="multipart/form-data">
         {% csrf_token %}
         {{ form|crispy }}
+        <div class="card-content">
+          <i class="small material-icons">folder</i>
+          <input type="file" name="arquivos" id="id_arquivos" multiple>
 
-        <label for="id_arquivos">Anexar arquivos:</label>
-        <input type="file" name="arquivos" id="id_arquivos" multiple>
+          <i class="small material-icons">image</i>
+          <input type="file" name="imagens" id="id_imagens" multiple accept="image/*">
 
-        <label for="id_imagens">Anexar imagens:</label>
-        <input type="file" name="imagens" id="id_imagens" multiple accept="image/*">
-
-        <button class="btn" type="submit">Salvar</button>
-      </form method="post" enctype="multipart/form-data">
+          <button class="btn blue right" type="submit">Salvar</button>
+        </div>
+      </form>
+      
       {% for comment in comments %}
-      <div class="section">
-        <div class="row">
-          <div class="col l3">
-            <b>Em:</b> {{ comment.criado_em|date:"d/m/y à\s H:i" }}</br>
-            <b>Por:</b> {{ comment.autor.username|default:"Anônimo" }}
-
-            {% if comment.imagens.all %}
-              <p><b>Imagens:</b></p>
-              <div>
-                {% for imagem in comment.imagens.all %}
-                  <img src="{{ imagem.imagem.url }}" alt="Imagem do comentário" width="100">
-                  <a href="{{ imagem.imagem.url }}" download>📥 Baixar Imagem</a>
-                  <a href="{% url 'excluir_arquivo' comment.id 'imagem' %}" class="btn btn-danger">🗑 Excluir</a>
-                {% endfor %}
-              </div>
-            {% endif %}
-            {% for arquivo in comment.arquivos.all %}
-              <a href="{{ arquivo.arquivo.url }}" download>📥 Baixar Arquivo</a>
-              <a href="{% url 'excluir_arquivo' comment.id 'arquivo' %}" class="btn btn-danger">🗑 Excluir</a>
-            {% endfor %}
+      <div class="card">
+        <div class="card-content">
+          <div class="row">
+            <div class="col l12">
+              <b>Em:</b> {{ comment.criado_em|date:"d/m/y à\s H:i" }}</br>
+              <b>Por:</b> {{ comment.autor.username|default:"Anônimo" }}
+            </div>
           </div>
-          <div class="col l9">
-            {{ comment.texto }}
+          <div class="row">
+            <div class="col l12">
+              {{ comment.texto }}
+            </div>
+          </div>
+          {% if comment.imagens.all %}
+            <div class="row">
+              <div class="col l12">
+                <p><b>Imagens:</b></p>
+                <div class="row">
+                  {% for imagem in comment.imagens.all %}
+                    <div class="col l4 m6 s12">
+                      <div class="card">
+                        <div class="card-image">
+                          <img src="{{ imagem.imagem.url }}" class="responsive-img">
+                          <div class="card">
+                            <a href="{{ imagem.imagem.url }}" download class="btn blue left">📥 Baixar</a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          {% endif %}
+          {% if comment.arquivos.all %}
+            <div class="card-image">
+              <div class="col l12 m4 s12">
+                <p><b>Arquivos:</b></p>
+                <div class="row">
+                  {% for arquivo in comment.arquivos.all %}
+                    <div class="card-content">
+                      {{ arquivo.arquivo.url }}
+                      <div class="card">
+                        <a href="{{ arquivo.arquivo.url }}" download class="btn blue left">📥 Baixar</a>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          {% endif %}
+          <div class="row">
+            <div class="col l12">
+              <a href="{% url 'excluir_comentario' comment.id %}" class="btn red right">🗑 Excluir Comentário</a>
+            </div>
           </div>
         </div>
       </div>
-    {% endfor %}
-    
+      {% endfor %}
     </div>
     <div class="col l4 m4 z-depth-1">
       <h5>Detalhes:</h5>

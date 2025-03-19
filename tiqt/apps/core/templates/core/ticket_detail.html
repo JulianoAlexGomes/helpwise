@@ -28,21 +28,15 @@
               <div>
                 {% for imagem in comment.imagens.all %}
                   <img src="{{ imagem.imagem.url }}" alt="Imagem do comentário" width="100">
-                  <a href="{{ comment.imagem.url }}" download>📥 Baixar Imagem</a>
+                  <a href="{{ imagem.imagem.url }}" download>📥 Baixar Imagem</a>
                   <a href="{% url 'excluir_arquivo' comment.id 'imagem' %}" class="btn btn-danger">🗑 Excluir</a>
                 {% endfor %}
               </div>
             {% endif %}
-    
-            {% if comment.arquivos.all %}
-              <p><b>Arquivos:</b></p>
-              <ul>
-                {% for arquivo in comment.arquivos.all %}
-                <a href="{{ comment.arquivo.url }}" download>📥 Baixar Arquivo</a>
-                <a href="{% url 'excluir_arquivo' comment.id 'arquivo' %}" class="btn btn-danger">🗑 Excluir</a>
-                {% endfor %}
-              </ul>
-            {% endif %}
+            {% for arquivo in comment.arquivos.all %}
+              <a href="{{ arquivo.arquivo.url }}" download>📥 Baixar Arquivo</a>
+              <a href="{% url 'excluir_arquivo' comment.id 'arquivo' %}" class="btn btn-danger">🗑 Excluir</a>
+            {% endfor %}
           </div>
           <div class="col l9">
             {{ comment.texto }}

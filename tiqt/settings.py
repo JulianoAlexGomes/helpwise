@@ -45,6 +45,10 @@ ALLOWED_HOSTS = ['10.0.0.97', '127.0.0.1', '185.137.92.173','www.brothersti.com'
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(PROJECT_DIR, 'staticfiles')
 
+MEDIA_URL = '/media/'
+# MEDIA_ROOT = os.path.join(PROJECT_DIR, 'media')
+
+MEDIA_ROOT = "/var/www/tiqt/media/"
 
 LOGIN_REDIRECT_URL = '/'
 
@@ -136,7 +140,3 @@ USE_TZ = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-MEDIA_URL = '/media/'
-# MEDIA_ROOT = os.path.join(PROJECT_DIR, 'media')
-
-MEDIA_ROOT = "/root/projetos/oficial/helpwise/tiqt/media"

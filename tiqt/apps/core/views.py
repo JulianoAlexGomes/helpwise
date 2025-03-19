@@ -1,6 +1,7 @@
 from django.views import View
 from django.views.generic import TemplateView, DetailView, ListView
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
+from django.contrib import messages
 from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LogoutView as BaseLogoutView
@@ -38,24 +39,41 @@ def HomeView(request):
 
     return render(request, 'core/home.html', context)
 
+def excluir_comentario(request, comentario_id):
+    comentario = get_object_or_404(Comentario, id=comentario_id)
+    ticket_id = comentario.ticket.id
+    comentario.delete()
+    return redirect('ticket_detail', ticket_id)
+
+
 def excluir_arquivo(request, comentario_id, tipo):
     comentario = get_object_or_404(Comentario, id=comentario_id)
+    arquivo_removido = False
 
-    if tipo == 'imagem' and comentario.imagem:
-        caminho_arquivo = os.path.join(settings.MEDIA_ROOT, str(comentario.imagem))
-        if os.path.exists(caminho_arquivo):
-            os.remove(caminho_arquivo)
-        comentario.imagem = None
+    if tipo == 'imagem':
+        imagens = comentario.imagens.all()  # Obtém todas as imagens relacionadas
+        for imagem in imagens:
+            caminho_arquivo = os.path.join(settings.MEDIA_ROOT, str(imagem.imagem))
+            if os.path.exists(caminho_arquivo):
+                os.remove(caminho_arquivo)
+            imagem.delete()
+            arquivo_removido = True
 
-    elif tipo == 'arquivo' and comentario.arquivo:
-        caminho_arquivo = os.path.join(settings.MEDIA_ROOT, str(comentario.arquivo))
-        if os.path.exists(caminho_arquivo):
-            os.remove(caminho_arquivo)
-        comentario.arquivo = None
+    elif tipo == 'arquivo':
+        arquivos = comentario.arquivos.all()  # Obtém todos os arquivos relacionados
+        for arquivo in arquivos:
+            caminho_arquivo = os.path.join(settings.MEDIA_ROOT, str(arquivo.arquivo))
+            if os.path.exists(caminho_arquivo):
+                os.remove(caminho_arquivo)
+            arquivo.delete()
+            arquivo_removido = True
 
-    comentario.save()
-    return JsonResponse({'status': 'Arquivo excluído com sucesso'})
+    if arquivo_removido:
+        messages.success(request, 'Arquivo excluído com sucesso.')
+    else:
+        messages.error(request, 'Erro ao excluir o arquivo.')
 
+    return redirect('ticket_detail', pk=comentario.ticket.pk)
 
 def apply_filters(queryset, form):
     if form.is_valid():
@@ -249,25 +267,6 @@ class TicketUpdateView(LoginRequiredMixin, View):
             form.save()
             return redirect(reverse('ticket_detail', args=[ticket.pk]))
         return render(request, 'core/ticket_form.html', {'form': form, 'ticket': ticket})
-
-# class TicketDetailView(LoginRequiredMixin, View):
-#     def get(self, request, pk):
-#         ticket = get_object_or_404(Ticket, pk=pk)
-#         form = ComentarioForm()
-#         comments = ticket.comentario.all()
-#         return render(request, 'core/ticket_detail.html', {'object': ticket, 'form': form, 'comments': comments})
-
-#     def post(self, request, pk):
-#         ticket = get_object_or_404(Ticket, pk=pk)
-#         form = ComentarioForm(request.POST)
-#         if form.is_valid():
-#             comentario = form.save(commit=False)
-#             comentario.ticket = ticket
-#             comentario.autor = request.user
-#             comentario.save()
-#             return redirect('ticket_detail', pk=ticket.pk)
-#         comments = ticket.comentario.all()
-#         return render(request, 'core/ticket_detail.html', {'object': ticket, 'form': form, 'comments': comments})
 
 class TicketDetailView(View):
     def get(self, request, pk):

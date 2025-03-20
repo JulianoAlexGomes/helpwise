@@ -155,8 +155,8 @@ class Ticket(models.Model):
         return reverse("ticket_detail", kwargs={"pk": self.pk})
 
     def ultimo_comentario(self):
-            ultimo_comentario = self.comentario_set.order_by('-id').first()
-            return ultimo_comentario.texto if ultimo_comentario else ''
+        ultimo_comentario = self.comentario_set.order_by('-criado_em').first()
+        return ultimo_comentario.texto if ultimo_comentario else ''
     
     def get_solucao(self):
         solucao = self.solucao_set.order_by('-criado_em').first()

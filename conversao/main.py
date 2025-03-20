@@ -23,8 +23,8 @@ def excel_to_sql_insert(excel_file: str, output_file: str, table_name: str, colu
 # Exemplo de uso:
 excel_file = "D:/Projetos/TIQT/tiqt-master/helpwise/conversao/arquivo.xlsx"
 output_file = "D:/Projetos/TIQT/tiqt-master/helpwise/conversao/arquivo.txt"
-table_name = "temp_storage"
-selected_columns = []  
+table_name = "temp_product"
+selected_columns = ['name','integrationCode']  
 start_id = 1
 
 excel_to_sql_insert(excel_file, output_file, table_name, selected_columns, start_id)

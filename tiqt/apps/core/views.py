@@ -6,7 +6,6 @@ from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LogoutView as BaseLogoutView
 from django.utils.decorators import method_decorator
-from django.utils.timezone import now
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.cache import never_cache
 from django.shortcuts import reverse, render, resolve_url, get_object_or_404, redirect
@@ -21,7 +20,7 @@ from .filters import TicketFilterForm
 from datetime import datetime
 import tiqt.settings as settings
 import os
-from django.http import JsonResponse
+from django.db.models import Q
 
 
 def HomeView(request):
@@ -134,6 +133,33 @@ class MyTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     def get_table_data(self, **kwargs):
         return Ticket.objects.filter(status=Ticket.EM_ATENDIMENTO, responsavel=self.request.user)
 
+# class OpenTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
+#     template_name = 'core/tickets_list.html'
+#     table_class = TicketTable
+
+#     def get_table_data(self):
+#         queryset = Ticket.objects.filter(status=Ticket.ABERTO)
+#         form = TicketFilterForm(self.request.GET)
+#         if form.is_valid():
+#             if form.cleaned_data['cliente']:
+#                 queryset = queryset.filter(cliente=form.cleaned_data['cliente'])
+#             if form.cleaned_data['departamento']:
+#                 queryset = queryset.filter(departamento=form.cleaned_data['departamento'])
+#             if form.cleaned_data['tipo']:
+#                 queryset = queryset.filter(tipo=form.cleaned_data['tipo'])
+#             if form.cleaned_data['prioridade']:
+#                 queryset = queryset.filter(prioridade=form.cleaned_data['prioridade'])
+#         return queryset
+
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         context['filter_form'] = TicketFilterForm(self.request.GET)
+#         context['request'] = self.request
+#         return context
+#     table_pagination = {
+#         'per_page': 10
+#     }   
+
 class OpenTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     template_name = 'core/tickets_list.html'
     table_class = TicketTable
@@ -141,6 +167,9 @@ class OpenTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     def get_table_data(self):
         queryset = Ticket.objects.filter(status=Ticket.ABERTO)
         form = TicketFilterForm(self.request.GET)
+        query = self.request.GET.get('q')
+        if query:
+            queryset = queryset.filter(Q(titulo__icontains=query) | Q(id__icontains=query))
         if form.is_valid():
             if form.cleaned_data['cliente']:
                 queryset = queryset.filter(cliente=form.cleaned_data['cliente'])
@@ -155,11 +184,13 @@ class OpenTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['filter_form'] = TicketFilterForm(self.request.GET)
+        context['query'] = self.request.GET.get('q', '')
         context['request'] = self.request
         return context
+
     table_pagination = {
         'per_page': 10
-    }   
+    }
 
 class InProgressTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     template_name = 'core/tickets_list.html'
@@ -298,7 +329,7 @@ class TicketDetailView(View):
 
             return redirect(reverse('ticket_detail', kwargs={'pk': pk}))
 
-        comments = Comentario.objects.filter(ticket=ticket).order_by('-criado_em')
+        comments = Comentario.objects.filter(ticket=ticket).order_by('criado_em')
         return render(request, 'core/ticket_detail.html', {'object': ticket, 'comments': comments, 'form': form})
 
 

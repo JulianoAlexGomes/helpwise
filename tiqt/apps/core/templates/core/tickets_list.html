@@ -6,6 +6,16 @@
   <div class="container-fluid">
     <h5>Tickets:</h5>
     <form method="get">
+      <div class="row">
+        <div class="col s12 m4">
+          <input type="text" name="q" placeholder="Pesquisar por título ou número do ticket" value="{{ query }}">
+        </div>
+        <div class="col s12 m2">
+          <button type="submit" class="btn">Pesquisar</button>
+        </div>
+      </div>
+    </form>
+    <form method="get">
       {% if request.path != '/ticket/my/' %}
       <div class="row">
         <div class="col s12 m4">

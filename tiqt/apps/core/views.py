@@ -131,34 +131,7 @@ class MyTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     }
 
     def get_table_data(self, **kwargs):
-        return Ticket.objects.filter(status=Ticket.EM_ATENDIMENTO, responsavel=self.request.user)
-
-# class OpenTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
-#     template_name = 'core/tickets_list.html'
-#     table_class = TicketTable
-
-#     def get_table_data(self):
-#         queryset = Ticket.objects.filter(status=Ticket.ABERTO)
-#         form = TicketFilterForm(self.request.GET)
-#         if form.is_valid():
-#             if form.cleaned_data['cliente']:
-#                 queryset = queryset.filter(cliente=form.cleaned_data['cliente'])
-#             if form.cleaned_data['departamento']:
-#                 queryset = queryset.filter(departamento=form.cleaned_data['departamento'])
-#             if form.cleaned_data['tipo']:
-#                 queryset = queryset.filter(tipo=form.cleaned_data['tipo'])
-#             if form.cleaned_data['prioridade']:
-#                 queryset = queryset.filter(prioridade=form.cleaned_data['prioridade'])
-#         return queryset
-
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         context['filter_form'] = TicketFilterForm(self.request.GET)
-#         context['request'] = self.request
-#         return context
-#     table_pagination = {
-#         'per_page': 10
-#     }   
+        return Ticket.objects.filter(Q(status=Ticket.ABERTO) | Q(status=Ticket.EM_ATENDIMENTO),responsavel=self.request.user)
 
 class OpenTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     template_name = 'core/tickets_list.html'

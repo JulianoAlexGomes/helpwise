@@ -72,7 +72,7 @@
           {% endif %}
           <div class="row">
             <div class="col l12">
-              <a href="{% url 'excluir_comentario' comment.id %}" class="btn red right">🗑 Excluir Comentário</a>
+              {% comment %} <a href="{% url 'excluir_comentario' comment.id %}" class="btn red right">🗑 Excluir Comentário</a> {% endcomment %}
             </div>
           </div>
         </div>
@@ -82,7 +82,8 @@
     <div class="col l4 m4 z-depth-1">
       <h5>Detalhes:</h5>
       <p><b>Número: </b>{{ object.id }}</p>
-      <p><b>Atendente: </b>{{ object.atendente }}</p>
+      <p><b>Título: </b>{{ object.titulo|default_if_none:" "  }}</p>
+      <p><b>Atendente: </b>{{ object.atendente|default_if_none:" "  }}</p>
       <p><b>Cliente: </b>{{ object.cliente }}</p>
       <p><b>Responsável: </b>{{ object.responsavel|default_if_none:" " }}</p>
       <p><b>Criado em: </b>{{ object.criado_em|date:"d/m/y à\s H:i" }}</p>
@@ -90,6 +91,7 @@
       <p><b>Encerrado em: </b>{{ object.encerrado_em|date:"d/m/y à\s H:i"|default:" " }}</p>
       <p><b>Idade: </b>{{ object.criado_em|timesince:object.encerrado_em }}</p>
       <p><b>Status: </b>{{ object.get_status_display }}</p>
+      <p><b>Situação: </b>{{ object.situacao|default_if_none:" "  }}</p>
       <p><b>Tipo: </b>{{ object.tipo }}</p>
       <p><b>Prioridade: </b>{{ object.prioridade }}</p>
       <p><b>Cancelado por: </b>{{ object.cancelado|default_if_none:" " }}</p>

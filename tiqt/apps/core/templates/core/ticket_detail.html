@@ -82,7 +82,17 @@
       {% endfor %}
     </div>
     <div class="col l4 m4 z-depth-1">
-      <h5>Detalhes:</h5>
+      <h5 >Detalhes:</h5>
+      
+      <h5 class="center-align" style="font-weight: bold; 
+        {% if object.get_status_display == 'Em atendimento' %} color: orange; 
+        {% elif object.get_status_display == 'Aberto' %} color: red; 
+        {% elif object.get_status_display == 'Encerrado' %} color: green; 
+        {% elif object.get_status_display == 'Cancelado' %} color: gray; 
+        {% endif %}">
+        {{ object.get_status_display }}
+      </h5>
+
       <p><b>Número: </b>{{ object.id }}</p>
       <p><b>Título: </b>{{ object.titulo|default_if_none:" "  }}</p>
       <p><b>Atendente: </b>{{ object.atendente|default_if_none:" "  }}</p>
@@ -97,7 +107,7 @@
         <p><b>Encerrado em: </b>{{ object.encerrado_em|date:"d/m/y à\s H:i"|default:" " }}</p>
       {% endif %}
       <p><b>Idade: </b>{{ object.criado_em|timesince:object.encerrado_em }}</p>
-      <p><b>Status: </b>{{ object.get_status_display }}</p>
+      {% comment %} <p><b>Status: </b>{{ object.get_status_display }}</p> {% endcomment %}
       <p><b>Situação: </b>{{ object.situacao|default_if_none:" "  }}</p>
       <p><b>Tipo: </b>{{ object.tipo }}</p>
       <p><b>Prioridade: </b>{{ object.prioridade }}</p>

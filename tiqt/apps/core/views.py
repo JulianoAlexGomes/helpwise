@@ -144,21 +144,16 @@ class OpenTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
         if query:
             queryset = queryset.filter(Q(titulo__icontains=query) | Q(id__icontains=query))
         if form.is_valid():
-            if form.cleaned_data['cliente']:
-                queryset = queryset.filter(cliente=form.cleaned_data['cliente'])
-            if form.cleaned_data['departamento']:
-                queryset = queryset.filter(departamento=form.cleaned_data['departamento'])
-            if form.cleaned_data['tipo']:
-                queryset = queryset.filter(tipo=form.cleaned_data['tipo'])
-            if form.cleaned_data['prioridade']:
-                queryset = queryset.filter(prioridade=form.cleaned_data['prioridade'])
+            queryset = apply_filters(queryset, form)
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        queryset = self.get_table_data()
         context['filter_form'] = TicketFilterForm(self.request.GET)
         context['query'] = self.request.GET.get('q', '')
         context['request'] = self.request
+        context['filtered_count'] = queryset.count()
         return context
 
     table_pagination = {
@@ -172,12 +167,21 @@ class InProgressTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     def get_table_data(self):
         queryset = Ticket.objects.filter(status=Ticket.EM_ATENDIMENTO)
         form = TicketFilterForm(self.request.GET)
-        return apply_filters(queryset, form)
+        query = self.request.GET.get('q')
+        if query:
+            queryset = queryset.filter(Q(titulo__icontains=query) | Q(id__icontains=query))
+        if form.is_valid():
+            queryset = apply_filters(queryset, form)
+        return queryset
+    
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        queryset = self.get_table_data()
         context['filter_form'] = TicketFilterForm(self.request.GET)
+        context['query'] = self.request.GET.get('q', '')
         context['request'] = self.request
+        context['filtered_count'] = queryset.count()
         return context
 
     table_pagination = {
@@ -191,12 +195,20 @@ class ClosedTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     def get_table_data(self):
         queryset = Ticket.objects.filter(status=Ticket.ENCERRADO)
         form = TicketFilterForm(self.request.GET)
-        return apply_filters(queryset, form)
+        query = self.request.GET.get('q')
+        if query:
+            queryset = queryset.filter(Q(titulo__icontains=query) | Q(id__icontains=query))
+        if form.is_valid():
+            queryset = apply_filters(queryset, form)
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        queryset = self.get_table_data()
         context['filter_form'] = TicketFilterForm(self.request.GET)
+        context['query'] = self.request.GET.get('q', '')
         context['request'] = self.request
+        context['filtered_count'] = queryset.count()
         return context
 
     table_pagination = {
@@ -206,16 +218,24 @@ class ClosedTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
 class EveryoneTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     template_name = 'core/tickets_list.html'
     table_class = TicketTable
-    
+
     def get_table_data(self):
         queryset = Ticket.objects.all()
         form = TicketFilterForm(self.request.GET)
-        return apply_filters(queryset, form)
+        query = self.request.GET.get('q')
+        if query:
+            queryset = queryset.filter(Q(titulo__icontains=query) | Q(id__icontains=query))
+        if form.is_valid():
+            queryset = apply_filters(queryset, form)
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        queryset = self.get_table_data()
         context['filter_form'] = TicketFilterForm(self.request.GET)
+        context['query'] = self.request.GET.get('q', '')
         context['request'] = self.request
+        context['filtered_count'] = queryset.count()
         return context
 
     table_pagination = {
@@ -229,12 +249,20 @@ class CanceledTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     def get_table_data(self):
         queryset = Ticket.objects.filter(status=Ticket.CANCELADO)
         form = TicketFilterForm(self.request.GET)
-        return apply_filters(queryset, form)
+        query = self.request.GET.get('q')
+        if query:
+            queryset = queryset.filter(Q(titulo__icontains=query) | Q(id__icontains=query))
+        if form.is_valid():
+            queryset = apply_filters(queryset, form)
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        queryset = self.get_table_data()
         context['filter_form'] = TicketFilterForm(self.request.GET)
+        context['query'] = self.request.GET.get('q', '')
         context['request'] = self.request
+        context['filtered_count'] = queryset.count()
         return context
 
     table_pagination = {

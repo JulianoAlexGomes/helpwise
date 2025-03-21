@@ -4,15 +4,17 @@
 
 {% block content %}
   <div class="container-fluid">
-    <h5>Tickets:</h5>
+    <h5>Tickets: {{ filtered_count }} </h5>
     <form method="get">
       <div class="row">
+        {% if request.path != '/ticket/my/' %}
         <div class="col s12 m4">
           <input type="text" name="q" placeholder="Pesquisar por título ou número do ticket" value="{{ query }}">
         </div>
         <div class="col s12 m2">
           <button type="submit" class="btn">Pesquisar</button>
         </div>
+        {% endif %}
       </div>
     </form>
     <form method="get">
@@ -20,23 +22,23 @@
       <div class="row">
         <div class="col s12 m4">
           <h6>Cliente</h6>
-          {{ filter_form.cliente }}
+          {{ filter_form.cliente  }}
         </div>
         <div class="col s12 m2">
           <h6>Tipo</h6>
-          {{ filter_form.tipo }}
+          {{ filter_form.tipo  }}
         </div>
         <div class="col s12 m2">
           <h6>Departamento</h6>
-          {{ filter_form.departamento }}
+          {{ filter_form.departamento  }}
         </div>
         <div class="col s12 m2">
           <h6>Prioridade</h6>
-          {{ filter_form.prioridade }}
+          {{ filter_form.prioridade  }}
         </div>
         <div class="col s12 m2">
           <h6>Situação</h6>
-          {{ filter_form.situacao }}
+          {{ filter_form.situacao  }}
         </div>
       </div>
       <div class="row">
@@ -46,7 +48,7 @@
         </div>
         <div class="col s12 m2">
             <h6 style="color: white;">111111</h6>
-          {{ filter_form.criado_em_fim }}
+            {{ filter_form.criado_em_fim }}
         </div>
         <div class="col s12 m2">
           <h6>Encerrado</h6>
@@ -67,7 +69,7 @@
       </div>
       <div class="row">
         <div class="col s12 left-align">
-          <button type="submit" class="btn">Filtrar</button>
+          <button type="submit" class="btn blue">Aplicar Filtros</button>
         </div>
       </div>
       {% endif %}   

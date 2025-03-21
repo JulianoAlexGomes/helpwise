@@ -4,7 +4,23 @@
 {% block content %}
 <h5>{% if object %}Editar Cliente:{% else %}Novo Cliente:{% endif %}</h5>
 <form method="post"> {% csrf_token %}
-    {{ form.as_p }}
+    {% for field in form %}
+        <div class="input-field">
+            {{ field.label_tag }}
+            {{ field }}
+            {% if field.value %}
+                <label for="{{ field.id_for_label }}" class="active">{{ field.label }}</label>
+            {% else %}
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {% endif %}
+            {% if field.help_text %}
+                <small class="form-text text-muted">{{ field.help_text }}</small>
+            {% endif %}
+            {% for error in field.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+    {% endfor %}
     <button class="btn" type="submit">Salvar</button>
     {% if object %}
         <a href="{% url 'cliente_delete' object.pk %}" class="btn right red lighten-1">Excluir</a>

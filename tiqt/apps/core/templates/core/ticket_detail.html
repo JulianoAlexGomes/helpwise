@@ -93,7 +93,7 @@
       {% if object.iniciado_em %}
         <p><b>Iniciado em: </b>{{ object.iniciado_em|date:"d/m/y à\s H:i"|default:" " }}</p>
       {% endif %}
-      {% if object.iniciado_em %}
+      {% if object.encerrado_em %}
         <p><b>Encerrado em: </b>{{ object.encerrado_em|date:"d/m/y à\s H:i"|default:" " }}</p>
       {% endif %}
       <p><b>Idade: </b>{{ object.criado_em|timesince:object.encerrado_em }}</p>

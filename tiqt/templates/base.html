@@ -7,23 +7,28 @@
     <!--Let browser know website is optimized for mobile-->
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     {% if user.is_authenticated %}
-      <style>
-       header, main, footer {
-       padding-left: 300px;
-       }
+    <style>
+      header, main, footer {
+        padding-left: 300px;
+        transition: padding-left 0.3s;
+      }
 
-       @media only screen and (max-width: 992px) {
-       header, main, footer {s
-           padding-left: 0px;
-       }
-       }
+      @media only screen and (max-width: 992px) {
+        header, main, footer {
+          padding-left: 0px;
+        }
+      }
 
-       @media only screen and (min-width: 993px) {
-       .container {
-           width: 80%; !important
-       }
-       }
-      </style>
+      @media only screen and (min-width: 993px) {
+        .container {
+          width: 80% !important;
+        }
+      }
+
+      .sidenav-hidden header, .sidenav-hidden main, .sidenav-hidden footer {
+        padding-left: 0 !important;
+      }
+    </style>
     {% endif %}
     <title>{% block title %}Sinos HelpDesk{% endblock title %}</title>
 	
@@ -35,9 +40,10 @@
       <div class="navbar black" >
     <nav class="black" >
           <div class="nav-wrapper">
-         <a href="/" class="brand-logo" style="padding: 0 10px;">Sinos HelpDesk</a>
+         <a href="/" class="brand-logo" style="padding: 0 10px;">HelpWise</a>
             {% if user.is_authenticated %}
           <a href="#" data-target="slide-out" class="sidenav-trigger"><i class="material-icons">menu</i></a>
+          <a href="#" id="toggle-sidenav" class="right"><i class="material-icons">chevron_left</i></a>
         {% endif %}
       </div>	
     </nav>
@@ -81,6 +87,18 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
   <script>
     M.AutoInit();
+
+    document.getElementById('toggle-sidenav').addEventListener('click', function() {
+      var body = document.body;
+      var sidenav = document.getElementById('slide-out');
+      if (body.classList.contains('sidenav-hidden')) {
+        body.classList.remove('sidenav-hidden');
+        sidenav.style.transform = 'translateX(0%)';
+      } else {
+        body.classList.add('sidenav-hidden');
+        sidenav.style.transform = 'translateX(-100%)';
+      }
+    });
   </script>
   {% block extra_js %}{% endblock extra_js %}
   </body>

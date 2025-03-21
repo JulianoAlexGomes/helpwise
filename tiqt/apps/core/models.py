@@ -206,7 +206,7 @@ class Solucao(models.Model):
         return self.texto
 
 class Comentario(models.Model):
-    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name="comentarios")  # 🔥 Adicionando a ForeignKey
+    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name="comentarios") 
     texto = models.TextField()
     proximo_contato = models.DateTimeField(null=True, blank=True)
     tipo = models.ForeignKey(TipoAcao, on_delete=models.PROTECT, null=True, blank=True)

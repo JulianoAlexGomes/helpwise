@@ -24,7 +24,9 @@
           <div class="row">
             <div class="col l12">
               <b>Em:</b> {{ comment.criado_em|date:"d/m/y à\s H:i" }}</br>
-              <b>Por:</b> {{ comment.autor.username|default:"Anônimo" }}
+              <b>Por:</b> {{ comment.autor.username|default:"Anônimo" }}</br>
+              <b>Próximo Contato</b> {{ comment.proximo_contato|date:"d/m/y à\s H:i"|default:" " }}</br>
+              <b>Ação:</b> {{ comment.tipo|default:"Anônimo" }}
             </div>
           </div>
           <div class="row">
@@ -85,17 +87,26 @@
       <p><b>Título: </b>{{ object.titulo|default_if_none:" "  }}</p>
       <p><b>Atendente: </b>{{ object.atendente|default_if_none:" "  }}</p>
       <p><b>Cliente: </b>{{ object.cliente }}</p>
+      <p><b>Uid: </b>{{ client.uid|default_if_none:" "  }}</p>
       <p><b>Responsável: </b>{{ object.responsavel|default_if_none:" " }}</p>
       <p><b>Criado em: </b>{{ object.criado_em|date:"d/m/y à\s H:i" }}</p>
-      <p><b>Iniciado em: </b>{{ object.iniciado_em|date:"d/m/y à\s H:i"|default:" " }}</p>
-      <p><b>Encerrado em: </b>{{ object.encerrado_em|date:"d/m/y à\s H:i"|default:" " }}</p>
+      {% if object.iniciado_em %}
+        <p><b>Iniciado em: </b>{{ object.iniciado_em|date:"d/m/y à\s H:i"|default:" " }}</p>
+      {% endif %}
+      {% if object.iniciado_em %}
+        <p><b>Encerrado em: </b>{{ object.encerrado_em|date:"d/m/y à\s H:i"|default:" " }}</p>
+      {% endif %}
       <p><b>Idade: </b>{{ object.criado_em|timesince:object.encerrado_em }}</p>
       <p><b>Status: </b>{{ object.get_status_display }}</p>
       <p><b>Situação: </b>{{ object.situacao|default_if_none:" "  }}</p>
       <p><b>Tipo: </b>{{ object.tipo }}</p>
       <p><b>Prioridade: </b>{{ object.prioridade }}</p>
-      <p><b>Cancelado por: </b>{{ object.cancelado|default_if_none:" " }}</p>
-      <p><b>Cancelado em: </b>{{ object.cancelado_em|date:"d/m/y à\s H:i"|default:" " }}</p>
+      {% if object.cancelado %}
+        <p><b>Cancelado por: </b>{{ object.cancelado|default_if_none:" " }}</p>
+      {% endif %}
+      {% if object.cancelado_em %}
+        <p><b>Cancelado em: </b>{{ object.cancelado_em|date:"d/m/y à\s H:i"|default:" " }}</p>
+      {% endif %}
       {% if solucoes %}
         <h5>Solução:</h5>
         {% for solucao in solucoes %}

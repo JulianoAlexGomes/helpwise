@@ -269,6 +269,33 @@ class CanceledTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
         'per_page': 10
     }
 
+# class DesenvTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
+#     template_name = 'core/tickets_list.html'
+#     table_class = TicketTable
+
+#     def get_table_data(self):
+#         queryset = Ticket.objects.filter(Q(status=Ticket.ABERTO) | Q(status=Ticket.EM_ATENDIMENTO))
+#         form = TicketFilterForm(self.request.GET)
+#         query = self.request.GET.get('q')
+#         if query:
+#             queryset = queryset.filter(Q(titulo__icontains=query) | Q(id__icontains=query))
+#         if form.is_valid():
+#             queryset = apply_filters(queryset, form)
+#         return queryset
+
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         queryset = self.get_table_data()
+#         context['filter_form'] = TicketFilterForm(self.request.GET)
+#         context['query'] = self.request.GET.get('q', '')
+#         context['request'] = self.request
+#         context['filtered_count'] = queryset.count()
+#         return context
+
+#     table_pagination = {
+#         'per_page': 10
+#     }
+
 class NewTicketView(LoginRequiredMixin, View):
     def get(self, request):
         form = TicketForm()
@@ -306,7 +333,8 @@ class TicketDetailView(View):
         comments = Comentario.objects.filter(ticket=ticket).order_by('-criado_em')
         solucoes = ticket.get_solucoes()
         form = ComentarioForm()
-        return render(request, 'core/ticket_detail.html', {'object': ticket, 'comments': comments, 'solucoes': solucoes, 'form': form})
+        client = Cliente.objects.get(pk=ticket.cliente.pk)  
+        return render(request, 'core/ticket_detail.html', {'object': ticket, 'comments': comments, 'solucoes': solucoes, 'form': form, 'client': client})
 
     def post(self, request, pk):
         ticket = get_object_or_404(Ticket, pk=pk)

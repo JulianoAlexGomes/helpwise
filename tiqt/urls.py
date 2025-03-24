@@ -20,6 +20,7 @@ urlpatterns = [
     path('ticket/<int:pk>/accept', views.TicketAcceptView.as_view(), name='ticket_accept'),
     path('ticket/<int:pk>/cancel', views.TicketCancelView.as_view(), name='ticket_cancel'),
     path('ticket/<int:pk>/close', views.CloseTicketView.as_view(), name='ticket_close'),
+    path('ticket/development/', views.DesenvTicketsView.as_view(), name='ticket_desenv'),
     path('ticket/<int:ticket_pk>/comment', views.CommentView.as_view(), name='ticket_comment'),
     path('clientes/', views.ClienteListView.as_view(), name='cliente_list'),
     path('cliente/novo/', views.ClienteCreateView.as_view(), name='cliente_create'),

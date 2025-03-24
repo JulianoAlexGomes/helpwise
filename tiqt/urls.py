@@ -4,7 +4,7 @@ from django.contrib.auth import views as auth_views
 from tiqt.apps.core import views
 from django.conf import settings
 from django.conf.urls.static import static
-from tiqt.apps.core.views import excluir_arquivo
+from tiqt.apps.core.views import excluir_arquivo, download_certificado, CertificadoDeleteView
 
 urlpatterns = [
     path('', views.HomeView, name='home'),
@@ -25,6 +25,8 @@ urlpatterns = [
     path('clientes/', views.ClienteListView.as_view(), name='cliente_list'),
     path('cliente/novo/', views.ClienteCreateView.as_view(), name='cliente_create'),
     path('cliente/<int:pk>/editar/', views.ClienteUpdateView.as_view(), name='cliente_update'),
+    path('cliente/<int:cliente_id>/download/', download_certificado, name='cliente_certificado'),
+    path('certificado/<int:pk>/delete/', CertificadoDeleteView.as_view(), name='certificado_delete'),
     path('cliente/<int:pk>/delete/', views.ClienteDeleteView.as_view(), name='cliente_delete'),
     path('login/', auth_views.LoginView.as_view(redirect_authenticated_user=True),name='login'), 
     path('logout', auth_views.LogoutView.as_view(), name='logout'),

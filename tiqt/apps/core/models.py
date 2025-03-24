@@ -71,6 +71,12 @@ class Situacao(models.Model):
     def __str__(self):
         return self.descricao
     
+class Plano(models.Model):
+    descricao = models.CharField(max_length=50, null=True, blank=True)
+
+    def __str__(self):
+        return self.descricao
+    
 
 class Cliente(models.Model):
     razao_social = models.CharField(max_length=120, null=True, blank=True)
@@ -94,6 +100,8 @@ class Cliente(models.Model):
     motivo_inativacao = models.TextField(null=True, blank=True)
     data_inativacao = models.DateTimeField(null=True, blank=True)
     uid = models.CharField(max_length=120, null=True, blank=True)
+    certificado_digital = models.FileField(upload_to='certificados/', null=True, blank=True, default=None)
+    plano = models.ForeignKey(Plano, on_delete=models.PROTECT, null=True, blank=True)
 
     def __str__(self):
         return f"{self.fantasia or ''} - {self.cidade or ''}/{self.uf or ''}"
@@ -209,7 +217,7 @@ class Comentario(models.Model):
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name="comentarios") 
     texto = models.TextField()
     proximo_contato = models.DateTimeField(null=True, blank=True)
-    tipo = models.ForeignKey(TipoAcao, on_delete=models.PROTECT, null=True, blank=True)
+    tipo = models.ForeignKey(TipoAcao, on_delete=models.PROTECT, null=True, blank=True, default=1)
     criado_em = models.DateTimeField(auto_now_add=True)
     autor = models.ForeignKey(User, on_delete=models.CASCADE)
 
@@ -240,3 +248,11 @@ class ComentarioImagem(models.Model):
 
     def __str__(self):
         return f"Imagem ({self.imagem.name})"
+    
+class CertificadoCliente(models.Model):
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='certificados')
+    arquivo = models.FileField(upload_to='clientes_certificados/')
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Arquivo ({self.arquivo.name})"

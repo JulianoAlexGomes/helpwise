@@ -16,17 +16,30 @@ DEBUG = True
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'prd01',
+        'NAME': 'prd1',
         'USER': 'admin',
         'PASSWORD': 'Desenv@112025',
-        'HOST': '185.137.92.173',
-        # 'HOST': 'localhost',
+        'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
         }
     }
 }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'prd01',
+#         'USER': 'admin',
+#         'PASSWORD': 'Desenv@112025',
+#         'HOST': '185.137.92.173',
+#         'PORT': '3306',
+#         'OPTIONS': {
+#             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
+#         }
+#     }
+# }
 
 
 AUTH_USER_MODEL = 'core.User'

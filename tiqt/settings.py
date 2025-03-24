@@ -10,8 +10,8 @@ PROJECT_DIR = Path(__file__).parent
 
 SECRET_KEY = config('SECRET_KEY')
 
-DEBUG = True
-# DEBUG = False
+# DEBUG = True
+DEBUG = False
 
 DATABASES = {
     'default': {
@@ -19,8 +19,8 @@ DATABASES = {
         'NAME': 'prd1',
         'USER': 'admin',
         'PASSWORD': 'Desenv@112025',
-        # 'HOST': '185.137.92.173',
-        'HOST': 'localhost',
+        'HOST': '185.137.92.173',
+        # 'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"

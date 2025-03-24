@@ -16,7 +16,8 @@ class ClienteForm(forms.ModelForm):
                     'uf',
                     'tributacao',
                     'uid',
-                    # 'plano',
+                    'observacao',
+                    'plano',
                 ]
         widgets = {
             'fantasia': forms.TextInput(attrs={'id': 'id_fantasia'}),
@@ -25,7 +26,8 @@ class ClienteForm(forms.ModelForm):
             'uf': forms.TextInput(attrs={'id': 'id_uf'}),
             'tributacao': forms.TextInput(attrs={'id': 'id_tributacao'}),
             'uid': forms.TextInput(attrs={'id': 'id_uid'}),
-            # 'plano': forms.Select(attrs={'id': 'id_plano'}),
+            'observacao': forms.Textarea(attrs={'id': 'id_observacao'}),
+            'plano': forms.Select(attrs={'id': 'id_plano'}),
         }
         
 class TicketForm(forms.ModelForm):

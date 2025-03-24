@@ -101,7 +101,7 @@ class Cliente(models.Model):
     data_inativacao = models.DateTimeField(null=True, blank=True)
     uid = models.CharField(max_length=120, null=True, blank=True)
     certificado_digital = models.FileField(upload_to='certificados/', null=True, blank=True, default=None)
-    plano = models.ForeignKey(Plano, on_delete=models.PROTECT, null=True, blank=True)
+    # plano = models.ForeignKey(Plano, on_delete=models.PROTECT, null=True, blank=True)
 
     def __str__(self):
         return f"{self.fantasia or ''} - {self.cidade or ''}/{self.uf or ''}"

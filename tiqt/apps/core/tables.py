@@ -12,6 +12,6 @@ class TicketTable(Table):
     class Meta:
         model = Ticket
         template_name = 'django_tables2/table.html'
-        fields = ('id', 'atendente', 'titulo', 'prioridade', 'cliente', 'responsavel')
+        fields = ('id', 'atendente', 'titulo', 'tipo', 'prioridade', 'cliente', 'responsavel')
         attrs = {'class': 'striped responsive-table'}
         paginate_by = None

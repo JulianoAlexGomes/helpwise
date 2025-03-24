@@ -9,13 +9,13 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.cache import never_cache
 from django.shortcuts import reverse, render, resolve_url, get_object_or_404, redirect
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse, Http404
 from django.urls import reverse_lazy
 from django_tables2 import SingleTableMixin
 from tiqt.apps.core.models import Ticket, Comentario
 from tiqt.apps.core.tables import TicketTable
 from .forms import TicketForm, ClienteForm, TicketCloseForm, ComentarioForm
-from .models import Cliente, Ticket, Solucao, ComentarioArquivo, ComentarioImagem
+from .models import Cliente, Ticket, Solucao, ComentarioArquivo, ComentarioImagem, CertificadoCliente
 from .filters import TicketFilterForm
 from datetime import datetime
 import tiqt.settings as settings
@@ -121,6 +121,16 @@ def apply_filters(queryset, form):
             queryset = queryset.filter(solucao__criado_em__lte=solucao_criado_em_fim)
 
     return queryset
+
+def download_certificado(request, cliente_id):
+    cliente = get_object_or_404(Cliente, id=cliente_id)
+    file_path = cliente.certificado_digital.path
+    if os.path.exists(file_path):
+        with open(file_path, 'rb') as fh:
+            response = HttpResponse(fh.read(), content_type="application/octet-stream")
+            response['Content-Disposition'] = 'inline; filename=' + os.path.basename(file_path)
+            return response
+    raise Http404
 
 
 class MyTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
@@ -429,11 +439,34 @@ class ClienteCreateView(CreateView):
     template_name = 'core/cliente_form.html'
     success_url = reverse_lazy('cliente_list')
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        cliente = form.instance
+        certificados = self.request.FILES.getlist('certificados')
+        for certificado in certificados:
+            CertificadoCliente.objects.create(cliente=cliente, arquivo=certificado)
+        return response
+
 class ClienteUpdateView(UpdateView):
     model = Cliente
     form_class = ClienteForm
     template_name = 'core/cliente_form.html'
     success_url = reverse_lazy('cliente_list')
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        cliente = form.instance
+        certificados = self.request.FILES.getlist('certificados')
+        for certificado in certificados:
+            CertificadoCliente.objects.create(cliente=cliente, arquivo=certificado)
+        return response
+
+class CertificadoDeleteView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        certificado = get_object_or_404(CertificadoCliente, pk=pk)
+        cliente_id = certificado.cliente.id
+        certificado.delete()
+        return redirect('cliente_update', pk=cliente_id)
 
 class ClienteDeleteView(LoginRequiredMixin, DeleteView):
     model = Cliente

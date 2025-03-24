@@ -27,7 +27,10 @@
             <td>{{ cliente.uf }}</td>
             <td>{{ cliente.tributacao }}</td>
             <td>
-                <a href="{% url 'cliente_update' cliente.pk %}"><i class="material-icons center">edit</i>
+                <a href="{% url 'cliente_update' cliente.pk %}"><i class="material-icons center">edit</i></a>
+                {% if cliente.certificado_digital %}
+                    <a href="{% url 'cliente_certificado' cliente.id %}" class="btn blue">📥 Certificado</a>
+                {% endif %}
             </td>
         </tr>
         {% endfor %}

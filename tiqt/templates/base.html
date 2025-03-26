@@ -101,6 +101,17 @@
       }
     });
   </script>
+  <script>
+    const socket = new WebSocket("ws://" + window.location.host + "/ws/notifications/");
+
+    socket.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        const notificationArea = document.getElementById("notification-area");
+        const newNotification = document.createElement("p");
+        newNotification.textContent = data.message;
+        notificationArea.appendChild(newNotification);
+    };
+  </script>
   {% block extra_js %}{% endblock extra_js %}
   </body>
 </html>

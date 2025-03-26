@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Notificações</title>
+</head>
+<body>
+    <h1>Notificações em Tempo Real</h1>
+    <div id="notification"></div>
+
+    <script>
+        var socket = new WebSocket("ws://127.0.0.1:8000/ws/notifications/");
+
+        socket.onmessage = function(event) {
+            var data = JSON.parse(event.data);
+            document.getElementById("notification").innerText = data.message;
+        };
+    </script>
+</body>
+</html>

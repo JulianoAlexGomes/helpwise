@@ -13,33 +13,33 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = True
 # DEBUG = False
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'prd1',
-#         'USER': 'admin',
-#         'PASSWORD': 'Desenv@112025',
-#         'HOST': 'localhost',
-#         'PORT': '3306',
-#         'OPTIONS': {
-#             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
-#         }
-#     }
-# }
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'prd01',
+        'NAME': 'prd1',
         'USER': 'admin',
         'PASSWORD': 'Desenv@112025',
-        'HOST': '185.137.92.173',
+        'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
         }
     }
 }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'prd01',
+#         'USER': 'admin',
+#         'PASSWORD': 'Desenv@112025',
+#         'HOST': '185.137.92.173',
+#         'PORT': '3306',
+#         'OPTIONS': {
+#             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
+#         }
+#     }
+# }
 
 
 AUTH_USER_MODEL = 'core.User'
@@ -68,7 +68,9 @@ INSTALLED_APPS = [
     'crispy_forms',
     'django_select2',
     'dbbackup',
-    "crispy_bootstrap5",  # Ou outro tema, como 'crispy_tailwind'
+    "crispy_bootstrap5",
+    "channels", 
+    "tiqt.apps.notifications",
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
@@ -111,7 +113,6 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'tiqt.wsgi.application'
 
 CSRF_TRUSTED_ORIGINS = ["https://app1.brothersti.com"]
 
@@ -151,3 +152,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(PROJECT_DIR, 'media')
+
+WSGI_APPLICATION = 'tiqt.wsgi.application'
+ASGI_APPLICATION = "tiqt.asgi.application"
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    },
+}

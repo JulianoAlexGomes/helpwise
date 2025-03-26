@@ -21,6 +21,8 @@ from datetime import datetime
 import tiqt.settings as settings
 import os
 from django.db.models import Q
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 
 def HomeView(request):
@@ -408,6 +410,19 @@ class CloseTicketView(LoginRequiredMixin, View):
 
 class CommentView(LoginRequiredMixin, View):
 
+    # def post(self, request, ticket_pk):
+    #     ticket = Ticket.objects.get(pk=ticket_pk)
+    #     comment = Comentario(
+    #         ticket=ticket, 
+    #         texto=request.POST['texto'], 
+    #         autor=request.user,
+    #         proximo_contato=request.POST.get('proximo_contato'),
+    #         tipo_id=request.POST.get('tipo')
+    #     )
+    #     comment.save()
+    #     return HttpResponseRedirect(
+    #         reverse("ticket_detail", kwargs={"pk": ticket_pk}))
+
     def post(self, request, ticket_pk):
         ticket = Ticket.objects.get(pk=ticket_pk)
         comment = Comentario(
@@ -418,6 +433,17 @@ class CommentView(LoginRequiredMixin, View):
             tipo_id=request.POST.get('tipo')
         )
         comment.save()
+
+        if comment.tipo.id == '5':
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                'notifications',
+                {
+                    'type': 'send_notification',
+                    'message': f'Novo comentário liberado no ticket #{ticket_pk}'
+                }
+            )
+
         return HttpResponseRedirect(
             reverse("ticket_detail", kwargs={"pk": ticket_pk}))
     

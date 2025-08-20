@@ -36,6 +36,9 @@ urlpatterns = [
     path('comentario/excluir/<int:comentario_id>/', views.excluir_comentario, name='excluir_comentario'),
 
     path('notifications/', include('tiqt.apps.notifications.urls')),
+
+    # API
+    path('api/', include('tiqt.apps.core.api_urls')),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

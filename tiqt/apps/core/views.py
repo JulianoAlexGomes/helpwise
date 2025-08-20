@@ -23,6 +23,8 @@ import os
 from django.db.models import Q
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from rest_framework import viewsets
+from .serializers import ClienteSerializer
 
 
 def HomeView(request):
@@ -450,6 +452,10 @@ class CommentView(LoginRequiredMixin, View):
     def get(self, request, ticket_pk):
         return HttpResponseRedirect(
             reverse("ticket_detail", kwargs={"pk": ticket_pk}))
+
+class ClienteViewSet(viewsets.ModelViewSet):
+    queryset = Cliente.objects.all()
+    serializer_class = ClienteSerializer
 
 class ClienteListView(ListView):
     model = Cliente

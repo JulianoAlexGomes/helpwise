@@ -10,30 +10,16 @@ PROJECT_DIR = Path(__file__).parent
 
 SECRET_KEY = config('SECRET_KEY')
 
-# DEBUG = True
-DEBUG = False
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'prd1',
-#         'USER': 'admin',
-#         'PASSWORD': 'Desenv@112025',
-#         'HOST': 'localhost',
-#         'PORT': '3306',
-#         'OPTIONS': {
-#             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
-#         }
-#     }
-# }
+DEBUG = True
+# DEBUG = False
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'prd01',
-        'USER': 'admin',
-        'PASSWORD': 'Desenv@112025',
-        'HOST': '185.137.92.173',
+        'NAME': 'helpdesk',
+        'USER': 'root',
+        'PASSWORD': 'NovaSenhaForte123!',
+        'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
@@ -41,10 +27,24 @@ DATABASES = {
     }
 }
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'prd01',
+#         'USER': 'admin',
+#         'PASSWORD': 'Desenv@112025',
+#         'HOST': '185.137.92.173',
+#         'PORT': '3306',
+#         'OPTIONS': {
+#             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
+#         }
+#     }
+# }
+
 
 AUTH_USER_MODEL = 'core.User'
 
-ALLOWED_HOSTS = ['10.0.0.97', '127.0.0.1', '185.137.92.173','www.brothersti.com','brothersti.com','app1.brothersti.com']
+ALLOWED_HOSTS = ['10.0.0.97', '127.0.0.1', '185.137.92.173','www.brothersti.com','brothersti.com','app1.brothersti.com', 'localhost']
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(PROJECT_DIR, 'staticfiles')
@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     "crispy_bootstrap5",
     "channels", 
     "tiqt.apps.notifications",
+    "rest_framework",
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"

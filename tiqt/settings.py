@@ -44,7 +44,7 @@ DATABASES = {
 
 AUTH_USER_MODEL = 'core.User'
 
-ALLOWED_HOSTS = ['10.0.0.97', '127.0.0.1', '185.137.92.173','www.brothersti.com','brothersti.com','app1.brothersti.com', 'localhost']
+ALLOWED_HOSTS = ['10.0.0.97', '127.0.0.1', '31.97.164.192']
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(PROJECT_DIR, 'staticfiles')

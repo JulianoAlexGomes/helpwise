@@ -19,4 +19,4 @@ class ComentarioAdmin(admin.ModelAdmin):
 @admin.register(Comentario)
 class ComentarioAdmin(admin.ModelAdmin):
     list_display = ['id', 'ticket', 'autor', 'criado_em']
-    list_filter = ['ticket', 'autor']
+    list_filter = ['ticket', 'autor'] 

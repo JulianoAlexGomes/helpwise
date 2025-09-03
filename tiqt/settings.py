@@ -13,12 +13,25 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = True
 # DEBUG = False
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'helpwise',
+#         'USER': 'help',
+#         'PASSWORD': 'SenhaForte123!',
+#         'HOST': 'localhost',
+#         'PORT': '3306',
+#         'OPTIONS': {
+#             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
+#         }
+#     }
+# }
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'helpwise',
-        'USER': 'help',
-        'PASSWORD': 'SenhaForte123!',
+        'NAME': 'helpdesk',
+        'USER': 'root',
+        'PASSWORD': 'NovaSenhaForte123!',
         'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {
@@ -27,19 +40,6 @@ DATABASES = {
     }
 }
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'prd01',
-#         'USER': 'admin',
-#         'PASSWORD': 'Desenv@112025',
-#         'HOST': '185.137.92.173',
-#         'PORT': '3306',
-#         'OPTIONS': {
-#             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
-#         }
-#     }
-# }
 
 
 AUTH_USER_MODEL = 'core.User'

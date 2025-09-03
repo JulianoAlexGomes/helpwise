@@ -1,12 +1,1 @@
-asgiref==3.8.1
-Django==4.2.20
-django-appconf==1.1.0
-django-crispy-forms==2.4
-django-dbbackup==4.2.1
-django-select2==8.2.3
-django-tables2==2.7.5
-PyMySQL==1.1.1
-python-decouple==3.8
-pytz==2025.2
-sqlparse==0.5.3
-typing_extensions==4.13.2
+wheel==0.45.1

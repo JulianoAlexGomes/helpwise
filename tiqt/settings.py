@@ -16,10 +16,10 @@ DEBUG = True
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'helpdesk',
+        'NAME': 'helpwise',
         'USER': 'help',
         'PASSWORD': 'SenhaForte123!',
-        'HOST': 'localhost',
+        'HOST': '31.97.164.192',
         'PORT': '3306',
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"

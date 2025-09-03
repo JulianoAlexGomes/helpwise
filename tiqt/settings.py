@@ -10,28 +10,15 @@ PROJECT_DIR = Path(__file__).parent
 
 SECRET_KEY = config('SECRET_KEY')
 
-DEBUG = True
-# DEBUG = False
+# DEBUG = True
+DEBUG = False
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'helpwise',
-#         'USER': 'help',
-#         'PASSWORD': 'SenhaForte123!',
-#         'HOST': 'localhost',
-#         'PORT': '3306',
-#         'OPTIONS': {
-#             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
-#         }
-#     }
-# }
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'helpdesk',
-        'USER': 'root',
-        'PASSWORD': 'NovaSenhaForte123!',
+        'NAME': 'helpwise',
+        'USER': 'help',
+        'PASSWORD': 'SenhaForte123!',
         'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {
@@ -39,6 +26,19 @@ DATABASES = {
         }
     }
 }
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'helpdesk',
+#         'USER': 'root',
+#         'PASSWORD': 'NovaSenhaForte123!',
+#         'HOST': 'localhost',
+#         'PORT': '3306',
+#         'OPTIONS': {
+#             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
+#         }
+#     }
+# }
 
 
 

@@ -32,12 +32,21 @@ def HomeView(request):
     atendimentos_andamento = Ticket.objects.filter(status=Ticket.EM_ATENDIMENTO).count()
     atendimentos_encerrados = Ticket.objects.filter(status=Ticket.ENCERRADO).count()
     atendimentos_cancelados = Ticket.objects.filter(status=Ticket.CANCELADO).count()
+    
+    atendimentos_abertos_juliano = Ticket.objects.filter(status=Ticket.ABERTO, responsavel_id=12).count()
+    atendimentos_andamento_juliano = Ticket.objects.filter(status=Ticket.EM_ATENDIMENTO, responsavel_id=12).count()
+    atendimentos_encerrados_juliano = Ticket.objects.filter(status=Ticket.ENCERRADO, responsavel_id=12).count()
+    atendimentos_cancelados_juliano = Ticket.objects.filter(status=Ticket.CANCELADO, responsavel_id=12).count()
 
     context = {
         'atendimentos_aberto': atendimentos_aberto,
         'atendimentos_andamento': atendimentos_andamento,
         'atendimentos_encerrados': atendimentos_encerrados,
         'atendimentos_cancelados': atendimentos_cancelados,
+        'atendimentos_abertos_juliano': atendimentos_abertos_juliano,
+        'atendimentos_andamento_juliano': atendimentos_andamento_juliano,
+        'atendimentos_encerrados_juliano': atendimentos_encerrados_juliano,
+        'atendimentos_cancelados_juliano': atendimentos_cancelados_juliano,
     }
 
     return render(request, 'core/home.html', context)

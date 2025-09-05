@@ -37,16 +37,8 @@
   </div>
 
   <div class="row">
-    <div class="col s12 m8">
+    <div class="col s12">
       <canvas id="atendimentosChart"></canvas>
-    </div>
-    <div class="col s12 m4">
-      <div class="card">
-        <div class="card-content">
-          <span class="card-title center">JULIANO</span>
-          <canvas id="julianoPieChart"></canvas>
-        </div>
-      </div>
     </div>
   </div>
 {% endblock content %}
@@ -82,47 +74,6 @@
         scales: {
           y: {
             beginAtZero: true
-          }
-        }
-      }
-    });
-
-    // Gráfico de Pizza para JULIANO
-    var julianoPieCtx = document.getElementById('julianoPieChart').getContext('2d');
-    var julianoPieChart = new Chart(julianoPieCtx, {
-      type: 'pie',
-      data: {
-        labels: ['Aberto', 'Em Andamento', 'Encerrado', 'Cancelado'],
-        datasets: [{
-          data: [
-            {{ atendimentos_abertos_juliano }},
-            {{ atendimentos_andamento_juliano }},
-            {{ atendimentos_encerrados_juliano }},
-            {{ atendimentos_cancelados_juliano }}
-          ],
-          backgroundColor: [
-            'rgba(0, 150, 136, 0.6)',
-            'rgba(255, 152, 0, 0.6)',
-            'rgba(76, 175, 80, 0.6)',
-            'rgba(231, 70, 70, 0.6)'
-          ],
-          borderColor: [
-            'rgba(0, 150, 136, 1)',
-            'rgba(255, 152, 0, 1)',
-            'rgba(76, 175, 80, 1)',
-            'rgb(200, 98, 98)'
-          ],
-          borderWidth: 2
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: {
-            position: 'bottom'
-          },
-          title: {
-            display: false
           }
         }
       }

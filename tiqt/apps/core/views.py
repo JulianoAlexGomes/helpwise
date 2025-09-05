@@ -32,7 +32,7 @@ def HomeView(request):
         14: "Harissa",
         12: "Juliano",
         11: "Lucas",
-        15: "Marco",
+        # 15: "Marco",
         10: "Marcos",
         9:  "Taylan",
         13: "Victoria",

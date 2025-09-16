@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+tiqt/apps/core/templates/core/ticket_detail.html{% extends 'base.html' %}
 {% load crispy_forms_tags %}
 
 {% block content %}
@@ -35,7 +35,7 @@
           </div>
           <div class="row">
             <div class="col l12">
-              {{ comment.texto }}
+              {{ comment.texto|linebreaksbr }}
             </div>
           </div>
           {% if comment.imagens.all %}
@@ -111,7 +111,6 @@
         <p><b>Encerrado em: </b>{{ object.encerrado_em|date:"d/m/y à\s H:i"|default:" " }}</p>
       {% endif %}
       <p><b>Idade: </b>{{ object.criado_em|timesince:object.encerrado_em }}</p>
-      {% comment %} <p><b>Status: </b>{{ object.get_status_display }}</p> {% endcomment %}
       <p><b>Situação: </b>{{ object.situacao|default_if_none:" "  }}</p>
       <p><b>Tipo: </b>{{ object.tipo }}</p>
       <p><b>Prioridade: </b>{{ object.prioridade }}</p>

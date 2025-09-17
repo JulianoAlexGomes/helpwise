@@ -78,7 +78,8 @@ tiqt/apps/core/templates/core/ticket_detail.html{% extends 'base.html' %}
           {% endif %}
           <div class="row">
             <div class="col l12">
-              <a href="{% url 'excluir_comentario' comment.id %}" class="btn red right">🗑 Excluir Comentário</a>
+              <a href="{% url 'excluir_comentario' comment.id %}" class="btn red right"
+              onclick="return confirm('Tem certeza que deseja excluir este comentário?');">🗑 Excluir</a>
             </div>
           </div>
         </div>
@@ -134,7 +135,8 @@ tiqt/apps/core/templates/core/ticket_detail.html{% extends 'base.html' %}
       <a class="btn-floating btn-large red {% if object.encerrado_em or object.cancelado %} disabled {% endif %}" href="{% url 'ticket_update' object.id %}"><i class="material-icons large">edit</i></a>
       <ul>
         {% if not object.cancelado and not object.encerrado_em%}
-          <li><a class="btn-floating teal" href="{% url 'ticket_cancel' object.id %}"><i class="material-icons">cancel</i></a></li>
+          <li><a class="btn-floating teal" href="{% url 'ticket_cancel' object.id %}"><i class="material-icons"
+            onclick="return confirm('Tem certeza que deseja cancelar este ticket?');">cancel</i></a></li>
         {% endif %}
         {% if not object.cancelado and not object.iniciado_em %}
           <li><a class="btn-floating teal" href="{% url 'ticket_accept' object.id %}"><i class="material-icons">playlist_add</i></a></li>

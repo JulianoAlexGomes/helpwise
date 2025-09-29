@@ -14,6 +14,14 @@
         <div class="col s12 m2">
           <button type="submit" class="btn">Pesquisar</button>
         </div>
+        <div class="col s12 m3">
+          <h6>Responsável</h6>
+          {{ filter_form.responsavel }}
+        </div>
+        <div class="col s12 m3">
+          <h6>Atendente</h6>
+          {{ filter_form.atendente }}
+        </div>
         {% endif %}
       </div>
     </form>
@@ -40,7 +48,6 @@
           <h6>Situação</h6>
           {{ filter_form.situacao  }}
         </div>
-      </div>
       <div class="row">
         <div class="col s12 m2">
           <h6>Criado</h6>

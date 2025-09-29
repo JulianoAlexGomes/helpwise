@@ -27,6 +27,8 @@ from rest_framework import viewsets
 from .serializers import ClienteSerializer
 
 
+from django.utils import timezone
+
 def HomeView(request):
     usuarios = {
         14: "Harissa",
@@ -38,20 +40,61 @@ def HomeView(request):
         13: "Victoria",
     }
 
-    # Totais gerais
-    atendimentos_aberto = Ticket.objects.filter(status=Ticket.ABERTO).count()
-    atendimentos_andamento = Ticket.objects.filter(status=Ticket.EM_ATENDIMENTO).count()
-    atendimentos_encerrados = Ticket.objects.filter(status=Ticket.ENCERRADO).count()
-    atendimentos_cancelados = Ticket.objects.filter(status=Ticket.CANCELADO).count()
+    # Filtro para o mês atual
+    hoje = timezone.now()
+    mes = hoje.month
+    ano = hoje.year
 
-    # Totais por usuário
+    # Totais gerais do mês atual
+    atendimentos_aberto = Ticket.objects.filter(
+        status=Ticket.ABERTO,
+        criado_em__year=ano,
+        criado_em__month=mes
+    ).count()
+    atendimentos_andamento = Ticket.objects.filter(
+        status=Ticket.EM_ATENDIMENTO,
+        criado_em__year=ano,
+        criado_em__month=mes
+    ).count()
+    atendimentos_encerrados = Ticket.objects.filter(
+        status=Ticket.ENCERRADO,
+        criado_em__year=ano,
+        criado_em__month=mes
+    ).count()
+    atendimentos_cancelados = Ticket.objects.filter(
+        status=Ticket.CANCELADO,
+        criado_em__year=ano,
+        criado_em__month=mes
+    ).count()
+
+    # Totais por usuário do mês atual
     atendimentos_por_usuario = {}
     for uid, nome in usuarios.items():
         atendimentos_por_usuario[nome] = {
-            "abertos": Ticket.objects.filter(status=Ticket.ABERTO, responsavel_id=uid).count(),
-            "andamento": Ticket.objects.filter(status=Ticket.EM_ATENDIMENTO, responsavel_id=uid).count(),
-            "encerrados": Ticket.objects.filter(status=Ticket.ENCERRADO, responsavel_id=uid).count(),
-            "cancelados": Ticket.objects.filter(status=Ticket.CANCELADO, responsavel_id=uid).count(),
+            "abertos": Ticket.objects.filter(
+                status=Ticket.ABERTO,
+                responsavel_id=uid,
+                criado_em__year=ano,
+                criado_em__month=mes
+            ).count(),
+            "andamento": Ticket.objects.filter(
+                status=Ticket.EM_ATENDIMENTO,
+                responsavel_id=uid,
+                criado_em__year=ano,
+                criado_em__month=mes
+            ).count(),
+            "encerrados": Ticket.objects.filter(
+                status=Ticket.ENCERRADO,
+                responsavel_id=uid,
+                criado_em__year=ano,
+                criado_em__month=mes
+            ).count(),
+            "cancelados": Ticket.objects.filter(
+                status=Ticket.CANCELADO,
+                responsavel_id=uid,
+                criado_em__year=ano,
+                criado_em__month=mes
+            ).count(),
         }
 
     context = {
@@ -63,6 +106,43 @@ def HomeView(request):
     }
 
     return render(request, "core/home.html", context)
+
+# def HomeView(request):
+#     usuarios = {
+#         14: "Harissa",
+#         12: "Juliano",
+#         11: "Lucas",
+#         # 15: "Marco",
+#         10: "Marcos",
+#         9:  "Taylan",
+#         13: "Victoria",
+#     }
+
+#     # Totais gerais
+#     atendimentos_aberto = Ticket.objects.filter(status=Ticket.ABERTO).count()
+#     atendimentos_andamento = Ticket.objects.filter(status=Ticket.EM_ATENDIMENTO).count()
+#     atendimentos_encerrados = Ticket.objects.filter(status=Ticket.ENCERRADO).count()
+#     atendimentos_cancelados = Ticket.objects.filter(status=Ticket.CANCELADO).count()
+
+#     # Totais por usuário
+#     atendimentos_por_usuario = {}
+#     for uid, nome in usuarios.items():
+#         atendimentos_por_usuario[nome] = {
+#             "abertos": Ticket.objects.filter(status=Ticket.ABERTO, responsavel_id=uid).count(),
+#             "andamento": Ticket.objects.filter(status=Ticket.EM_ATENDIMENTO, responsavel_id=uid).count(),
+#             "encerrados": Ticket.objects.filter(status=Ticket.ENCERRADO, responsavel_id=uid).count(),
+#             "cancelados": Ticket.objects.filter(status=Ticket.CANCELADO, responsavel_id=uid).count(),
+#         }
+
+#     context = {
+#         "atendimentos_aberto": atendimentos_aberto,
+#         "atendimentos_andamento": atendimentos_andamento,
+#         "atendimentos_encerrados": atendimentos_encerrados,
+#         "atendimentos_cancelados": atendimentos_cancelados,
+#         "atendimentos_por_usuario": atendimentos_por_usuario,
+#     }
+
+#     return render(request, "core/home.html", context)
 
 
 def excluir_comentario(request, comentario_id):
@@ -179,7 +259,7 @@ class OpenTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
         form = TicketFilterForm(self.request.GET)
         query = self.request.GET.get('q')
         if query:
-            queryset = queryset.filter(Q(titulo__icontains=query) | Q(id__icontains=query))
+            queryset = queryset.filter(Q(titulo__icontains=query) | Q(id__icontains=query) | Q(atendente__username__icontains=query))
         if form.is_valid():
             queryset = apply_filters(queryset, form)
         return queryset
@@ -194,7 +274,7 @@ class OpenTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
         return context
 
     table_pagination = {
-        'per_page': 10
+        'per_page': 10000
     }
 
 class InProgressTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):

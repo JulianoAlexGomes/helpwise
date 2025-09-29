@@ -1,7 +1,7 @@
 from django import forms
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit
-from .models import Cliente, Tipo, Prioridade, Departamento, Situacao   
+from .models import Cliente, Tipo, Prioridade, Departamento, Situacao, User
 
 class TicketFilterForm(forms.Form):
     cliente = forms.ModelChoiceField(queryset=Cliente.objects.all(), required=False, label='Cliente')
@@ -22,6 +22,8 @@ class TicketFilterForm(forms.Form):
     prioridade = forms.ModelChoiceField(queryset=Prioridade.objects.all(), required=False, label='Prioridade')
     departamento = forms.ModelChoiceField(queryset=Departamento.objects.all(), required=False, label='Departamento')
     situacao = forms.ModelChoiceField(queryset=Situacao.objects.all(), required=False, label='Situação')
+    responsavel = forms.ModelChoiceField(queryset=User.objects.all(), required=False, label='Responsável')
+    atendente = forms.ModelChoiceField(queryset=User.objects.all(), required=False, label='Atendente')
     criado_em_inicio = forms.DateField(required=False, label='Criado em (início)', widget=forms.DateInput(attrs={'type': 'date'}))
     criado_em_fim = forms.DateField(required=False, label='Criado em (fim)', widget=forms.DateInput(attrs={'type': 'date'}))
     encerrado_em_inicio = forms.DateField(required=False, label='Encerrado em (início)', widget=forms.DateInput(attrs={'type': 'date'}))

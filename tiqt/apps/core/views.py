@@ -17,95 +17,18 @@ from tiqt.apps.core.tables import TicketTable
 from .forms import TicketForm, ClienteForm, TicketCloseForm, ComentarioForm
 from .models import Cliente, Ticket, Solucao, ComentarioArquivo, ComentarioImagem, CertificadoCliente
 from .filters import TicketFilterForm
-from datetime import datetime
+from datetime import datetime, timedelta
 import tiqt.settings as settings
-import os
 from django.db.models import Q
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from rest_framework import viewsets
 from .serializers import ClienteSerializer
-
-
 from django.utils import timezone
+from django.shortcuts import render
+from .models import Ticket
+import os
 
-def HomeView(request):
-    usuarios = {
-        14: "Harissa",
-        12: "Juliano",
-        11: "Lucas",
-        # 15: "Marco",
-        10: "Marcos",
-        9:  "Taylan",
-        13: "Victoria",
-    }
-
-    # Filtro para o mês atual
-    hoje = timezone.now()
-    mes = hoje.month
-    ano = hoje.year
-
-    # Totais gerais do mês atual
-    atendimentos_aberto = Ticket.objects.filter(
-        status=Ticket.ABERTO,
-        criado_em__year=ano,
-        criado_em__month=mes
-    ).count()
-    atendimentos_andamento = Ticket.objects.filter(
-        status=Ticket.EM_ATENDIMENTO,
-        criado_em__year=ano,
-        criado_em__month=mes
-    ).count()
-    atendimentos_encerrados = Ticket.objects.filter(
-        status=Ticket.ENCERRADO,
-        criado_em__year=ano,
-        criado_em__month=mes
-    ).count()
-    atendimentos_cancelados = Ticket.objects.filter(
-        status=Ticket.CANCELADO,
-        criado_em__year=ano,
-        criado_em__month=mes
-    ).count()
-
-    # Totais por usuário do mês atual
-    atendimentos_por_usuario = {}
-    for uid, nome in usuarios.items():
-        atendimentos_por_usuario[nome] = {
-            "abertos": Ticket.objects.filter(
-                status=Ticket.ABERTO,
-                responsavel_id=uid,
-                criado_em__year=ano,
-                criado_em__month=mes
-            ).count(),
-            "andamento": Ticket.objects.filter(
-                status=Ticket.EM_ATENDIMENTO,
-                responsavel_id=uid,
-                criado_em__year=ano,
-                criado_em__month=mes
-            ).count(),
-            "encerrados": Ticket.objects.filter(
-                status=Ticket.ENCERRADO,
-                responsavel_id=uid,
-                criado_em__year=ano,
-                criado_em__month=mes
-            ).count(),
-            "cancelados": Ticket.objects.filter(
-                status=Ticket.CANCELADO,
-                responsavel_id=uid,
-                criado_em__year=ano,
-                criado_em__month=mes
-            ).count(),
-        }
-
-    context = {
-        "atendimentos_aberto": atendimentos_aberto,
-        "atendimentos_andamento": atendimentos_andamento,
-        "atendimentos_encerrados": atendimentos_encerrados,
-        "atendimentos_cancelados": atendimentos_cancelados,
-        "atendimentos_por_usuario": atendimentos_por_usuario,
-    }
-
-    return render(request, "core/home.html", context)
 
 # def HomeView(request):
 #     usuarios = {
@@ -118,31 +41,75 @@ def HomeView(request):
 #         13: "Victoria",
 #     }
 
-#     # Totais gerais
-#     atendimentos_aberto = Ticket.objects.filter(status=Ticket.ABERTO).count()
-#     atendimentos_andamento = Ticket.objects.filter(status=Ticket.EM_ATENDIMENTO).count()
-#     atendimentos_encerrados = Ticket.objects.filter(status=Ticket.ENCERRADO).count()
-#     atendimentos_cancelados = Ticket.objects.filter(status=Ticket.CANCELADO).count()
+#     hoje = timezone.now()
+#     inicio_mes = hoje.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-#     # Totais por usuário
+#     # calcula o primeiro dia do próximo mês
+#     if hoje.month == 12:
+#         inicio_prox_mes = hoje.replace(year=hoje.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+#     else:
+#         inicio_prox_mes = hoje.replace(month=hoje.month + 1, day=1, hour=0, minute=0, second=0, microsecond=0)
+
+#     # Tickets do mês atual
+#     tickets_mes = Ticket.objects.filter(criado_em__gte=inicio_mes, criado_em__lt=inicio_prox_mes)
+
+#     # Totais
+#     atendimentos_aberto = tickets_mes.filter(status=Ticket.ABERTO).count()
+#     atendimentos_andamento = tickets_mes.filter(status=Ticket.EM_ATENDIMENTO).count()
+#     atendimentos_encerrados = tickets_mes.filter(status=Ticket.ENCERRADO).count()
+#     atendimentos_cancelados = tickets_mes.filter(status=Ticket.CANCELADO).count()
+
+#     # Totais por usuário (atendente)
 #     atendimentos_por_usuario = {}
 #     for uid, nome in usuarios.items():
-#         atendimentos_por_usuario[nome] = {
-#             "abertos": Ticket.objects.filter(status=Ticket.ABERTO, responsavel_id=uid).count(),
-#             "andamento": Ticket.objects.filter(status=Ticket.EM_ATENDIMENTO, responsavel_id=uid).count(),
-#             "encerrados": Ticket.objects.filter(status=Ticket.ENCERRADO, responsavel_id=uid).count(),
-#             "cancelados": Ticket.objects.filter(status=Ticket.CANCELADO, responsavel_id=uid).count(),
-#         }
+#         atendimentos_por_usuario[nome] = tickets_mes.filter(atendente_id=uid).count()
 
 #     context = {
-#         "atendimentos_aberto": atendimentos_aberto,
-#         "atendimentos_andamento": atendimentos_andamento,
-#         "atendimentos_encerrados": atendimentos_encerrados,
-#         "atendimentos_cancelados": atendimentos_cancelados,
+#         "abertos": atendimentos_aberto,
+#         "andamento": atendimentos_andamento,
+#         "encerrados": atendimentos_encerrados,
+#         "cancelados": atendimentos_cancelados,
 #         "atendimentos_por_usuario": atendimentos_por_usuario,
 #     }
-
 #     return render(request, "core/home.html", context)
+
+
+def HomeView(request):
+    usuarios = {
+        14: "Harissa",
+        12: "Juliano",
+        11: "Lucas",
+        # 15: "Marco",
+        10: "Marcos",
+        9:  "Taylan",
+        13: "Victoria",
+    }
+
+    # Totais gerais
+    atendimentos_aberto = Ticket.objects.filter(status=Ticket.ABERTO).count()
+    atendimentos_andamento = Ticket.objects.filter(status=Ticket.EM_ATENDIMENTO).count()
+    atendimentos_encerrados = Ticket.objects.filter(status=Ticket.ENCERRADO).count()
+    atendimentos_cancelados = Ticket.objects.filter(status=Ticket.CANCELADO).count()
+
+    # Totais por usuário
+    atendimentos_por_usuario = {}
+    for uid, nome in usuarios.items():
+        atendimentos_por_usuario[nome] = {
+            "abertos": Ticket.objects.filter(status=Ticket.ABERTO, responsavel_id=uid).count(),
+            "andamento": Ticket.objects.filter(status=Ticket.EM_ATENDIMENTO, responsavel_id=uid).count(),
+            "encerrados": Ticket.objects.filter(status=Ticket.ENCERRADO, responsavel_id=uid).count(),
+            "cancelados": Ticket.objects.filter(status=Ticket.CANCELADO, responsavel_id=uid).count(),
+        }
+
+    context = {
+        "atendimentos_aberto": atendimentos_aberto,
+        "atendimentos_andamento": atendimentos_andamento,
+        "atendimentos_encerrados": atendimentos_encerrados,
+        "atendimentos_cancelados": atendimentos_cancelados,
+        "atendimentos_por_usuario": atendimentos_por_usuario,
+    }
+
+    return render(request, "core/home.html", context)
 
 
 def excluir_comentario(request, comentario_id):

@@ -20,7 +20,7 @@
       
       {% for comment in comments %}
       <div class="card">
-        <div class="card-content">§
+        <div class="card-content">
           <div class="row">
             <div class="col l12">
               <b>Em:</b> {{ comment.criado_em|date:"d/m/y à\s H:i" }}</br>
@@ -47,7 +47,8 @@
                     <div class="col l4 m6 s12">
                       <div class="card">
                         <div class="card-image">
-                          <img src="{{ imagem.imagem.url }}" class="responsive-img">
+                          <!-- Aqui está a pré-visualização -->
+                          <img src="{{ imagem.imagem.url }}" class="responsive-img materialboxed">
                           <div class="card">
                             <a href="{{ imagem.imagem.url }}" download class="btn blue left">📥 Baixar</a>
                           </div>
@@ -146,4 +147,5 @@
         {% endif %}
       </ul>
     </div>
+  </div>
 {% endblock content %}

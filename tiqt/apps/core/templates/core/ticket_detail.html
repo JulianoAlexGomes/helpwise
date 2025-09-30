@@ -1,4 +1,4 @@
-tiqt/apps/core/templates/core/ticket_detail.html{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% load crispy_forms_tags %}
 
 {% block content %}
@@ -47,7 +47,8 @@ tiqt/apps/core/templates/core/ticket_detail.html{% extends 'base.html' %}
                     <div class="col l4 m6 s12">
                       <div class="card">
                         <div class="card-image">
-                          <img src="{{ imagem.imagem.url }}" class="responsive-img">
+                          <!-- Aqui está a pré-visualização -->
+                          <img src="{{ imagem.imagem.url }}" class="responsive-img materialboxed">
                           <div class="card">
                             <a href="{{ imagem.imagem.url }}" download class="btn blue left">📥 Baixar</a>
                           </div>
@@ -146,4 +147,13 @@ tiqt/apps/core/templates/core/ticket_detail.html{% extends 'base.html' %}
         {% endif %}
       </ul>
     </div>
+  </div>
+
+  <!-- Script para ativar a pré-visualização -->
+  {% comment %} <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var elems = document.querySelectorAll('.materialboxed');
+      M.Materialbox.init(elems, {});
+    });
+  </script> {% endcomment %}
 {% endblock content %}

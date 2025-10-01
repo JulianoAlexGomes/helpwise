@@ -112,12 +112,12 @@
         notificationArea.appendChild(newNotification);
     };
   </script>
-  <script>
+  {% comment %} <script>
   document.addEventListener('DOMContentLoaded', function() {
     var elems = document.querySelectorAll('.materialboxed');
     M.Materialbox.init(elems, {});
   });
-</script>
+</script> {% endcomment %}
   {% block extra_js %}{% endblock extra_js %}
   </body>
 </html>

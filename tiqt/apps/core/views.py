@@ -210,9 +210,9 @@ def download_certificado(request, cliente_id):
 class MyTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     template_name = 'core/tickets_list.html'
     table_class = TicketTable
-    table_pagination = {
-        'per_page': 10
-    }
+    # table_pagination = {
+    #     'per_page': 10
+    # }
 
     def get_table_data(self, **kwargs):
         return Ticket.objects.filter(Q(status=Ticket.ABERTO) | Q(status=Ticket.EM_ATENDIMENTO),responsavel=self.request.user)

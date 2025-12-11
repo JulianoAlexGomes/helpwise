@@ -24,7 +24,7 @@
           <div class="row">
             <div class="col l12">
               <b>Em:</b> {{ comment.criado_em|date:"d/m/y à\s H:i" }}</br>
-              <b>Por:</b> {{ comment.autor.username|default:" " }}</br>
+              <b>Por:</b> {{ comment.autor.get_full_name|default:" " }}</br>
               {% if comment.proximo_contato %}
                 <b>Próximo Contato</b> {{ comment.proximo_contato|date:"d/m/y à\s H:i"|default:" " }}</br>
               {% endif %}
@@ -124,7 +124,7 @@
       {% if solucoes %}
         <h5>Solução:</h5>
         {% for solucao in solucoes %}
-          <p><b>Autor: </b>{{ solucao.autor }}</p>
+          <p><b>Autor: </b>{{ solucao.autor.get_full_name }}</p>
           <p><b>Data: </b>{{ solucao.criado_em|date:"d/m/y à\s H:i" }}</p>
           <p><b>Descrição: </b>{{ solucao.texto }}</p>
           <div class="divider"></div>

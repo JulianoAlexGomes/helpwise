@@ -15,7 +15,7 @@ from django_tables2 import SingleTableMixin
 from tiqt.apps.core.models import Ticket, Comentario
 from tiqt.apps.core.tables import TicketTable
 from .forms import TicketForm, ClienteForm, TicketCloseForm, ComentarioForm
-from .models import Cliente, Ticket, Solucao, ComentarioArquivo, ComentarioImagem, CertificadoCliente
+from .models import Cliente, Ticket, Solucao, ComentarioArquivo, ComentarioImagem, CertificadoCliente, User
 from .filters import TicketFilterForm
 from datetime import datetime, timedelta
 import tiqt.settings as settings
@@ -75,30 +75,30 @@ import os
 
 
 def HomeView(request):
-    usuarios = {
-        14: "Harissa",
-        12: "Juliano",
-        11: "Lucas",
-        # 15: "Marco",
-        10: "Marcos",
-        9:  "Taylan",
-        13: "Victoria",
-    }
-
     # Totais gerais
     atendimentos_aberto = Ticket.objects.filter(status=Ticket.ABERTO).count()
     atendimentos_andamento = Ticket.objects.filter(status=Ticket.EM_ATENDIMENTO).count()
     atendimentos_encerrados = Ticket.objects.filter(status=Ticket.ENCERRADO).count()
     atendimentos_cancelados = Ticket.objects.filter(status=Ticket.CANCELADO).count()
 
-    # Totais por usuário
+    # Totais por usuário - busca dinâmica de usuários com tickets
     atendimentos_por_usuario = {}
-    for uid, nome in usuarios.items():
-        atendimentos_por_usuario[nome] = {
-            "abertos": Ticket.objects.filter(status=Ticket.ABERTO, responsavel_id=uid).count(),
-            "andamento": Ticket.objects.filter(status=Ticket.EM_ATENDIMENTO, responsavel_id=uid).count(),
-            "encerrados": Ticket.objects.filter(status=Ticket.ENCERRADO, responsavel_id=uid).count(),
-            "cancelados": Ticket.objects.filter(status=Ticket.CANCELADO, responsavel_id=uid).count(),
+    usuarios_com_tickets = User.objects.filter(
+        responsavel_por__isnull=False
+    ).distinct().values_list('id', 'first_name', 'last_name')
+    
+    for user_id, first_name, last_name in usuarios_com_tickets:
+        nome_completo = f"{first_name} {last_name}".strip()
+        if not nome_completo:
+            # Fallback para username caso não tenha nome completo
+            usuario = User.objects.get(id=user_id)
+            nome_completo = usuario.get_full_name() or usuario.username
+        
+        atendimentos_por_usuario[nome_completo] = {
+            "abertos": Ticket.objects.filter(status=Ticket.ABERTO, responsavel_id=user_id).count(),
+            "andamento": Ticket.objects.filter(status=Ticket.EM_ATENDIMENTO, responsavel_id=user_id).count(),
+            "encerrados": Ticket.objects.filter(status=Ticket.ENCERRADO, responsavel_id=user_id).count(),
+            "cancelados": Ticket.objects.filter(status=Ticket.CANCELADO, responsavel_id=user_id).count(),
         }
 
     context = {
@@ -161,6 +161,10 @@ def apply_filters(queryset, form):
             queryset = queryset.filter(prioridade=form.cleaned_data['prioridade'])
         if form.cleaned_data['situacao']:
             queryset = queryset.filter(situacao=form.cleaned_data['situacao'])
+        if form.cleaned_data['responsavel']:
+            queryset = queryset.filter(responsavel=form.cleaned_data['responsavel'])
+        if form.cleaned_data['atendente']:
+            queryset = queryset.filter(atendente=form.cleaned_data['atendente'])
 
         # Filtros de Criado em
         if form.cleaned_data['criado_em_inicio']:
@@ -226,7 +230,12 @@ class OpenTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
         form = TicketFilterForm(self.request.GET)
         query = self.request.GET.get('q')
         if query:
-            queryset = queryset.filter(Q(titulo__icontains=query) | Q(id__icontains=query) | Q(atendente__username__icontains=query))
+            queryset = queryset.filter(
+                Q(titulo__icontains=query) | 
+                Q(id__icontains=query) | 
+                Q(atendente__first_name__icontains=query) |
+                Q(atendente__last_name__icontains=query)
+            )
         if form.is_valid():
             queryset = apply_filters(queryset, form)
         return queryset

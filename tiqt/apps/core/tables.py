@@ -4,7 +4,7 @@ from django.urls import reverse
 
 class TicketTable(Table):
     id = LinkColumn('ticket_detail', args=[A('pk')])
-    atendente = tables.Column(accessor='atendente.username', verbose_name='Atendente')
+    atendente = tables.Column(accessor='atendente.get_full_name', verbose_name='Atendente')
     cliente = tables.Column(accessor='cliente.fantasia', verbose_name='Cliente')
     # ultimo_comentario = tables.Column(accessor='ultimo_comentario', verbose_name='Último Comentário')
     # solucao = tables.Column(accessor='get_solucao', verbose_name='Solução')

@@ -9,6 +9,10 @@
       {{ form|crispy }}
       <input type="submit" value="Entrar" class="btn right">
       <input type="hidden" name="next" value="{{ next }}">
+      {% comment %} <button class="btn-flat left" onclick="window.location.href='{% url 'password_reset' %}'">Esqueci minha senha</button> {% endcomment %}
+      {% comment %} <button class="btn-flat left" style="margin-left: 10px;" onclick="window.location.href='{% url 'register' %}'">Registrar-se</button> {% endcomment %}
+      {% comment %} <button class="btn-flat left" style="margin-left: 10px;" onclick="window.location.href=''">Voltar ao Início</button> {% endcomment %}
+      <a href="{% url 'home' %}" class="btn left">Voltar ao Início</a>
     </form>
   </div>
 </div>

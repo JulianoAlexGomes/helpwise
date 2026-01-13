@@ -1,110 +1,199 @@
 {% extends 'base.html' %}
 
 {% block content %}
-  {% comment %} <div class="row">
-    <div class="col s12">
-      <h5 class="center">
-        Dados referentes a: 
-        {{ mes }}/{{ ano }}
-      </h5>
-    </div>
-  </div> {% endcomment %}
-  <div class="row">
-    <div class="col s12 m3">
-      <div class="card teal">
-        <div class="card-content white-text">
-          <span class="card-title center">Aberto</span>
-          <h4 class="center">{{ atendimentos_aberto }}</h4>
-        </div>
-      </div>
-    </div>
-    <div class="col s12 m3">
-      <div class="card orange">
-        <div class="card-content white-text">
-          <span class="card-title center">Atendimento</span>
-          <h4 class="center">{{ atendimentos_andamento }}</h4>
-        </div>
-      </div>
-    </div>
-    <div class="col s12 m3">
-      <div class="card green">
-        <div class="card-content white-text">
-          <span class="card-title center">Encerrados</span>
-          <h4 class="center">{{ atendimentos_encerrados }}</h4>
-        </div>
-      </div>
-    </div>
-    <div class="col s12 m3">
-      <div class="card red">
-        <div class="card-content white-text">
-          <span class="card-title center">Cancelados</span>
-          <h4 class="center">{{ atendimentos_cancelados }}</h4>
-        </div>
-      </div>
-    </div>
-  </div>
+{% if not user.is_authenticated %}
+<div align="center" style="margin-top: 50px;">
+  <h3>Bem-vindo ao HelpWise</h3>
+  <p>Por favor, faça login para acessar o sistema.</p>
+<form  method="post" action="{% url 'login' %}">{% csrf_token %}<button type="submit" class="btn">Login</button></form>
+</div>
+{% endif %}
+{% if user.is_authenticated %}
 
-  <div class="row">
-    <!-- Gráficos por usuário -->
-    {% for usuario, dados in atendimentos_por_usuario.items %}
-      <div class="col s12 m4"> <!-- 3 por linha -->
-        <div class="card" style="padding: 12px;">
-          <div class="card-content">
-            <span class="card-title center" style="font-size: 1.4rem; font-weight: bold; color: #333;">
-              {{ usuario|upper }}
-            </span>
-            <canvas id="pieChart_{{ forloop.counter }}" style="max-width: 260px; margin: auto;"></canvas>
-          </div>
-        </div>
+<h4 class="center">
+  Bem-vindo, {{ user.first_name|default:user.username }}<br>
+</h4>
+
+
+<!-- ===================== -->
+<!-- RESUMO -->
+<!-- ===================== -->
+<div class="row">
+  <div class="col s12 m3">
+    <div class="card teal">
+      <div class="card-content white-text center">
+        <span class="card-title">Abertos</span>
+        <h4>{{ atendimentos_aberto }}</h4>
       </div>
-    {% endfor %}
+    </div>
   </div>
+  
+  <div class="col s12 m3">
+    <div class="card orange">
+      <div class="card-content white-text center">
+        <span class="card-title">Em Atendimento</span>
+        <h4>{{ atendimentos_andamento }}</h4>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col s12 m3">
+    <div class="card green">
+      <div class="card-content white-text center">
+        <span class="card-title">Encerrados</span>
+        <h4>{{ atendimentos_encerrados }}</h4>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col s12 m3">
+    <div class="card red">
+      <div class="card-content white-text center">
+        <span class="card-title">Cancelados</span>
+        <h4>{{ atendimentos_cancelados }}</h4>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if labels_usuarios %}
+
+<!-- ===================== -->
+<!-- GRÁFICO EMPILHADO -->
+<!-- ===================== -->
+<div class="card">
+  <div class="card-content">
+    <span class="card-title center" style="font-weight:600">
+      Atendimentos por Usuário
+    </span>
+    <canvas id="stackedChart" height="140"></canvas>
+  </div>
+</div>
+
+<!-- ===================== -->
+<!-- EVOLUÇÃO DIÁRIA -->
+<!-- ===================== -->
+
+<div class="card">
+  <div class="card-content">
+    <span class="card-title center" style="font-weight:600">
+      Evolução Diária de Atendimentos
+    </span>
+    <canvas id="dailyChart" height="120"></canvas>
+  </div>
+</div>
+<!-- ===================== -->
+<!-- FILTROS -->
+<!-- ===================== -->
+<div class="card">
+  <div class="card-content">
+    <form method="get" class="row">
+
+      <div class="input-field col s12 m3">
+        <input type="date" name="data_inicio" value="{{ data_inicio }}">
+        <label class="active">Data início</label>
+      </div>
+
+      <div class="input-field col s12 m3">
+        <input type="date" name="data_fim" value="{{ data_fim }}">
+        <label class="active">Data fim</label>
+      </div>
+
+      <div class="input-field col s12 m4">
+        <select name="usuarios" multiple>
+          {% for u in usuarios %}
+            <option value="{{ u.id }}"
+              {% if u.id|stringformat:"s" in usuarios_selecionados %}selected{% endif %}
+            >
+              {{ u.get_full_name|default:u.username }}
+            </option>
+          {% endfor %}
+        </select>
+        <label>Usuários</label>
+      </div>
+
+      <div class="input-field col s12 m2 center-align">
+        <button class="btn waves-effect waves-light">
+          Filtrar
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{% else %}
+<div class="card-panel yellow lighten-4 center">
+  <strong>Nenhum atendimento encontrado para os filtros selecionados.</strong>
+</div>
+{% endif %}
+
+{% endif %}
 {% endblock content %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const cores = [
-      'rgba(0, 150, 136, 0.6)',
-      'rgba(255, 152, 0, 0.6)',
-      'rgba(76, 175, 80, 0.6)',
-      'rgba(231, 70, 70, 0.6)'
-    ];
-    const bordas = [
-      'rgba(0, 150, 136, 1)',
-      'rgba(255, 152, 0, 1)',
-      'rgba(76, 175, 80, 1)',
-      'rgb(200, 98, 98)'
-    ];
 
-    {% for usuario, dados in atendimentos_por_usuario.items %}
-      new Chart(document.getElementById("pieChart_{{ forloop.counter }}").getContext('2d'), {
-        type: 'pie',
-        data: {
-          labels: ['Aberto', 'Em Andamento', 'Encerrado', 'Cancelado'],
-          datasets: [{
-            data: [{{ dados.abertos }}, {{ dados.andamento }}, {{ dados.encerrados }}, {{ dados.cancelados }}],
-            backgroundColor: cores,
-            borderColor: bordas,
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { display: false },
-            datalabels: {
-              color: '#fff',
-              font: { weight: 'bold', size: 14 },
-              formatter: (value) => value
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+  M.FormSelect.init(document.querySelectorAll('select'));
+
+  {% if labels_usuarios %}
+  // ======================
+  // GRÁFICO EMPILHADO
+  // ======================
+  new Chart(document.getElementById('stackedChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ labels_usuarios|safe }},
+      datasets: [
+        { label: 'Aberto', data: {{ dados_abertos|safe }}, backgroundColor: '#009688' },
+        { label: 'Em Atendimento', data: {{ dados_andamento|safe }}, backgroundColor: '#ff9800' },
+        { label: 'Encerrado', data: {{ dados_encerrados|safe }}, backgroundColor: '#4caf50' },
+        { label: 'Cancelado', data: {{ dados_cancelados|safe }}, backgroundColor: '#e53935' }
+      ]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { stacked: true },
+        y: { stacked: true, beginAtZero: true }
+      },
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: {
+          callbacks: {
+            footer: (items) => {
+              let total = items.reduce((sum, i) => sum + i.raw, 0);
+              return 'Total: ' + total;
             }
           }
-        },
-        plugins: [ChartDataLabels]
-      });
-    {% endfor %}
+        }
+      }
+    }
   });
+
+  // ======================
+  // EVOLUÇÃO DIÁRIA
+  // ======================
+  new Chart(document.getElementById('dailyChart'), {
+    type: 'line',
+    data: {
+      labels: {{ labels_dias|safe }},
+      datasets: [{
+        label: 'Atendimentos',
+        data: {{ dados_dias|safe }},
+        borderWidth: 2,
+        tension: 0.3
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+  {% endif %}
+});
 </script>
 {% endblock extra_js %}

@@ -8,9 +8,12 @@
         {% csrf_token %}
         {{ form|crispy }}
         <div class="card-content">
+          <b>Anexar arquivos</b><br>
           <i class="small material-icons">folder</i>
           <input type="file" name="arquivos" id="id_arquivos" multiple>
-
+        </div><br>
+        <div class="card-content">
+          <b>Anexar imagens</b><br>
           <i class="small material-icons">image</i>
           <input type="file" name="imagens" id="id_imagens" multiple accept="image/*">
 

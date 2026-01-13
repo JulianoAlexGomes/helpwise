@@ -15,9 +15,9 @@ from django_tables2 import SingleTableMixin
 from tiqt.apps.core.models import Ticket, Comentario
 from tiqt.apps.core.tables import TicketTable
 from .forms import TicketForm, ClienteForm, TicketCloseForm, ComentarioForm
-from .models import Cliente, Ticket, Solucao, ComentarioArquivo, ComentarioImagem, CertificadoCliente, User
+from .models import Cliente, Ticket, Solucao, ComentarioArquivo, ComentarioImagem, CertificadoCliente, User, Departamento, Prioridade
 from .filters import TicketFilterForm
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 import tiqt.settings as settings
 from django.db.models import Q
 from channels.layers import get_channel_layer
@@ -25,91 +25,167 @@ from asgiref.sync import async_to_sync
 from rest_framework import viewsets
 from .serializers import ClienteSerializer
 from django.utils import timezone
-from django.shortcuts import render
 from .models import Ticket
 import os
+from django.contrib.auth import get_user_model
+from openpyxl import Workbook
+from django.http import HttpResponse
+from datetime import datetime, timedelta
+from django.shortcuts import render
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+from django.db.models import Count, Case, When, IntegerField, DateField
+from .models import Ticket
+from django.db.models.functions import TruncMonth, Cast
+from django.template.loader import render_to_string
+from django.db.models.functions import TruncDate
 
-
-# def HomeView(request):
-#     usuarios = {
-#         14: "Harissa",
-#         12: "Juliano",
-#         11: "Lucas",
-#         # 15: "Marco",
-#         10: "Marcos",
-#         9:  "Taylan",
-#         13: "Victoria",
-#     }
-
-#     hoje = timezone.now()
-#     inicio_mes = hoje.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-
-#     # calcula o primeiro dia do próximo mês
-#     if hoje.month == 12:
-#         inicio_prox_mes = hoje.replace(year=hoje.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
-#     else:
-#         inicio_prox_mes = hoje.replace(month=hoje.month + 1, day=1, hour=0, minute=0, second=0, microsecond=0)
-
-#     # Tickets do mês atual
-#     tickets_mes = Ticket.objects.filter(criado_em__gte=inicio_mes, criado_em__lt=inicio_prox_mes)
-
-#     # Totais
-#     atendimentos_aberto = tickets_mes.filter(status=Ticket.ABERTO).count()
-#     atendimentos_andamento = tickets_mes.filter(status=Ticket.EM_ATENDIMENTO).count()
-#     atendimentos_encerrados = tickets_mes.filter(status=Ticket.ENCERRADO).count()
-#     atendimentos_cancelados = tickets_mes.filter(status=Ticket.CANCELADO).count()
-
-#     # Totais por usuário (atendente)
-#     atendimentos_por_usuario = {}
-#     for uid, nome in usuarios.items():
-#         atendimentos_por_usuario[nome] = tickets_mes.filter(atendente_id=uid).count()
-
-#     context = {
-#         "abertos": atendimentos_aberto,
-#         "andamento": atendimentos_andamento,
-#         "encerrados": atendimentos_encerrados,
-#         "cancelados": atendimentos_cancelados,
-#         "atendimentos_por_usuario": atendimentos_por_usuario,
-#     }
-#     return render(request, "core/home.html", context)
-
+User = get_user_model()
 
 def HomeView(request):
-    # Totais gerais
-    atendimentos_aberto = Ticket.objects.filter(status=Ticket.ABERTO).count()
-    atendimentos_andamento = Ticket.objects.filter(status=Ticket.EM_ATENDIMENTO).count()
-    atendimentos_encerrados = Ticket.objects.filter(status=Ticket.ENCERRADO).count()
-    atendimentos_cancelados = Ticket.objects.filter(status=Ticket.CANCELADO).count()
+    hoje = timezone.localdate()
+    primeiro_dia_mes = hoje.replace(day=1)
 
-    # Totais por usuário - busca dinâmica de usuários com tickets
-    atendimentos_por_usuario = {}
-    usuarios_com_tickets = User.objects.filter(
-        responsavel_por__isnull=False
-    ).distinct().values_list('id', 'first_name', 'last_name')
-    
-    for user_id, first_name, last_name in usuarios_com_tickets:
-        nome_completo = f"{first_name} {last_name}".strip()
-        if not nome_completo:
-            # Fallback para username caso não tenha nome completo
-            usuario = User.objects.get(id=user_id)
-            nome_completo = usuario.get_full_name() or usuario.username
-        
-        atendimentos_por_usuario[nome_completo] = {
-            "abertos": Ticket.objects.filter(status=Ticket.ABERTO, responsavel_id=user_id).count(),
-            "andamento": Ticket.objects.filter(status=Ticket.EM_ATENDIMENTO, responsavel_id=user_id).count(),
-            "encerrados": Ticket.objects.filter(status=Ticket.ENCERRADO, responsavel_id=user_id).count(),
-            "cancelados": Ticket.objects.filter(status=Ticket.CANCELADO, responsavel_id=user_id).count(),
-        }
+    # =========================
+    # FILTROS DE DATA (SEM HORA)
+    # =========================
+    data_inicio_str = request.GET.get("data_inicio")
+    data_fim_str = request.GET.get("data_fim")
+
+    data_inicio = (
+        datetime.strptime(data_inicio_str, "%Y-%m-%d").date()
+        if data_inicio_str else primeiro_dia_mes
+    )
+
+    data_fim = (
+        datetime.strptime(data_fim_str, "%Y-%m-%d").date()
+        if data_fim_str else hoje
+    )
+
+    # 🔥 CONVERSÃO CORRETA PARA DATETIME
+    data_inicio_dt = timezone.make_aware(
+        datetime.combine(data_inicio, time.min)
+    )
+
+    data_fim_dt = timezone.make_aware(
+        datetime.combine(data_fim, time.max)
+    )
+
+    usuarios_ids = request.GET.getlist("usuarios")
+    departamento_id = request.GET.get("departamento")
+    prioridade_id = request.GET.get("prioridade")
+
+    # =========================
+    # QUERY BASE (DATETIME)
+    # =========================
+    tickets = Ticket.objects.filter(
+        criado_em__gte=data_inicio_dt,
+        criado_em__lte=data_fim_dt
+    )
+
+    if usuarios_ids:
+        tickets = tickets.filter(responsavel_id__in=usuarios_ids)
+
+    if departamento_id:
+        tickets = tickets.filter(departamento_id=departamento_id)
+
+    if prioridade_id:
+        tickets = tickets.filter(prioridade_id=prioridade_id)
+
+    # =========================
+    # TOTAIS
+    # =========================
+    totais = tickets.aggregate(
+        abertos=Count(Case(When(status=Ticket.ABERTO, then=1))),
+        andamento=Count(Case(When(status=Ticket.EM_ATENDIMENTO, then=1))),
+        encerrados=Count(Case(When(status=Ticket.ENCERRADO, then=1))),
+        cancelados=Count(Case(When(status=Ticket.CANCELADO, then=1))),
+    )
+
+    # =========================
+    # EVOLUÇÃO DIÁRIA
+    # =========================
+    evolucao = (
+    tickets
+    .filter(criado_em__isnull=False) 
+    .annotate(dia=TruncDate("criado_em"))
+    .values("dia")
+    .annotate(total=Count("id"))
+    .order_by("dia")
+)
+
+    labels_dias = []
+    dados_dias = []
+
+    for e in evolucao:
+        if e["dia"] is None:
+            continue
+        labels_dias.append(e["dia"].strftime("%d/%m"))
+        dados_dias.append(e["total"])
+    # =========================
+    # EMPILHADO POR USUÁRIO
+    # =========================
+    dados_por_usuario = (
+        tickets
+        .values(
+            "responsavel__first_name",
+            "responsavel__last_name",
+            "responsavel__username"
+        )
+        .annotate(
+            abertos=Count(Case(When(status=Ticket.ABERTO, then=1))),
+            andamento=Count(Case(When(status=Ticket.EM_ATENDIMENTO, then=1))),
+            encerrados=Count(Case(When(status=Ticket.ENCERRADO, then=1))),
+            cancelados=Count(Case(When(status=Ticket.CANCELADO, then=1))),
+        )
+        .order_by("responsavel__first_name")
+    )
+
+    labels_usuarios = []
+    dados_abertos = []
+    dados_andamento = []
+    dados_encerrados = []
+    dados_cancelados = []
+
+    for item in dados_por_usuario:
+        nome = (
+            f"{item['responsavel__first_name']} {item['responsavel__last_name']}".strip()
+            or item["responsavel__username"]
+        )
+
+        labels_usuarios.append(nome)
+        dados_abertos.append(item["abertos"])
+        dados_andamento.append(item["andamento"])
+        dados_encerrados.append(item["encerrados"])
+        dados_cancelados.append(item["cancelados"])
 
     context = {
-        "atendimentos_aberto": atendimentos_aberto,
-        "atendimentos_andamento": atendimentos_andamento,
-        "atendimentos_encerrados": atendimentos_encerrados,
-        "atendimentos_cancelados": atendimentos_cancelados,
-        "atendimentos_por_usuario": atendimentos_por_usuario,
+        "atendimentos_aberto": totais["abertos"],
+        "atendimentos_andamento": totais["andamento"],
+        "atendimentos_encerrados": totais["encerrados"],
+        "atendimentos_cancelados": totais["cancelados"],
+
+        "labels_usuarios": labels_usuarios,
+        "dados_abertos": dados_abertos,
+        "dados_andamento": dados_andamento,
+        "dados_encerrados": dados_encerrados,
+        "dados_cancelados": dados_cancelados,
+
+        "labels_dias": labels_dias,
+        "dados_dias": dados_dias,
+
+        "usuarios": User.objects.all(),
+        "usuarios_selecionados": usuarios_ids,
+        "departamentos": Departamento.objects.all(),
+        "prioridades": Prioridade.objects.all(),
+        "departamento_selecionado": departamento_id,
+        "prioridade_selecionada": prioridade_id,
+        "data_inicio": data_inicio.strftime("%Y-%m-%d"),
+        "data_fim": data_fim.strftime("%Y-%m-%d"),
     }
 
     return render(request, "core/home.html", context)
+
 
 
 def excluir_comentario(request, comentario_id):

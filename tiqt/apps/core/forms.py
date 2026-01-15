@@ -1,34 +1,92 @@
 from django import forms
-# from django_select2.forms import ModelSelect2Widget
-from .models import Ticket, Cliente, Uf, Cidade, Tributacao, Comentario, TipoAcao
+from django_select2.forms import ModelSelect2Widget
+from .models import Ticket, Cliente, Uf, Cidade, Tributacao, Comentario, TipoAcao, Departamento, Prioridade, Situacao, Tipo
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 class ClienteForm(forms.ModelForm):
-    uf = forms.ModelChoiceField(queryset=Uf.objects.all(), required=False, label='UF')
-    cidade = forms.ModelChoiceField(queryset=Cidade.objects.all(), required=False, label='Cidade')
-    tributacao = forms.ModelChoiceField(queryset=Tributacao.objects.all(), required=False, label='Tributação')
-    
+
     class Meta:
         model = Cliente
-        fields = [                    
-                    'fantasia',
-                    'cnpj',
-                    'cidade',
-                    'uf',
-                    'tributacao',
-                    'uid',
-                    'observacao',
-                    'plano',
-                ]
+        fields = [
+            'razao_social',
+            'fantasia',
+            'cnpj',
+            'telefone',
+            'email',
+            'endereco',
+            'numero',
+            'bairro',
+            'cep',
+            'complemento',
+            'cidade',
+            'uf',
+            'tributacao',
+            'responsavel',
+            'observacao',
+            'uid',
+            'plano',
+        ]
+
         widgets = {
-            'fantasia': forms.TextInput(attrs={'id': 'id_fantasia'}),
-            'cnpj': forms.TextInput(attrs={'id': 'id_cnpj'}),
-            'cidade': forms.TextInput(attrs={'id': 'id_cidade'}),
-            'uf': forms.TextInput(attrs={'id': 'id_uf'}),
-            'tributacao': forms.TextInput(attrs={'id': 'id_tributacao'}),
-            'uid': forms.TextInput(attrs={'id': 'id_uid'}),
-            'observacao': forms.Textarea(attrs={'id': 'id_observacao'}),
-            'plano': forms.Select(attrs={'id': 'id_plano'}),
+            'fantasia': forms.TextInput(),
+            'cnpj': forms.TextInput(),
+            'telefone': forms.TextInput(),
+            'email': forms.EmailInput(),
+            'endereco': forms.TextInput(),
+            'numero': forms.TextInput(),
+            'bairro': forms.TextInput(),
+            'cep': forms.TextInput(),
+            'complemento': forms.TextInput(),
+            'responsavel': forms.TextInput(),
+            'observacao': forms.Textarea(),
+
+            'cidade': ModelSelect2Widget(
+                model=Cidade,
+                search_fields=['descricao__icontains']
+            ),
+
+            'uf': ModelSelect2Widget(
+                model=Uf,
+                search_fields=['sigla__icontains', 'descricao__icontains']
+            ),
+
+            'tributacao': ModelSelect2Widget(
+                model=Tributacao,
+                search_fields=['descricao__icontains']
+            ),
+
+            'plano': forms.Select(),
         }
+
+# class ClienteForm(forms.ModelForm):
+#     uf = forms.ModelChoiceField(queryset=Uf.objects.all(), required=False, label='UF')
+#     cidade = forms.ModelChoiceField(queryset=Cidade.objects.all(), required=False, label='Cidade')
+#     tributacao = forms.ModelChoiceField(queryset=Tributacao.objects.all(), required=False, label='Tributação')
+    
+#     class Meta:
+#         model = Cliente
+#         fields = [                    
+#                     'fantasia',
+#                     'cnpj',
+#                     'cidade',
+#                     'uf',
+#                     'tributacao',
+#                     'uid',
+#                     'observacao',
+#                     'plano',
+#                 ]
+#         widgets = {
+#             'fantasia': forms.TextInput(attrs={'id': 'id_fantasia'}),
+#             'cnpj': forms.TextInput(attrs={'id': 'id_cnpj'}),
+#             'cidade': forms.TextInput(attrs={'id': 'id_cidade'}),
+#             'uf': forms.TextInput(attrs={'id': 'id_uf'}),
+#             'tributacao': forms.TextInput(attrs={'id': 'id_tributacao'}),
+#             'uid': forms.TextInput(attrs={'id': 'id_uid'}),
+#             'observacao': forms.Textarea(attrs={'id': 'id_observacao'}),
+#             'plano': forms.Select(attrs={'id': 'id_plano'}),
+#         }
         
 class TicketForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
@@ -37,22 +95,45 @@ class TicketForm(forms.ModelForm):
         if show_responsavel:
             self.fields.pop('responsavel')
 
+class TicketForm(forms.ModelForm):
+
     class Meta:
         model = Ticket
-        fields = ['titulo', 'tipo', 'departamento', 'cliente', 'protocolo', 'situacao', 'prioridade', 'responsavel']
+        fields = [
+            'titulo',
+            'tipo',
+            'departamento',
+            'cliente',
+            'protocolo',
+            'situacao',
+            'prioridade',
+            'responsavel',
+        ]
+
         widgets = {
-            'titulo': forms.TextInput(attrs={'id': 'id_titulo', 'class': 'form-control'}),
-            'tipo': forms.Select(attrs={'id': 'id_tipo', 'class': 'form-control'}),
-            'departamento': forms.Select(attrs={'id': 'id_departamento', 'class': 'form-control'}),
-            'cliente': forms.Select(attrs={'id': 'id_cliente', 'class': 'form-control'}),
-            'protocolo': forms.TextInput(attrs={'id': 'id_protocolo', 'class': 'form-control'}),
-            'situacao': forms.Select(attrs={'id': 'id_situacao', 'class': 'form-control'}),
-            'prioridade': forms.Select(attrs={'id': 'id_prioridade', 'class': 'form-control'}),
-            'responsavel': forms.Select(attrs={'id': 'id_responsavel', 'class': 'form-control'}),
+            'titulo': forms.TextInput(),
+            'tipo': forms.Select(),
+            'departamento': forms.Select(),
+
+            'cliente': ModelSelect2Widget(
+                model=Cliente,
+                search_fields=[
+                    'fantasia__icontains',
+                    'cnpj__icontains'
+                ]
+            ),
+
+            'protocolo': forms.TextInput(),
+            'situacao': forms.Select(),
+            'prioridade': forms.Select(),
+            'responsavel': forms.Select(),
         }
 
 class TicketCloseForm(forms.Form):
-    solucao = forms.CharField(widget=forms.Textarea, label='Solução')
+    solucao = forms.CharField(
+        label='Solução',
+        widget=forms.Textarea()
+    )
 
 class ComentarioForm(forms.ModelForm):
     class Meta:
@@ -63,3 +144,55 @@ class ComentarioForm(forms.ModelForm):
             'tipo': forms.Select(attrs={'id': 'id_tipo', 'class': 'form-control'}),
             'proximo_contato': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
         }
+
+# from django import forms
+# from .models import Departamento, Tipo, Prioridade, Situacao
+# from django.contrib.auth.models import User
+
+
+class TicketFilterForm(forms.Form):
+    q = forms.CharField(required=False)
+
+    cliente = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Digite o cliente',
+            'id': 'cliente-autocomplete'
+        })
+    )
+
+    departamento = forms.ModelChoiceField(
+        queryset=Departamento.objects.all(),
+        required=False,
+        empty_label="Todos"
+    )
+
+    tipo = forms.ModelChoiceField(
+        queryset=Tipo.objects.all(),
+        required=False,
+        empty_label="Todos"
+    )
+
+    prioridade = forms.ModelChoiceField(
+        queryset=Prioridade.objects.all(),
+        required=False,
+        empty_label="Todos"
+    )
+
+    situacao = forms.ModelChoiceField(
+        queryset=Situacao.objects.all(),
+        required=False,
+        empty_label="Todos"
+    )
+
+    responsavel = forms.ModelChoiceField(
+        queryset=User.objects.all(),
+        required=False,
+        empty_label="Todos"
+    )
+
+    atendente = forms.ModelChoiceField(
+        queryset=User.objects.all(),
+        required=False,
+        empty_label="Todos"
+    )

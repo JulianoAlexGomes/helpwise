@@ -1,3 +1,5 @@
+from django.http import JsonResponse
+from .models import Cliente
 from django.views import View
 from django.views.generic import TemplateView, DetailView, ListView
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
@@ -16,7 +18,6 @@ from tiqt.apps.core.models import Ticket, Comentario
 from tiqt.apps.core.tables import TicketTable
 from .forms import TicketForm, ClienteForm, TicketCloseForm, ComentarioForm
 from .models import Cliente, Ticket, Solucao, ComentarioArquivo, ComentarioImagem, CertificadoCliente, User, Departamento, Prioridade
-from .filters import TicketFilterForm
 from datetime import datetime, timedelta, time
 import tiqt.settings as settings
 from django.db.models import Q
@@ -39,6 +40,8 @@ from .models import Ticket
 from django.db.models.functions import TruncMonth, Cast
 from django.template.loader import render_to_string
 from django.db.models.functions import TruncDate
+from .forms import TicketFilterForm
+from .filters import apply_filters
 
 User = get_user_model()
 
@@ -224,57 +227,121 @@ def excluir_arquivo(request, comentario_id, tipo):
 
     return redirect('ticket_detail', pk=comentario.ticket.pk)
 
-def apply_filters(queryset, form):
-    if form.is_valid():
-        # Cliente, Departamento, Tipo, Prioridade e Situação
-        if form.cleaned_data['cliente']:
-            queryset = queryset.filter(cliente=form.cleaned_data['cliente'])
-        if form.cleaned_data['departamento']:
-            queryset = queryset.filter(departamento=form.cleaned_data['departamento'])
-        if form.cleaned_data['tipo']:
-            queryset = queryset.filter(tipo=form.cleaned_data['tipo'])
-        if form.cleaned_data['prioridade']:
-            queryset = queryset.filter(prioridade=form.cleaned_data['prioridade'])
-        if form.cleaned_data['situacao']:
-            queryset = queryset.filter(situacao=form.cleaned_data['situacao'])
-        if form.cleaned_data['responsavel']:
-            queryset = queryset.filter(responsavel=form.cleaned_data['responsavel'])
-        if form.cleaned_data['atendente']:
-            queryset = queryset.filter(atendente=form.cleaned_data['atendente'])
+from datetime import datetime
 
-        # Filtros de Criado em
-        if form.cleaned_data['criado_em_inicio']:
-            criado_em_inicio = datetime.combine(form.cleaned_data['criado_em_inicio'], datetime.min.time())
-            queryset = queryset.filter(criado_em__gte=criado_em_inicio)
-        if form.cleaned_data['criado_em_fim']:
-            criado_em_fim = datetime.combine(form.cleaned_data['criado_em_fim'], datetime.max.time())
-            queryset = queryset.filter(criado_em__lte=criado_em_fim)
 
-        # Filtros de Encerrado em
-        if form.cleaned_data['encerrado_em_inicio']:
-            encerrado_em_inicio = datetime.combine(form.cleaned_data['encerrado_em_inicio'], datetime.min.time())
-            queryset = queryset.filter(encerrado_em__gte=encerrado_em_inicio)
-        if form.cleaned_data['encerrado_em_fim']:
-            encerrado_em_fim = datetime.combine(form.cleaned_data['encerrado_em_fim'], datetime.max.time())
-            queryset = queryset.filter(encerrado_em__lte=encerrado_em_fim)
+# def apply_filters(queryset, form):
+#     if not form.is_valid():
+#         return queryset
 
-        # Filtros de Cancelado em
-        if form.cleaned_data['cancelado_em_inicio']:
-            cancelado_em_inicio = datetime.combine(form.cleaned_data['cancelado_em_inicio'], datetime.min.time())
-            queryset = queryset.filter(cancelado_em__gte=cancelado_em_inicio)
-        if form.cleaned_data['cancelado_em_fim']:
-            cancelado_em_fim = datetime.combine(form.cleaned_data['cancelado_em_fim'], datetime.max.time())
-            queryset = queryset.filter(cancelado_em__lte=cancelado_em_fim)
+#     data = form.cleaned_data
 
-        # Filtros de Solução Criado em
-        if form.cleaned_data['solucao_criado_em_inicio']:
-            solucao_criado_em_inicio = datetime.combine(form.cleaned_data['solucao_criado_em_inicio'], datetime.min.time())
-            queryset = queryset.filter(solucao__criado_em__gte=solucao_criado_em_inicio)
-        if form.cleaned_data['solucao_criado_em_fim']:
-            solucao_criado_em_fim = datetime.combine(form.cleaned_data['solucao_criado_em_fim'], datetime.max.time())
-            queryset = queryset.filter(solucao__criado_em__lte=solucao_criado_em_fim)
+#     # =========================
+#     # Filtros simples
+#     # =========================
+#     # if data.get('cliente'):
+#     #     queryset = queryset.filter(cliente=data['cliente'])
 
-    return queryset
+#     if form.cleaned_data.get('fantasia'):
+#         queryset = queryset.filter(
+#             cliente__fantasia__icontains=form.cleaned_data['fantasia']
+#         )
+
+#     if data.get('departamento'):
+#         queryset = queryset.filter(departamento=data['departamento'])
+
+#     if data.get('tipo'):
+#         queryset = queryset.filter(tipo=data['tipo'])
+
+#     if data.get('prioridade'):
+#         queryset = queryset.filter(prioridade=data['prioridade'])
+
+#     if data.get('situacao'):
+#         queryset = queryset.filter(situacao=data['situacao'])
+
+#     if data.get('responsavel'):
+#         queryset = queryset.filter(responsavel=data['responsavel'])
+
+#     if data.get('atendente'):
+#         queryset = queryset.filter(atendente=data['atendente'])
+
+#     # =========================
+#     # Criado em
+#     # =========================
+#     if data.get('criado_em_inicio'):
+#         queryset = queryset.filter(
+#             criado_em__gte=datetime.combine(
+#                 data['criado_em_inicio'],
+#                 datetime.min.time()
+#             )
+#         )
+
+#     if data.get('criado_em_fim'):
+#         queryset = queryset.filter(
+#             criado_em__lte=datetime.combine(
+#                 data['criado_em_fim'],
+#                 datetime.max.time()
+#             )
+#         )
+
+#     # =========================
+#     # Encerrado em
+#     # =========================
+#     if data.get('encerrado_em_inicio'):
+#         queryset = queryset.filter(
+#             encerrado_em__gte=datetime.combine(
+#                 data['encerrado_em_inicio'],
+#                 datetime.min.time()
+#             )
+#         )
+
+#     if data.get('encerrado_em_fim'):
+#         queryset = queryset.filter(
+#             encerrado_em__lte=datetime.combine(
+#                 data['encerrado_em_fim'],
+#                 datetime.max.time()
+#             )
+#         )
+
+#     # =========================
+#     # Cancelado em
+#     # =========================
+#     if data.get('cancelado_em_inicio'):
+#         queryset = queryset.filter(
+#             cancelado_em__gte=datetime.combine(
+#                 data['cancelado_em_inicio'],
+#                 datetime.min.time()
+#             )
+#         )
+
+#     if data.get('cancelado_em_fim'):
+#         queryset = queryset.filter(
+#             cancelado_em__lte=datetime.combine(
+#                 data['cancelado_em_fim'],
+#                 datetime.max.time()
+#             )
+#         )
+
+#     # =========================
+#     # Solução criado em
+#     # =========================
+#     if data.get('solucao_criado_em_inicio'):
+#         queryset = queryset.filter(
+#             solucao__criado_em__gte=datetime.combine(
+#                 data['solucao_criado_em_inicio'],
+#                 datetime.min.time()
+#             )
+#         )
+
+#     if data.get('solucao_criado_em_fim'):
+#         queryset = queryset.filter(
+#             solucao__criado_em__lte=datetime.combine(
+#                 data['solucao_criado_em_fim'],
+#                 datetime.max.time()
+#             )
+#         )
+
+#     return queryset
 
 def download_certificado(request, cliente_id):
     cliente = get_object_or_404(Cliente, id=cliente_id)
@@ -690,3 +757,29 @@ class LogoutView(BaseLogoutView):
             return resolve_url(settings.LOGOUT_REDIRECT_URL)
         else:
             return self.request.path
+
+def clientes_autocomplete(request):
+    term = request.GET.get('term', '').strip()
+
+    data = {}
+
+    if term:
+        clientes = (
+            Cliente.objects
+            .filter(
+                Q(fantasia__icontains=term) |
+                Q(razao_social__icontains=term) |
+                Q(cnpj__icontains=term)
+            )
+            .order_by('fantasia')[:15]
+        )
+
+        for cliente in clientes:
+            label = " - ".join(filter(None, [
+                cliente.fantasia,
+                cliente.razao_social,
+                cliente.cnpj
+            ]))
+            data[label] = None  # Materialize exige esse formato
+
+    return JsonResponse(data)

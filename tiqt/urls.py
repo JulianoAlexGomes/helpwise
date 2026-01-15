@@ -34,6 +34,8 @@ urlpatterns = [
     path('select2/', include('django_select2.urls')), 
     path('comentario/<int:comentario_id>/excluir/<str:tipo>/', excluir_arquivo, name='excluir_arquivo'),
     path('comentario/excluir/<int:comentario_id>/', views.excluir_comentario, name='excluir_comentario'),
+    path('clientes/autocomplete/',views.clientes_autocomplete,name='clientes_autocomplete'),
+    path('api/clientes/autocomplete/',views.clientes_autocomplete,name='clientes_autocomplete'),
 
     path('notifications/', include('tiqt.apps.notifications.urls')),
 

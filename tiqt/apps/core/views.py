@@ -17,7 +17,7 @@ from django_tables2 import SingleTableMixin
 from tiqt.apps.core.models import Ticket, Comentario
 from tiqt.apps.core.tables import TicketTable
 from .forms import TicketForm, ClienteForm, TicketCloseForm, ComentarioForm
-from .models import Cliente, Ticket, Solucao, ComentarioArquivo, ComentarioImagem, CertificadoCliente, User, Departamento, Prioridade
+from .models import Cliente, Ticket, Solucao, ComentarioArquivo, ComentarioImagem, CertificadoCliente, User, Departamento, Prioridade, Cidade, Uf, Tributacao
 from datetime import datetime, timedelta, time
 import tiqt.settings as settings
 from django.db.models import Q
@@ -229,120 +229,6 @@ def excluir_arquivo(request, comentario_id, tipo):
 
 from datetime import datetime
 
-
-# def apply_filters(queryset, form):
-#     if not form.is_valid():
-#         return queryset
-
-#     data = form.cleaned_data
-
-#     # =========================
-#     # Filtros simples
-#     # =========================
-#     # if data.get('cliente'):
-#     #     queryset = queryset.filter(cliente=data['cliente'])
-
-#     if form.cleaned_data.get('fantasia'):
-#         queryset = queryset.filter(
-#             cliente__fantasia__icontains=form.cleaned_data['fantasia']
-#         )
-
-#     if data.get('departamento'):
-#         queryset = queryset.filter(departamento=data['departamento'])
-
-#     if data.get('tipo'):
-#         queryset = queryset.filter(tipo=data['tipo'])
-
-#     if data.get('prioridade'):
-#         queryset = queryset.filter(prioridade=data['prioridade'])
-
-#     if data.get('situacao'):
-#         queryset = queryset.filter(situacao=data['situacao'])
-
-#     if data.get('responsavel'):
-#         queryset = queryset.filter(responsavel=data['responsavel'])
-
-#     if data.get('atendente'):
-#         queryset = queryset.filter(atendente=data['atendente'])
-
-#     # =========================
-#     # Criado em
-#     # =========================
-#     if data.get('criado_em_inicio'):
-#         queryset = queryset.filter(
-#             criado_em__gte=datetime.combine(
-#                 data['criado_em_inicio'],
-#                 datetime.min.time()
-#             )
-#         )
-
-#     if data.get('criado_em_fim'):
-#         queryset = queryset.filter(
-#             criado_em__lte=datetime.combine(
-#                 data['criado_em_fim'],
-#                 datetime.max.time()
-#             )
-#         )
-
-#     # =========================
-#     # Encerrado em
-#     # =========================
-#     if data.get('encerrado_em_inicio'):
-#         queryset = queryset.filter(
-#             encerrado_em__gte=datetime.combine(
-#                 data['encerrado_em_inicio'],
-#                 datetime.min.time()
-#             )
-#         )
-
-#     if data.get('encerrado_em_fim'):
-#         queryset = queryset.filter(
-#             encerrado_em__lte=datetime.combine(
-#                 data['encerrado_em_fim'],
-#                 datetime.max.time()
-#             )
-#         )
-
-#     # =========================
-#     # Cancelado em
-#     # =========================
-#     if data.get('cancelado_em_inicio'):
-#         queryset = queryset.filter(
-#             cancelado_em__gte=datetime.combine(
-#                 data['cancelado_em_inicio'],
-#                 datetime.min.time()
-#             )
-#         )
-
-#     if data.get('cancelado_em_fim'):
-#         queryset = queryset.filter(
-#             cancelado_em__lte=datetime.combine(
-#                 data['cancelado_em_fim'],
-#                 datetime.max.time()
-#             )
-#         )
-
-#     # =========================
-#     # Solução criado em
-#     # =========================
-#     if data.get('solucao_criado_em_inicio'):
-#         queryset = queryset.filter(
-#             solucao__criado_em__gte=datetime.combine(
-#                 data['solucao_criado_em_inicio'],
-#                 datetime.min.time()
-#             )
-#         )
-
-#     if data.get('solucao_criado_em_fim'):
-#         queryset = queryset.filter(
-#             solucao__criado_em__lte=datetime.combine(
-#                 data['solucao_criado_em_fim'],
-#                 datetime.max.time()
-#             )
-#         )
-
-#     return queryset
-
 def download_certificado(request, cliente_id):
     cliente = get_object_or_404(Cliente, id=cliente_id)
     file_path = cliente.certificado_digital.path
@@ -532,20 +418,42 @@ class DesenvTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
         'per_page': 10
     }
 
+# class NewTicketView(LoginRequiredMixin, View):
+#     def get(self, request):
+#         form = TicketForm()
+#         return render(request, 'core/ticket_form.html', {'form': form})
+
+#     def post(self, request):
+#         form = TicketForm(request.POST)
+#         if form.is_valid():
+#             ticket = form.save(commit=False)
+#             ticket.atendente = request.user
+#             ticket.save()
+#             return redirect(reverse('ticket_detail', args=[ticket.pk]))
+#         return render(request, 'core/ticket_form.html', {'form': form})
+
 class NewTicketView(LoginRequiredMixin, View):
+
     def get(self, request):
-        form = TicketForm()
+        cliente_id = request.GET.get('cliente')
+
+        if cliente_id:
+            form = TicketForm(initial={'cliente': cliente_id})
+        else:
+            form = TicketForm()
+
         return render(request, 'core/ticket_form.html', {'form': form})
 
     def post(self, request):
         form = TicketForm(request.POST)
+
         if form.is_valid():
             ticket = form.save(commit=False)
             ticket.atendente = request.user
             ticket.save()
             return redirect(reverse('ticket_detail', args=[ticket.pk]))
-        return render(request, 'core/ticket_form.html', {'form': form})
 
+        return render(request, 'core/ticket_form.html', {'form': form})
 
 class TicketUpdateView(LoginRequiredMixin, View):
     def get(self, request, pk):
@@ -679,13 +587,51 @@ class ClienteViewSet(viewsets.ModelViewSet):
     queryset = Cliente.objects.all()
     serializer_class = ClienteSerializer
 
+# class ClienteListView(ListView):
+#     model = Cliente
+#     template_name = 'core/cliente_list.html'
+#     context_object_name = 'clientes'
+
+#     def get_queryset(self):
+#         return Cliente.objects.all().order_by('fantasia')
+
 class ClienteListView(ListView):
     model = Cliente
     template_name = 'core/cliente_list.html'
     context_object_name = 'clientes'
 
     def get_queryset(self):
-        return Cliente.objects.all().order_by('fantasia')
+        queryset = Cliente.objects.all().order_by('fantasia')
+
+        q = self.request.GET.get('q')
+        cidade = self.request.GET.get('cidade')
+        uf = self.request.GET.get('uf')
+        tributacao = self.request.GET.get('tributacao')
+
+        if q:
+            queryset = queryset.filter(
+                Q(fantasia__icontains=q) |
+                Q(razao_social__icontains=q) |
+                Q(cnpj__icontains=q)
+            )
+
+        if cidade:
+            queryset = queryset.filter(cidade_id=cidade)
+
+        if uf:
+            queryset = queryset.filter(uf_id=uf)
+
+        if tributacao:
+            queryset = queryset.filter(tributacao_id=tributacao)
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['cidades'] = Cidade.objects.all().order_by('descricao')
+        context['ufs'] = Uf.objects.all().order_by('sigla')
+        context['tributacoes'] = Tributacao.objects.all().order_by('descricao')
+        return context
 
 class ClienteCreateView(CreateView):
     model = Cliente

@@ -3,8 +3,86 @@
 {% load static %}
 
 {% block content %}
-<h5>Lista de Clientes:</h5>
+<h5>Lista de Clientes</h5>
 {% comment %} <a href="{% url 'cliente_create' %}" class="btn">Novo Cliente</a> {% endcomment %}
+{% comment %} <form method="get" class="row">
+    <div class="input-field col s6">
+        <input
+            type="text"
+            name="q"
+            id="id_q"
+            value="{{ request.GET.q }}"
+            placeholder="Buscar por Fantasia, Razão Social ou CNPJ"
+        >
+        <label for="id_q">Pesquisar Cliente</label>
+    </div>
+
+    <div class="input-field col s2">
+        <button type="submit" class="btn">
+            Buscar
+        </button>
+    </div>
+</form> {% endcomment %}
+<form method="get" class="row">
+
+    <!-- Texto -->
+    <div class="input-field col s4">
+        <input type="text" name="q" value="{{ request.GET.q }}">
+        <label class="active">Pesquisar</label>
+    </div>
+
+    <!-- Cidade -->
+    <div class="input-field col s3">
+        <select name="cidade">
+            <option value="">Todas</option>
+            {% for cidade in cidades %}
+                <option value="{{ cidade.id }}"
+                    {% if request.GET.cidade == cidade.id|stringformat:"s" %}selected{% endif %}
+                >
+                    {{ cidade.descricao }}
+                </option>
+            {% endfor %}
+        </select>
+        <label>Cidade</label>
+    </div>
+
+    <!-- UF -->
+    <div class="input-field col s2">
+        <select name="uf">
+            <option value="">Todos</option>
+            {% for uf in ufs %}
+                <option value="{{ uf.id }}"
+                    {% if request.GET.uf == uf.id|stringformat:"s" %}selected{% endif %}
+                >
+                    {{ uf.sigla }}
+                </option>
+            {% endfor %}
+        </select>
+        <label>UF</label>
+    </div>
+
+    <!-- Tributação -->
+    <div class="input-field col s2">
+        <select name="tributacao">
+            <option value="">Todas</option>
+            {% for t in tributacoes %}
+                <option value="{{ t.id }}"
+                    {% if request.GET.tributacao == t.id|stringformat:"s" %}selected{% endif %}
+                >
+                    {{ t.descricao }}
+                </option>
+            {% endfor %}
+        </select>
+        <label>Tributação</label>
+    </div>
+
+    <div class="input-field col s1">
+        <button class="btn">
+            <i class="material-icons">search</i>
+        </button>
+    </div>
+
+</form>
 <table class="striped">
     <thead>
         <tr>
@@ -27,13 +105,33 @@
             <td>{{ cliente.uf }}</td>
             <td>{{ cliente.tributacao }}</td>
             <td>
-                <a href="{% url 'cliente_update' cliente.pk %}"><i class="material-icons center">edit</i></a>
+                <!-- Editar cliente -->
+                <a href="{% url 'cliente_update' cliente.pk %}" title="Editar cliente">
+                    <i class="material-icons">edit</i>
+                </a>
+
+                <!-- Novo ticket -->
+                <a href="{% url 'new_ticket' %}?cliente={{ cliente.id }}"
+                title="Novo ticket"
+                class="blue-text">
+                    <i class="material-icons">add_circle</i>
+                </a>
+
                 {% if cliente.certificado_digital %}
-                    <a href="{% url 'cliente_certificado' cliente.id %}" class="btn blue">📥 Certificado</a>
+                    <a href="{% url 'cliente_certificado' cliente.id %}"
+                    class="btn blue btn-small"
+                    title="Download certificado">
+                        📥
+                    </a>
                 {% endif %}
             </td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    M.FormSelect.init(document.querySelectorAll('select'));
+});
+</script>
 {% endblock content %}

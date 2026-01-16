@@ -196,3 +196,27 @@ class TicketFilterForm(forms.Form):
         required=False,
         empty_label="Todos"
     )
+
+from django import forms
+from .models import Ticket, Cliente
+
+
+class NewTicketForm(forms.ModelForm):
+
+    cliente = forms.ModelChoiceField(
+        queryset=Cliente.objects.all().order_by('fantasia'),
+        required=True,
+        label='Cliente'
+    )
+
+    class Meta:
+        model = Ticket
+        fields = [
+            'titulo',
+            'cliente',
+            'departamento',
+            'protocolo',
+            'tipo',
+            'prioridade',
+            'situacao',
+        ]

@@ -88,14 +88,61 @@ class ClienteForm(forms.ModelForm):
 #             'plano': forms.Select(attrs={'id': 'id_plano'}),
 #         }
         
-class TicketForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
-        show_responsavel = kwargs.pop('show_responsavel', False)
-        super(TicketForm, self).__init__(*args, **kwargs)
-        if show_responsavel:
-            self.fields.pop('responsavel')
+# class TicketForm(forms.ModelForm):
+#     def __init__(self, *args, **kwargs):
+#         show_responsavel = kwargs.pop('show_responsavel', False)
+#         super(TicketForm, self).__init__(*args, **kwargs)
+#         if show_responsavel:
+#             self.fields.pop('responsavel')
+
+# class TicketForm(forms.ModelForm):
+
+#     class Meta:
+#         model = Ticket
+#         fields = [
+#             'titulo',
+#             'tipo',
+#             'departamento',
+#             'cliente',
+#             'protocolo',
+#             'situacao',
+#             'prioridade',
+#             'responsavel',
+#         ]
+
+#         widgets = {
+#             'titulo': forms.TextInput(),
+#             'tipo': forms.Select(),
+#             'departamento': forms.Select(),
+
+#             'cliente': ModelSelect2Widget(
+#                 model=Cliente,
+#                 search_fields=[
+#                     'fantasia__icontains',
+#                     'cnpj__icontains'
+#                 ]
+#             ),
+
+#             'protocolo': forms.TextInput(),
+#             'situacao': forms.Select(),
+#             'prioridade': forms.Select(),
+#             'responsavel': forms.Select(),
+#         }
+
+class TicketCloseForm(forms.Form):
+    solucao = forms.CharField(
+        label='Solução',
+        widget=forms.Textarea()
+    )
 
 class TicketForm(forms.ModelForm):
+
+    def __init__(self, *args, **kwargs):
+        show_responsavel = kwargs.pop('show_responsavel', False)
+        super().__init__(*args, **kwargs)
+
+        if not show_responsavel:
+            self.fields.pop('responsavel', None)
 
     class Meta:
         model = Ticket
@@ -114,7 +161,6 @@ class TicketForm(forms.ModelForm):
             'titulo': forms.TextInput(),
             'tipo': forms.Select(),
             'departamento': forms.Select(),
-
             'cliente': ModelSelect2Widget(
                 model=Cliente,
                 search_fields=[
@@ -122,18 +168,11 @@ class TicketForm(forms.ModelForm):
                     'cnpj__icontains'
                 ]
             ),
-
             'protocolo': forms.TextInput(),
             'situacao': forms.Select(),
             'prioridade': forms.Select(),
             'responsavel': forms.Select(),
         }
-
-class TicketCloseForm(forms.Form):
-    solucao = forms.CharField(
-        label='Solução',
-        widget=forms.Textarea()
-    )
 
 class ComentarioForm(forms.ModelForm):
     class Meta:
@@ -219,4 +258,5 @@ class NewTicketForm(forms.ModelForm):
             'tipo',
             'prioridade',
             'situacao',
+            'responsavel',
         ]

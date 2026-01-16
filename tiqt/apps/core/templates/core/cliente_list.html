@@ -117,12 +117,13 @@
                     <i class="material-icons">add_circle</i>
                 </a>
 
-                {% if cliente.certificado_digital %}
-                    <a href="{% url 'cliente_certificado' cliente.id %}"
-                    class="btn blue btn-small"
-                    title="Download certificado">
-                        📥
-                    </a>
+                {% if cliente.certificados.all %}
+                    {% for certificado in cliente.certificados.all %}
+                        <a href="{% url 'cliente_certificado' certificado.pk %}"
+                        title="Baixar certificado">
+                            <i class="material-icons">download</i>
+                        </a>
+                    {% endfor %}
                 {% endif %}
             </td>
         </tr>

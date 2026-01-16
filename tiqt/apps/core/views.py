@@ -11,7 +11,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.cache import never_cache
 from django.shortcuts import reverse, render, resolve_url, get_object_or_404, redirect
-from django.http import HttpResponseRedirect, HttpResponse, Http404
+from django.http import HttpResponseRedirect, HttpResponse, Http404, FileResponse
 from django.urls import reverse_lazy
 from django_tables2 import SingleTableMixin
 from tiqt.apps.core.models import Ticket, Comentario
@@ -40,7 +40,7 @@ from .models import Ticket
 from django.db.models.functions import TruncMonth, Cast
 from django.template.loader import render_to_string
 from django.db.models.functions import TruncDate
-from .forms import TicketFilterForm
+from .forms import TicketFilterForm, NewTicketForm
 from .filters import apply_filters
 
 User = get_user_model()
@@ -239,7 +239,6 @@ def download_certificado(request, cliente_id):
             return response
     raise Http404
 
-
 class MyTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     template_name = 'core/tickets_list.html'
     table_class = TicketTable
@@ -432,20 +431,42 @@ class DesenvTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
 #             return redirect(reverse('ticket_detail', args=[ticket.pk]))
 #         return render(request, 'core/ticket_form.html', {'form': form})
 
+# class NewTicketView(LoginRequiredMixin, View):
+
+#     def get(self, request):
+#         cliente_id = request.GET.get('cliente')
+
+#         if cliente_id:
+#             form = TicketForm(initial={'cliente': cliente_id})
+#         else:
+#             form = TicketForm()
+
+#         return render(request, 'core/ticket_form.html', {'form': form})
+
+#     def post(self, request):
+#         form = TicketForm(request.POST)
+
+#         if form.is_valid():
+#             ticket = form.save(commit=False)
+#             ticket.atendente = request.user
+#             ticket.save()
+#             return redirect(reverse('ticket_detail', args=[ticket.pk]))
+
+#         return render(request, 'core/ticket_form.html', {'form': form})
+
 class NewTicketView(LoginRequiredMixin, View):
 
     def get(self, request):
         cliente_id = request.GET.get('cliente')
 
-        if cliente_id:
-            form = TicketForm(initial={'cliente': cliente_id})
-        else:
-            form = TicketForm()
+        form = NewTicketForm(
+            initial={'cliente': cliente_id} if cliente_id else None
+        )
 
         return render(request, 'core/ticket_form.html', {'form': form})
 
     def post(self, request):
-        form = TicketForm(request.POST)
+        form = NewTicketForm(request.POST)
 
         if form.is_valid():
             ticket = form.save(commit=False)
@@ -454,6 +475,7 @@ class NewTicketView(LoginRequiredMixin, View):
             return redirect(reverse('ticket_detail', args=[ticket.pk]))
 
         return render(request, 'core/ticket_form.html', {'form': form})
+
 
 class TicketUpdateView(LoginRequiredMixin, View):
     def get(self, request, pk):

@@ -25,7 +25,13 @@ urlpatterns = [
     path('clientes/', views.ClienteListView.as_view(), name='cliente_list'),
     path('cliente/novo/', views.ClienteCreateView.as_view(), name='cliente_create'),
     path('cliente/<int:pk>/editar/', views.ClienteUpdateView.as_view(), name='cliente_update'),
+
     path('cliente/<int:cliente_id>/download/', download_certificado, name='cliente_certificado'),
+    
+    # path('cliente/certificado/<int:pk>/download/',download_certificado_cliente,name='download_certificado_cliente'),
+
+    # path('cliente/certificado/<int:pk>/download/',download_certificado_cliente,name='download_certificado_cliente'),
+
     path('certificado/<int:pk>/delete/', CertificadoDeleteView.as_view(), name='certificado_delete'),
     path('cliente/<int:pk>/delete/', views.ClienteDeleteView.as_view(), name='cliente_delete'),
     path('login/', auth_views.LoginView.as_view(redirect_authenticated_user=True),name='login'), 

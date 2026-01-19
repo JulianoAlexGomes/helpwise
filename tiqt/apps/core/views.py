@@ -480,14 +480,14 @@ class NewTicketView(LoginRequiredMixin, View):
 class TicketUpdateView(LoginRequiredMixin, View):
     def get(self, request, pk):
         ticket = Ticket.objects.get(pk=pk)
-        show_responsavel = ticket.status == 'EM_ATENDIMENTO' 
-        form = TicketForm(instance=ticket, show_responsavel=show_responsavel)
+        # show_responsavel = ticket.status == 'ABERTO' 
+        form = TicketForm(instance=ticket, show_responsavel=True)
         return render(request, 'core/ticket_form.html', {'form': form, 'ticket': ticket})
 
     def post(self, request, pk):
         ticket = Ticket.objects.get(pk=pk)
-        show_responsavel = ticket.status == 'EM_ATENDIMENTO' 
-        form = TicketForm(request.POST, instance=ticket, show_responsavel=show_responsavel)
+        # show_responsavel = ticket.status == 'ABERTO' 
+        form = TicketForm(request.POST, instance=ticket, show_responsavel=True)
         if form.is_valid():
             form.save()
             return redirect(reverse('ticket_detail', args=[ticket.pk]))

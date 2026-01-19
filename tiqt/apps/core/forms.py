@@ -60,75 +60,6 @@ class ClienteForm(forms.ModelForm):
             'plano': forms.Select(),
         }
 
-# class ClienteForm(forms.ModelForm):
-#     uf = forms.ModelChoiceField(queryset=Uf.objects.all(), required=False, label='UF')
-#     cidade = forms.ModelChoiceField(queryset=Cidade.objects.all(), required=False, label='Cidade')
-#     tributacao = forms.ModelChoiceField(queryset=Tributacao.objects.all(), required=False, label='Tributação')
-    
-#     class Meta:
-#         model = Cliente
-#         fields = [                    
-#                     'fantasia',
-#                     'cnpj',
-#                     'cidade',
-#                     'uf',
-#                     'tributacao',
-#                     'uid',
-#                     'observacao',
-#                     'plano',
-#                 ]
-#         widgets = {
-#             'fantasia': forms.TextInput(attrs={'id': 'id_fantasia'}),
-#             'cnpj': forms.TextInput(attrs={'id': 'id_cnpj'}),
-#             'cidade': forms.TextInput(attrs={'id': 'id_cidade'}),
-#             'uf': forms.TextInput(attrs={'id': 'id_uf'}),
-#             'tributacao': forms.TextInput(attrs={'id': 'id_tributacao'}),
-#             'uid': forms.TextInput(attrs={'id': 'id_uid'}),
-#             'observacao': forms.Textarea(attrs={'id': 'id_observacao'}),
-#             'plano': forms.Select(attrs={'id': 'id_plano'}),
-#         }
-        
-# class TicketForm(forms.ModelForm):
-#     def __init__(self, *args, **kwargs):
-#         show_responsavel = kwargs.pop('show_responsavel', False)
-#         super(TicketForm, self).__init__(*args, **kwargs)
-#         if show_responsavel:
-#             self.fields.pop('responsavel')
-
-# class TicketForm(forms.ModelForm):
-
-#     class Meta:
-#         model = Ticket
-#         fields = [
-#             'titulo',
-#             'tipo',
-#             'departamento',
-#             'cliente',
-#             'protocolo',
-#             'situacao',
-#             'prioridade',
-#             'responsavel',
-#         ]
-
-#         widgets = {
-#             'titulo': forms.TextInput(),
-#             'tipo': forms.Select(),
-#             'departamento': forms.Select(),
-
-#             'cliente': ModelSelect2Widget(
-#                 model=Cliente,
-#                 search_fields=[
-#                     'fantasia__icontains',
-#                     'cnpj__icontains'
-#                 ]
-#             ),
-
-#             'protocolo': forms.TextInput(),
-#             'situacao': forms.Select(),
-#             'prioridade': forms.Select(),
-#             'responsavel': forms.Select(),
-#         }
-
 class TicketCloseForm(forms.Form):
     solucao = forms.CharField(
         label='Solução',
@@ -149,7 +80,7 @@ class TicketForm(forms.ModelForm):
         fields = [
             'titulo',
             'tipo',
-            'departamento',
+            'departamento', 
             'cliente',
             'protocolo',
             'situacao',
@@ -183,11 +114,6 @@ class ComentarioForm(forms.ModelForm):
             'tipo': forms.Select(attrs={'id': 'id_tipo', 'class': 'form-control'}),
             'proximo_contato': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
         }
-
-# from django import forms
-# from .models import Departamento, Tipo, Prioridade, Situacao
-# from django.contrib.auth.models import User
-
 
 class TicketFilterForm(forms.Form):
     q = forms.CharField(required=False)

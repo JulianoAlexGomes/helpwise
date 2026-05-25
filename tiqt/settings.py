@@ -26,12 +26,13 @@ DATABASES = {
         }
     }
 }
+
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'helpdesk',
+#         'NAME': 'help',
 #         'USER': 'root',
-#         'PASSWORD': 'NovaSenhaForte123!',
+#         'PASSWORD': 'lucas',
 #         'HOST': 'localhost',
 #         'PORT': '3306',
 #         'OPTIONS': {

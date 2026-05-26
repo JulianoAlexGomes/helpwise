@@ -2,104 +2,137 @@
 
 {% block content %}
 {% if not user.is_authenticated %}
-<div align="center" style="margin-top: 50px;">
-  <h3>Bem-vindo ao HelpWise</h3>
-  <p>Por favor, faça login para acessar o sistema.</p>
-<form  method="post" action="{% url 'login' %}">{% csrf_token %}<button type="submit" class="btn">Login</button></form>
+<div class="center" style="margin-top: 80px;">
+  <i class="material-icons large grey-text">lock</i>
+  <h5 class="grey-text">Bem-vindo ao HelpWise</h5>
+  <p class="grey-text">Faça login para acessar o sistema.</p>
+  <form method="post" action="{% url 'login' %}">
+    {% csrf_token %}
+    <button type="submit" class="btn black waves-effect">
+      <i class="material-icons left">login</i>Entrar
+    </button>
+  </form>
 </div>
 {% endif %}
+
 {% if user.is_authenticated %}
 
-<h4 class="center">
-  Bem-vindo, {{ user.first_name|default:user.username }}<br>
-</h4>
-
-
-<!-- ===================== -->
-<!-- RESUMO -->
-<!-- ===================== -->
-<div class="row">
-  <div class="col s12 m3">
-    <div class="card teal">
-      <div class="card-content white-text center">
-        <span class="card-title">Abertos</span>
-        <h4>{{ atendimentos_aberto }}</h4>
-      </div>
-    </div>
-  </div>
-  
-  <div class="col s12 m3">
-    <div class="card orange">
-      <div class="card-content white-text center">
-        <span class="card-title">Em Atendimento</span>
-        <h4>{{ atendimentos_andamento }}</h4>
-      </div>
-    </div>
-  </div>
-  
-  <div class="col s12 m3">
-    <div class="card green">
-      <div class="card-content white-text center">
-        <span class="card-title">Encerrados</span>
-        <h4>{{ atendimentos_encerrados }}</h4>
-      </div>
-    </div>
-  </div>
-  
-  <div class="col s12 m3">
-    <div class="card red">
-      <div class="card-content white-text center">
-        <span class="card-title">Cancelados</span>
-        <h4>{{ atendimentos_cancelados }}</h4>
-      </div>
-    </div>
-  </div>
-</div>
-
-{% if labels_usuarios %}
-
-<!-- ===================== -->
-<!-- GRÁFICO EMPILHADO -->
-<!-- ===================== -->
-<div class="card">
-  <div class="card-content">
-    <span class="card-title center" style="font-weight:600">
-      Atendimentos por Usuário
+<div style="margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+  <div>
+    <h5 style="margin: 0; font-weight: 600;">Dashboard</h5>
+    <span class="grey-text text-darken-1" style="font-size: 13px;">
+      Olá, {{ user.first_name|default:user.username }} &mdash; {{ data_inicio }} a {{ data_fim }}
     </span>
-    <canvas id="stackedChart" height="140"></canvas>
   </div>
+  <a href="{% url 'new_ticket' %}" class="btn black waves-effect waves-light">
+    <i class="material-icons left">add</i>Novo Ticket
+  </a>
 </div>
 
 <!-- ===================== -->
-<!-- EVOLUÇÃO DIÁRIA -->
+<!-- CARDS DE RESUMO -->
 <!-- ===================== -->
+<div class="row" style="margin-bottom: 0;">
 
-<div class="card">
-  <div class="card-content">
-    <span class="card-title center" style="font-weight:600">
-      Evolução Diária de Atendimentos
-    </span>
-    <canvas id="dailyChart" height="120"></canvas>
+  <div class="col s6 m3">
+    <div class="card" style="border-radius: 8px; border-top: 4px solid #009688; margin-bottom: 16px;">
+      <div class="card-content" style="padding: 16px;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <p style="margin: 0; font-size: 12px; color: #757575; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Abertos</p>
+            <h4 style="margin: 4px 0 0; font-weight: 700; color: #009688;">{{ atendimentos_aberto }}</h4>
+          </div>
+          <i class="material-icons" style="font-size: 36px; color: #b2dfdb;">inbox</i>
+        </div>
+      </div>
+      <div class="card-action" style="padding: 8px 16px; border-top: 1px solid #f0f0f0;">
+        <a href="{% url 'open_tickets' %}" style="color: #009688; font-size: 12px; font-weight: 600;">
+          Ver tickets <i class="material-icons" style="font-size: 14px; vertical-align: middle;">arrow_forward</i>
+        </a>
+      </div>
+    </div>
   </div>
+
+  <div class="col s6 m3">
+    <div class="card" style="border-radius: 8px; border-top: 4px solid #ff9800; margin-bottom: 16px;">
+      <div class="card-content" style="padding: 16px;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <p style="margin: 0; font-size: 12px; color: #757575; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Em Atendimento</p>
+            <h4 style="margin: 4px 0 0; font-weight: 700; color: #ff9800;">{{ atendimentos_andamento }}</h4>
+          </div>
+          <i class="material-icons" style="font-size: 36px; color: #ffe0b2;">assignment_ind</i>
+        </div>
+      </div>
+      <div class="card-action" style="padding: 8px 16px; border-top: 1px solid #f0f0f0;">
+        <a href="{% url 'inprogress_tickets' %}" style="color: #ff9800; font-size: 12px; font-weight: 600;">
+          Ver tickets <i class="material-icons" style="font-size: 14px; vertical-align: middle;">arrow_forward</i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col s6 m3">
+    <div class="card" style="border-radius: 8px; border-top: 4px solid #4caf50; margin-bottom: 16px;">
+      <div class="card-content" style="padding: 16px;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <p style="margin: 0; font-size: 12px; color: #757575; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Encerrados</p>
+            <h4 style="margin: 4px 0 0; font-weight: 700; color: #4caf50;">{{ atendimentos_encerrados }}</h4>
+          </div>
+          <i class="material-icons" style="font-size: 36px; color: #c8e6c9;">assignment_turned_in</i>
+        </div>
+      </div>
+      <div class="card-action" style="padding: 8px 16px; border-top: 1px solid #f0f0f0;">
+        <a href="{% url 'closed_tickets' %}" style="color: #4caf50; font-size: 12px; font-weight: 600;">
+          Ver tickets <i class="material-icons" style="font-size: 14px; vertical-align: middle;">arrow_forward</i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col s6 m3">
+    <div class="card" style="border-radius: 8px; border-top: 4px solid #e53935; margin-bottom: 16px;">
+      <div class="card-content" style="padding: 16px;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <p style="margin: 0; font-size: 12px; color: #757575; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Cancelados</p>
+            <h4 style="margin: 4px 0 0; font-weight: 700; color: #e53935;">{{ atendimentos_cancelados }}</h4>
+          </div>
+          <i class="material-icons" style="font-size: 36px; color: #ffcdd2;">event_busy</i>
+        </div>
+      </div>
+      <div class="card-action" style="padding: 8px 16px; border-top: 1px solid #f0f0f0;">
+        <a href="{% url 'canceled_tickets' %}" style="color: #e53935; font-size: 12px; font-weight: 600;">
+          Ver tickets <i class="material-icons" style="font-size: 14px; vertical-align: middle;">arrow_forward</i>
+        </a>
+      </div>
+    </div>
+  </div>
+
 </div>
+
 <!-- ===================== -->
 <!-- FILTROS -->
 <!-- ===================== -->
-<div class="card">
-  <div class="card-content">
-    <form method="get" class="row">
+<div class="card" style="border-radius: 8px; margin-bottom: 16px;">
+  <div class="card-content" style="padding: 16px 20px 0;">
+    <span class="card-title" style="font-size: 15px; font-weight: 600; color: #424242; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+      <i class="material-icons" style="font-size: 18px; color: #757575;">filter_list</i> Filtros
+    </span>
+    <form method="get" class="row" style="margin-bottom: 0;">
 
-      <div class="input-field col s12 m3">
+      <div class="input-field col s12 m2">
         <input type="date" name="data_inicio" value="{{ data_inicio }}">
         <label class="active">Data início</label>
       </div>
 
-      <div class="input-field col s12 m3">
+      <div class="input-field col s12 m2">
         <input type="date" name="data_fim" value="{{ data_fim }}">
         <label class="active">Data fim</label>
       </div>
 
-      <div class="input-field col s12 m4">
+      <div class="input-field col s12 m3">
         <select name="usuarios" multiple>
           {% for u in usuarios %}
             <option value="{{ u.id }}"
@@ -112,9 +145,21 @@
         <label>Usuários</label>
       </div>
 
-      <div class="input-field col s12 m2 center-align">
-        <button class="btn waves-effect waves-light">
-          Filtrar
+      <div class="input-field col s12 m3">
+        <select name="departamento">
+          <option value="">Todos</option>
+          {% for d in departamentos %}
+            <option value="{{ d.id }}" {% if d.id|stringformat:"s" == departamento_selecionado %}selected{% endif %}>
+              {{ d.nome }}
+            </option>
+          {% endfor %}
+        </select>
+        <label>Departamento</label>
+      </div>
+
+      <div class="input-field col s12 m2 center-align" style="display: flex; align-items: flex-end; padding-bottom: 8px;">
+        <button class="btn black waves-effect waves-light" style="width: 100%;">
+          <i class="material-icons left">search</i>Filtrar
         </button>
       </div>
 
@@ -122,9 +167,51 @@
   </div>
 </div>
 
+{% if labels_usuarios %}
+
+<!-- ===================== -->
+<!-- GRÁFICOS -->
+<!-- ===================== -->
+<div class="row">
+  <div class="col s12 m7">
+    <div class="card" style="border-radius: 8px;">
+      <div class="card-content">
+        <span class="card-title" style="font-size: 15px; font-weight: 600; color: #424242; display: flex; align-items: center; gap: 8px;">
+          <i class="material-icons" style="font-size: 18px; color: #757575;">bar_chart</i> Atendimentos por Usuário
+        </span>
+        <canvas id="stackedChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col s12 m5">
+    <div class="card" style="border-radius: 8px;">
+      <div class="card-content">
+        <span class="card-title" style="font-size: 15px; font-weight: 600; color: #424242; display: flex; align-items: center; gap: 8px;">
+          <i class="material-icons" style="font-size: 18px; color: #757575;">donut_large</i> Distribuição Geral
+        </span>
+        <canvas id="doughnutChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== -->
+<!-- EVOLUÇÃO DIÁRIA -->
+<!-- ===================== -->
+<div class="card" style="border-radius: 8px;">
+  <div class="card-content">
+    <span class="card-title" style="font-size: 15px; font-weight: 600; color: #424242; display: flex; align-items: center; gap: 8px;">
+      <i class="material-icons" style="font-size: 18px; color: #757575;">show_chart</i> Evolução Diária de Atendimentos
+    </span>
+    <canvas id="dailyChart" height="80"></canvas>
+  </div>
+</div>
+
 {% else %}
-<div class="card-panel yellow lighten-4 center">
-  <strong>Nenhum atendimento encontrado para os filtros selecionados.</strong>
+<div class="card-panel" style="border-radius: 8px; background: #fff8e1; border-left: 4px solid #ffc107; display: flex; align-items: center; gap: 12px;">
+  <i class="material-icons" style="color: #ffc107;">info_outline</i>
+  <span>Nenhum atendimento encontrado para os filtros selecionados.</span>
 </div>
 {% endif %}
 
@@ -148,28 +235,53 @@ document.addEventListener('DOMContentLoaded', function () {
     data: {
       labels: {{ labels_usuarios|safe }},
       datasets: [
-        { label: 'Aberto', data: {{ dados_abertos|safe }}, backgroundColor: '#009688' },
-        { label: 'Em Atendimento', data: {{ dados_andamento|safe }}, backgroundColor: '#ff9800' },
-        { label: 'Encerrado', data: {{ dados_encerrados|safe }}, backgroundColor: '#4caf50' },
-        { label: 'Cancelado', data: {{ dados_cancelados|safe }}, backgroundColor: '#e53935' }
+        { label: 'Aberto',         data: {{ dados_abertos|safe }},    backgroundColor: '#009688' },
+        { label: 'Em Atendimento', data: {{ dados_andamento|safe }},  backgroundColor: '#ff9800' },
+        { label: 'Encerrado',      data: {{ dados_encerrados|safe }}, backgroundColor: '#4caf50' },
+        { label: 'Cancelado',      data: {{ dados_cancelados|safe }}, backgroundColor: '#e53935' }
       ]
     },
     options: {
       responsive: true,
       scales: {
-        x: { stacked: true },
-        y: { stacked: true, beginAtZero: true }
+        x: { stacked: true, grid: { display: false } },
+        y: { stacked: true, beginAtZero: true, grid: { color: '#f0f0f0' } }
       },
       plugins: {
         legend: { position: 'bottom' },
         tooltip: {
           callbacks: {
-            footer: (items) => {
-              let total = items.reduce((sum, i) => sum + i.raw, 0);
-              return 'Total: ' + total;
-            }
+            footer: (items) => 'Total: ' + items.reduce((s, i) => s + i.raw, 0)
           }
         }
+      }
+    }
+  });
+
+  // ======================
+  // GRÁFICO ROSCA
+  // ======================
+  new Chart(document.getElementById('doughnutChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Aberto', 'Em Atendimento', 'Encerrado', 'Cancelado'],
+      datasets: [{
+        data: [
+          {{ atendimentos_aberto }},
+          {{ atendimentos_andamento }},
+          {{ atendimentos_encerrados }},
+          {{ atendimentos_cancelados }}
+        ],
+        backgroundColor: ['#009688', '#ff9800', '#4caf50', '#e53935'],
+        borderWidth: 2,
+        borderColor: '#fff'
+      }]
+    },
+    options: {
+      responsive: true,
+      cutout: '65%',
+      plugins: {
+        legend: { position: 'bottom' }
       }
     }
   });
@@ -184,13 +296,24 @@ document.addEventListener('DOMContentLoaded', function () {
       datasets: [{
         label: 'Atendimentos',
         data: {{ dados_dias|safe }},
+        borderColor: '#212121',
+        backgroundColor: 'rgba(33,33,33,0.06)',
         borderWidth: 2,
-        tension: 0.3
+        tension: 0.4,
+        fill: true,
+        pointBackgroundColor: '#212121',
+        pointRadius: 4
       }]
     },
     options: {
       responsive: true,
-      scales: { y: { beginAtZero: true } }
+      scales: {
+        y: { beginAtZero: true, grid: { color: '#f0f0f0' } },
+        x: { grid: { display: false } }
+      },
+      plugins: {
+        legend: { display: false }
+      }
     }
   });
   {% endif %}

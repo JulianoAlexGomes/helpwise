@@ -39,9 +39,10 @@ from django.db.models import Count, Case, When, IntegerField, DateField
 from .models import Ticket
 from django.db.models.functions import TruncMonth, Cast
 from django.template.loader import render_to_string
-from django.db.models.functions import TruncDate
 from .forms import TicketFilterForm, NewTicketForm
 from .filters import apply_filters
+import json
+from collections import Counter
 
 User = get_user_model()
 
@@ -108,23 +109,16 @@ def HomeView(request):
     # =========================
     # EVOLUÇÃO DIÁRIA
     # =========================
-    evolucao = (
-    tickets
-    .filter(criado_em__isnull=False) 
-    .annotate(dia=TruncDate("criado_em"))
-    .values("dia")
-    .annotate(total=Count("id"))
-    .order_by("dia")
-)
+    ticket_dts = tickets.filter(criado_em__isnull=False).values_list("criado_em", flat=True)
+    date_counts = Counter(timezone.localtime(dt).date() for dt in ticket_dts)
 
     labels_dias = []
     dados_dias = []
-
-    for e in evolucao:
-        if e["dia"] is None:
-            continue
-        labels_dias.append(e["dia"].strftime("%d/%m"))
-        dados_dias.append(e["total"])
+    current_date = data_inicio
+    while current_date <= data_fim:
+        labels_dias.append(current_date.strftime("%d/%m"))
+        dados_dias.append(date_counts.get(current_date, 0))
+        current_date += timedelta(days=1)
     # =========================
     # EMPILHADO POR USUÁRIO
     # =========================
@@ -174,8 +168,8 @@ def HomeView(request):
         "dados_encerrados": dados_encerrados,
         "dados_cancelados": dados_cancelados,
 
-        "labels_dias": labels_dias,
-        "dados_dias": dados_dias,
+        "labels_dias": json.dumps(labels_dias),
+        "dados_dias": json.dumps(dados_dias),
 
         "usuarios": User.objects.all(),
         "usuarios_selecionados": usuarios_ids,

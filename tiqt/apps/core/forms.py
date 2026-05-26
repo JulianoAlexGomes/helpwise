@@ -42,20 +42,11 @@ class ClienteForm(forms.ModelForm):
             'responsavel': forms.TextInput(),
             'observacao': forms.Textarea(),
 
-            'cidade': ModelSelect2Widget(
-                model=Cidade,
-                search_fields=['descricao__icontains']
-            ),
+            'cidade': forms.Select(),
 
-            'uf': ModelSelect2Widget(
-                model=Uf,
-                search_fields=['sigla__icontains', 'descricao__icontains']
-            ),
+            'uf': forms.Select(),
 
-            'tributacao': ModelSelect2Widget(
-                model=Tributacao,
-                search_fields=['descricao__icontains']
-            ),
+            'tributacao': forms.Select(),
 
             'plano': forms.Select(),
         }

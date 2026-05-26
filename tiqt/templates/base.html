@@ -28,12 +28,17 @@
       .sidenav-hidden header, .sidenav-hidden main, .sidenav-hidden footer {
         padding-left: 0 !important;
       }
+
+      #slide-out li > a {
+        height: 56px;
+        line-height: 56px;
+      }
     </style>
     {% endif %}
     <title>{% block title %}Sinos HelpDesk{% endblock title %}</title>
-	
+
 	{% block extra_css %}{% endblock extra_css %}
-	
+
   </head>
   <body>
     <header>
@@ -45,7 +50,7 @@
           <a href="#" data-target="slide-out" class="sidenav-trigger"><i class="material-icons">menu</i></a>
           <a href="#" id="toggle-sidenav" class="right"><i class="material-icons">chevron_left</i></a>
         {% endif %}
-      </div>	
+      </div>
     </nav>
       </div>
       {% if user.is_authenticated %}
@@ -73,7 +78,7 @@
       <li><div class="divider"></div></li>
       <li><a href="{% url 'new_ticket' %}"><i class="material-icons center">add</i><span class="show-on-small">Novo</span></a></li>
       <div class="center">
-        <form  method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit" class="btn">Logoff</button></form>
+        <form  method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit" class="btn" style="margin-top: 10px;">Logoff</button></form>
       </div>
     </ul>
     {% endif %}

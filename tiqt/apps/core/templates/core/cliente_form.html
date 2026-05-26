@@ -17,7 +17,7 @@
     </div>
     <button class="btn" type="submit">Salvar</button>
     {% if object %}
-        <a href="{% url 'cliente_delete' object.pk %}" class="btn right red lighten-1">Excluir</a>
+        <a href="{% url 'cliente_delete' object.pk %}" class="btn right red lighten-1" style="margin-left: 8px;">Excluir</a>
     {% endif %}
     <a href="{% url 'cliente_list' %}" class="btn right red lighten-1">Cancelar</a>
 </form>

@@ -1,1 +1,16 @@
 wheel==0.45.1
+django
+python-decouple
+pymysql
+django-tables2
+django-crispy-forms
+django-select2
+django-dbbackup
+crispy-bootstrap5
+channels
+djangorestframework
+Pillow
+openpyxl
+model-mommy
+pytest
+pytest-django

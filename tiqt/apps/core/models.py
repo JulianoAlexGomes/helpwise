@@ -67,6 +67,12 @@ class Tributacao(models.Model):
     
 class Situacao(models.Model):
     descricao = models.CharField(max_length=50, null=True, blank=True)
+    
+    def __str__(self):
+        return self.descricao
+
+class Status(models.Model):
+    descricao = models.CharField(max_length=50, null=True, blank=True)
 
     def __str__(self):
         return self.descricao

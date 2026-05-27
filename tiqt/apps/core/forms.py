@@ -141,6 +141,11 @@ class TicketFilterForm(forms.Form):
         empty_label="Todos"
     )
 
+    status = forms.ChoiceField(
+        choices=[('', 'Todos')] + list(Ticket.STATUS),
+        required=False,
+    )
+
     responsavel = forms.ModelChoiceField(
         queryset=User.objects.all(),
         required=False,

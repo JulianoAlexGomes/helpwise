@@ -42,6 +42,8 @@ urlpatterns = [
     path('comentario/excluir/<int:comentario_id>/', views.excluir_comentario, name='excluir_comentario'),
     path('clientes/autocomplete/',views.clientes_autocomplete,name='clientes_autocomplete'),
     path('api/clientes/autocomplete/',views.clientes_autocomplete,name='clientes_autocomplete'),
+    path('api/clientes/busca/', views.clientes_busca_api, name='clientes_busca_api'),
+    path('ticket/quick-create/', views.QuickTicketCreateView.as_view(), name='quick_ticket_create'),
 
     path('notifications/', include('tiqt.apps.notifications.urls')),
 

@@ -89,6 +89,318 @@
       {% endblock content %}
     </div>
   </main>
+  {% if user.is_authenticated %}
+  <style>
+    /* ── Modal Rápido de Ticket ─────────────────────────────── */
+    #modal-quick-ticket {
+      width: 72% !important;
+      max-width: 860px !important;
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    @media only screen and (max-width: 992px) {
+      #modal-quick-ticket { width: 94% !important; }
+    }
+    #modal-quick-ticket .qt-header {
+      background: #212121;
+      padding: 22px 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    #modal-quick-ticket .qt-header h5 {
+      margin: 0;
+      font-weight: 700;
+      font-size: 18px;
+      color: #fff;
+      flex: 1;
+    }
+    #modal-quick-ticket .qt-kbd {
+      font-size: 11px;
+      color: rgba(255,255,255,.5);
+      background: rgba(255,255,255,.1);
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      letter-spacing: 1px;
+    }
+    #modal-quick-ticket .qt-body {
+      padding: 28px 32px 12px;
+    }
+    #modal-quick-ticket .qt-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #757575;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      display: block;
+      margin-bottom: 7px;
+    }
+    #modal-quick-ticket .qt-input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      box-sizing: border-box;
+      transition: border-color .2s;
+      background: #fff;
+      color: #212121;
+      height: auto !important;
+      box-shadow: none !important;
+      margin: 0 !important;
+    }
+    #modal-quick-ticket .qt-input:focus {
+      border-color: #212121;
+    }
+    #modal-quick-ticket .qt-input.qt-invalid {
+      border-color: #e53935;
+    }
+    #modal-quick-ticket .qt-field {
+      margin-bottom: 20px;
+    }
+    #modal-quick-ticket .qt-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    #modal-quick-ticket .qt-grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    /* Botões de prioridade */
+    #qt-prioridade-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .qt-prio-btn {
+      padding: 7px 18px;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #fff;
+      color: #616161;
+      transition: all .15s;
+      outline: none;
+      letter-spacing: .3px;
+    }
+    .qt-prio-btn:hover {
+      border-color: #bdbdbd;
+      background: #fafafa;
+    }
+    .qt-prio-btn.qt-prio-ativo {
+      background: #212121;
+      color: #fff;
+      border-color: #212121;
+    }
+    /* Dropdown de clientes */
+    #qt-cliente-dropdown {
+      display: none;
+      position: absolute;
+      top: calc(100% + 2px);
+      left: 0; right: 0;
+      z-index: 9999;
+      background: #fff;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.12);
+      max-height: 210px;
+      overflow-y: auto;
+    }
+    #qt-cliente-dropdown .qt-drop-item {
+      padding: 10px 14px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #212121;
+      border-bottom: 1px solid #f5f5f5;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background .1s;
+    }
+    #qt-cliente-dropdown .qt-drop-item:last-child { border-bottom: none; }
+    #qt-cliente-dropdown .qt-drop-item:hover { background: #f5f5f5; }
+    #qt-cliente-dropdown .qt-drop-item.qt-drop-focused {
+      background: #212121;
+      color: #fff;
+    }
+    #qt-cliente-dropdown .qt-drop-item.qt-drop-focused i {
+      color: rgba(255,255,255,.6) !important;
+    }
+    #qt-cliente-dropdown .qt-drop-empty {
+      padding: 12px 14px;
+      color: #9e9e9e;
+      font-size: 13px;
+      text-align: center;
+    }
+    /* Tag cliente selecionado */
+    #qt-cliente-selecionado {
+      display: none;
+      margin-top: 6px;
+      padding: 8px 12px;
+      background: #f1f8e9;
+      border: 1.5px solid #c5e1a5;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #33691e;
+      align-items: center;
+      gap: 8px;
+    }
+    /* Mensagem de erro */
+    #qt-erro {
+      display: none;
+      padding: 10px 14px;
+      background: #ffebee;
+      border: 1px solid #ffcdd2;
+      border-radius: 8px;
+      color: #c62828;
+      font-size: 13px;
+      margin-bottom: 4px;
+      align-items: center;
+      gap: 8px;
+    }
+    /* Footer */
+    #modal-quick-ticket .qt-footer {
+      padding: 14px 20px 20px;
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      align-items: center;
+      border-top: 1px solid #f0f0f0;
+    }
+  </style>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MODAL DE ABERTURA RÁPIDA DE TICKET
+  ═══════════════════════════════════════════════════════════ -->
+  <div id="modal-quick-ticket" class="modal">
+
+    <!-- Cabeçalho escuro -->
+    <div class="qt-header">
+      <i class="material-icons" style="color:#fff; font-size:22px;">confirmation_number</i>
+      <h5>Novo Ticket</h5>
+      <span class="qt-kbd">N</span>
+    </div>
+
+    <div class="qt-body">
+      <form id="form-quick-ticket" autocomplete="off">
+        {% csrf_token %}
+
+        <!-- ── Cliente ── -->
+        <div class="qt-field">
+          <label class="qt-label">
+            Cliente <span style="color:#e53935;">*</span>
+          </label>
+          <div style="position:relative;">
+            <span id="qt-lupa" style="position:absolute; left:11px; top:50%; transform:translateY(-50%); color:#bdbdbd; pointer-events:none; transition:opacity .15s;">
+              <i class="material-icons" style="font-size:18px; line-height:1;">search</i>
+            </span>
+            <input id="qt-cliente-input" type="text" class="qt-input"
+              placeholder="Digite o nome ou CNPJ..."
+              style="padding-left: 36px;">
+            <input type="hidden" id="qt-cliente-id">
+            <div id="qt-cliente-dropdown"></div>
+          </div>
+          <div id="qt-cliente-selecionado">
+            <i class="material-icons" style="font-size:16px; color:#558b2f; flex-shrink:0;">check_circle</i>
+            <span id="qt-cliente-nome" style="flex:1; font-weight:600; font-size:13px;"></span>
+            <a id="qt-cliente-limpar" href="#"
+              style="display:inline-flex; align-items:center; gap:4px;
+                     padding:4px 10px; border-radius:20px;
+                     border:1.5px solid #e0e0e0; background:#fff;
+                     color:#424242; font-size:11px; font-weight:700;
+                     text-decoration:none; white-space:nowrap;
+                     transition:all .15s; letter-spacing:.3px;"
+              onmouseover="this.style.background='#212121';this.style.color='#fff';this.style.borderColor='#212121';"
+              onmouseout="this.style.background='#fff';this.style.color='#424242';this.style.borderColor='#e0e0e0';">
+              <i class="material-icons" style="font-size:13px; line-height:1;">edit</i> Alterar
+            </a>
+          </div>
+        </div>
+
+        <!-- ── Título ── -->
+        <div class="qt-field">
+          <label class="qt-label">
+            Título <span style="color:#e53935;">*</span>
+          </label>
+          <input id="qt-titulo" type="text" maxlength="60" class="qt-input"
+            placeholder="Descreva o problema resumidamente...">
+        </div>
+
+        <!-- ── Departamento + Tipo + Atendente (3 colunas) ── -->
+        <div class="qt-grid-3">
+          <div>
+            <label class="qt-label">
+              Departamento <span style="color:#e53935;">*</span>
+            </label>
+            <select id="qt-departamento" class="qt-input browser-default">
+              <option value="">Selecione...</option>
+              {% for d in modal_departamentos %}
+                <option value="{{ d.id }}">{{ d.descricao }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="qt-label">Tipo</label>
+            <select id="qt-tipo" class="qt-input browser-default">
+              {% for t in modal_tipos %}
+                <option value="{{ t.id }}"{% if t.id == 3 %} selected{% endif %}>{{ t.descricao }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="qt-label">Atendente</label>
+            <select id="qt-responsavel" class="qt-input browser-default">
+              <option value="">— Sem atendente —</option>
+              {% for u in modal_usuarios %}
+                <option value="{{ u.id }}"{% if u == request.user %} selected{% endif %}>
+                  {{ u.get_full_name|default:u.username }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <!-- ── Prioridade ── -->
+        <div class="qt-field">
+          <label class="qt-label">Prioridade</label>
+          <input type="hidden" id="qt-prioridade-val" value="2">
+          <div id="qt-prioridade-group">
+            {% for p in modal_prioridades %}
+              <button type="button" class="qt-prio-btn{% if p.id == 2 %} qt-prio-ativo{% endif %}"
+                data-id="{{ p.id }}">{{ p.descricao }}</button>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- ── Erro ── -->
+        <div id="qt-erro">
+          <i class="material-icons" style="font-size:16px;">error_outline</i>
+          <span id="qt-erro-texto"></span>
+        </div>
+
+      </form>
+    </div>
+
+    <div class="qt-footer">
+      <a href="#!" class="modal-close btn-flat" style="color:#757575; font-weight:600; border-radius:6px;">
+        Cancelar
+      </a>
+      <button id="qt-btn-salvar" class="btn black waves-effect waves-light" style="border-radius:8px; padding:0 20px;">
+        <i class="material-icons left">add</i>Abrir Ticket
+      </button>
+    </div>
+  </div>
+  <!-- fim modal-quick-ticket -->
+  {% endif %}
+
   <!--JavaScript at end of body for optimized loading-->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
   <script>
@@ -125,5 +437,277 @@
 </script>
   {% block extra_js %}{% endblock extra_js %}
   {{ form.media }}
+
+  {% if user.is_authenticated %}
+  <script>
+  (function () {
+    var modalEl   = document.getElementById('modal-quick-ticket');
+    var modalInst = null;
+    var inputCliente, dropdownEl, clienteIdEl, clienteTagEl, clienteNomeEl;
+    var debounceTimer = null;
+    var focusIndex = -1;
+
+    // ── Inicializa ────────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function () {
+      modalInst = M.Modal.init(modalEl, { onOpenStart: onModalOpen });
+
+      // Prioridade: botões toggle
+      document.querySelectorAll('.qt-prio-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          document.querySelectorAll('.qt-prio-btn').forEach(function (b) {
+            b.classList.remove('qt-prio-ativo');
+          });
+          this.classList.add('qt-prio-ativo');
+          document.getElementById('qt-prioridade-val').value = this.dataset.id;
+        });
+      });
+
+      // Botão salvar
+      document.getElementById('qt-btn-salvar').addEventListener('click', submitModal);
+
+      // Modal só abre via tecla N — botões da sidebar/dashboard usam a rota normal
+    });
+
+    // ── Atalho "N" ────────────────────────────────────────────────────────────
+    document.addEventListener('keydown', function (e) {
+      var tag = document.activeElement.tagName.toLowerCase();
+      if (e.key === 'n' && tag !== 'input' && tag !== 'textarea' && tag !== 'select') {
+        e.preventDefault();
+        abrirModal();
+      }
+    });
+
+    function abrirModal() {
+      if (!modalInst) modalInst = M.Modal.getInstance(modalEl);
+      resetModal();
+      modalInst.open();
+      setTimeout(function () {
+        document.getElementById('qt-cliente-input').focus();
+      }, 180);
+    }
+
+    // ── Setup ao abrir modal ──────────────────────────────────────────────────
+    function onModalOpen() {
+      inputCliente  = document.getElementById('qt-cliente-input');
+      dropdownEl    = document.getElementById('qt-cliente-dropdown');
+      clienteIdEl   = document.getElementById('qt-cliente-id');
+      clienteTagEl  = document.getElementById('qt-cliente-selecionado');
+      clienteNomeEl = document.getElementById('qt-cliente-nome');
+
+      // Remover listeners antigos clonando o nó
+      var novoInput = inputCliente.cloneNode(true);
+      inputCliente.parentNode.replaceChild(novoInput, inputCliente);
+      inputCliente = novoInput;
+
+      inputCliente.addEventListener('input', function () {
+        focusIndex = -1;
+        clearTimeout(debounceTimer);
+        var q = this.value.trim();
+        if (q.length < 2) { fecharDropdown(); return; }
+        debounceTimer = setTimeout(function () { buscarClientes(q); }, 280);
+      });
+
+      // ── Navegação por teclado no dropdown ─────────────────────────────────
+      inputCliente.addEventListener('keydown', function (e) {
+        var itens = dropdownEl.querySelectorAll('.qt-drop-item');
+        var aberto = dropdownEl.style.display === 'block';
+
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          if (!aberto || !itens.length) return;
+          focusIndex = Math.min(focusIndex + 1, itens.length - 1);
+          atualizarFoco(itens);
+
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (!aberto || !itens.length) return;
+          focusIndex = Math.max(focusIndex - 1, 0);
+          atualizarFoco(itens);
+
+        } else if (e.key === 'Enter') {
+          if (aberto && focusIndex >= 0 && itens[focusIndex]) {
+            e.preventDefault();
+            itens[focusIndex].dispatchEvent(new MouseEvent('mousedown'));
+          }
+
+        } else if (e.key === 'Tab') {
+          // Tab com item em foco → seleciona; sem foco → fecha e segue o fluxo normal
+          if (aberto && focusIndex >= 0 && itens[focusIndex]) {
+            e.preventDefault();
+            itens[focusIndex].dispatchEvent(new MouseEvent('mousedown'));
+          } else {
+            fecharDropdown();
+          }
+
+        } else if (e.key === 'Escape') {
+          fecharDropdown();
+        }
+      });
+
+      document.getElementById('qt-cliente-limpar').addEventListener('click', function (e) {
+        e.preventDefault();
+        clienteIdEl.value = '';
+        clienteTagEl.style.display = 'none';
+        inputCliente.style.display = '';
+        document.getElementById('qt-lupa').style.display = '';
+        inputCliente.value = '';
+        focusIndex = -1;
+        inputCliente.focus();
+      });
+
+      document.addEventListener('click', function (e) {
+        if (dropdownEl && !inputCliente.contains(e.target) && !dropdownEl.contains(e.target)) {
+          fecharDropdown();
+        }
+      });
+    }
+
+    // ── Busca AJAX ────────────────────────────────────────────────────────────
+    function buscarClientes(q) {
+      fetch('/api/clientes/busca/?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (data) { renderDropdown(data.results); });
+    }
+
+    function renderDropdown(items) {
+      focusIndex = -1;
+      dropdownEl.innerHTML = '';
+      if (!items.length) {
+        var vazio = document.createElement('div');
+        vazio.className = 'qt-drop-empty';
+        vazio.innerHTML = '<i class="material-icons" style="font-size:15px;vertical-align:middle;margin-right:4px;">search_off</i>Nenhum cliente encontrado';
+        dropdownEl.appendChild(vazio);
+      } else {
+        items.forEach(function (item) {
+          var div = document.createElement('div');
+          div.className = 'qt-drop-item';
+          div.innerHTML = '<i class="material-icons" style="font-size:15px;color:#9e9e9e;">business</i>' + item.text;
+          div.addEventListener('mousedown', function (e) {
+            e.preventDefault();
+            selecionarCliente(item.id, item.text);
+          });
+          // Hover via mouse também atualiza focusIndex
+          div.addEventListener('mouseenter', function () {
+            var todos = dropdownEl.querySelectorAll('.qt-drop-item');
+            focusIndex = Array.prototype.indexOf.call(todos, div);
+            atualizarFoco(todos);
+          });
+          dropdownEl.appendChild(div);
+        });
+      }
+      dropdownEl.style.display = 'block';
+    }
+
+    function atualizarFoco(itens) {
+      itens.forEach(function (el, i) {
+        el.classList.toggle('qt-drop-focused', i === focusIndex);
+      });
+      // Garante que o item esteja visível no scroll
+      if (focusIndex >= 0 && itens[focusIndex]) {
+        itens[focusIndex].scrollIntoView({ block: 'nearest' });
+      }
+    }
+
+    function selecionarCliente(id, nome) {
+      clienteIdEl.value = id;
+      clienteNomeEl.textContent = nome;
+      clienteTagEl.style.display = 'flex';
+      inputCliente.style.display = 'none';
+      document.getElementById('qt-lupa').style.display = 'none';
+      fecharDropdown();
+      document.getElementById('qt-titulo').focus();
+    }
+
+    function fecharDropdown() {
+      focusIndex = -1;
+      if (dropdownEl) dropdownEl.style.display = 'none';
+    }
+
+    // ── Submit ────────────────────────────────────────────────────────────────
+    function submitModal() {
+      ocultarErro();
+
+      var clienteId    = document.getElementById('qt-cliente-id').value;
+      var titulo       = document.getElementById('qt-titulo').value.trim();
+      var departamento = document.getElementById('qt-departamento').value;
+      var tipo         = document.getElementById('qt-tipo').value;
+      var prioridade   = document.getElementById('qt-prioridade-val').value || '2';
+      var responsavel  = document.getElementById('qt-responsavel').value;
+
+      if (!clienteId)   { mostrarErro('Selecione um cliente.'); return; }
+      if (!titulo)       { mostrarErro('Informe o título do ticket.'); document.getElementById('qt-titulo').focus(); return; }
+      if (!departamento) { mostrarErro('Selecione o departamento.'); return; }
+
+      var btn = document.getElementById('qt-btn-salvar');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="material-icons left" style="animation:spin 1s linear infinite;">hourglass_empty</i>Abrindo...';
+
+      var csrf = document.getElementById('form-quick-ticket').querySelector('[name=csrfmiddlewaretoken]').value;
+      var body = new URLSearchParams({
+        csrfmiddlewaretoken: csrf,
+        cliente_id: clienteId, titulo: titulo,
+        departamento: departamento, tipo: tipo,
+        prioridade: prioridade, responsavel: responsavel,
+      });
+
+      fetch('/ticket/quick-create/', {
+        method: 'POST', body: body,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.redirect) {
+          window.location.href = data.redirect;
+        } else {
+          mostrarErro(data.error || 'Erro ao abrir ticket.');
+          btn.disabled = false;
+          btn.innerHTML = '<i class="material-icons left">add</i>Abrir Ticket';
+        }
+      })
+      .catch(function () {
+        mostrarErro('Erro de conexão. Tente novamente.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="material-icons left">add</i>Abrir Ticket';
+      });
+    }
+
+    function mostrarErro(msg) {
+      var el = document.getElementById('qt-erro');
+      document.getElementById('qt-erro-texto').textContent = msg;
+      el.style.display = 'flex';
+    }
+
+    function ocultarErro() {
+      document.getElementById('qt-erro').style.display = 'none';
+    }
+
+    function resetModal() {
+      document.getElementById('qt-cliente-id').value = '';
+      var inp = document.getElementById('qt-cliente-input');
+      inp.value = '';
+      inp.style.display = '';
+      inp.classList.remove('qt-invalid');
+      document.getElementById('qt-lupa').style.display = '';
+      document.getElementById('qt-cliente-selecionado').style.display = 'none';
+      document.getElementById('qt-titulo').value = '';
+      document.getElementById('qt-titulo').classList.remove('qt-invalid');
+      document.getElementById('qt-departamento').value = '';
+      document.getElementById('qt-responsavel').value = '';
+      document.getElementById('qt-prioridade-val').value = '2';
+      // Reativa botão padrão de prioridade (id=2)
+      document.querySelectorAll('.qt-prio-btn').forEach(function (b) {
+        b.classList.toggle('qt-prio-ativo', b.dataset.id === '2');
+      });
+      ocultarErro();
+      var btn = document.getElementById('qt-btn-salvar');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="material-icons left">add</i>Abrir Ticket';
+      if (dropdownEl) dropdownEl.style.display = 'none';
+    }
+
+  })();
+  </script>
+  {% endif %}
+
   </body>
 </html>

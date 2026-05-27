@@ -745,3 +745,53 @@ def clientes_autocomplete(request):
             data[label] = None  # Materialize exige esse formato
 
     return JsonResponse(data)
+
+
+# ─── API: busca de clientes retornando id + nome (para o modal rápido) ────────
+def clientes_busca_api(request):
+    q = request.GET.get('q', '').strip()
+    results = []
+    if q:
+        clientes = (
+            Cliente.objects
+            .filter(
+                Q(fantasia__icontains=q) |
+                Q(razao_social__icontains=q) |
+                Q(cnpj__icontains=q)
+            )
+            .order_by('fantasia')[:15]
+        )
+        for c in clientes:
+            results.append({
+                'id': c.id,
+                'text': " - ".join(filter(None, [c.fantasia, c.razao_social, c.cnpj]))
+            })
+    return JsonResponse({'results': results})
+
+
+# ─── View: criação rápida de ticket via AJAX (modal) ──────────────────────────
+class QuickTicketCreateView(LoginRequiredMixin, View):
+
+    def post(self, request):
+        cliente_id      = request.POST.get('cliente_id')
+        titulo          = request.POST.get('titulo', '').strip()
+        departamento_id = request.POST.get('departamento')
+        tipo_id         = request.POST.get('tipo') or 3
+        prioridade_id   = request.POST.get('prioridade') or 2
+        responsavel_id  = request.POST.get('responsavel') or None
+
+        if not cliente_id or not titulo or not departamento_id:
+            return JsonResponse({'error': 'Preencha cliente, título e departamento.'}, status=400)
+
+        ticket = Ticket.objects.create(
+            cliente_id=cliente_id,
+            titulo=titulo,
+            departamento_id=departamento_id,
+            tipo_id=tipo_id,
+            prioridade_id=prioridade_id,
+            situacao_id=1,
+            atendente=request.user,
+            responsavel_id=responsavel_id if responsavel_id else None,
+        )
+
+        return JsonResponse({'redirect': reverse('ticket_detail', kwargs={'pk': ticket.pk})})

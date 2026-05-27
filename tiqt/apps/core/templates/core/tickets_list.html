@@ -8,7 +8,7 @@
 
     <div class="row">
       {% if request.path != '/ticket/my/' %}
-      <div class="col s12 m6">
+      <div class="col s12 m5">
         <h6><strong>Tickets: {{ filtered_count }}</strong></h6>
         <input type="text" name="q"
                placeholder="Pesquisar por título ou número do ticket"
@@ -29,7 +29,7 @@
 
     {% if request.path != '/ticket/my/' %}
     <div class="row">
-      <div class="col s12 m4">
+      <div class="col s12 m2">
         <h6>Cliente</h6>
         {{ filter_form.cliente }}
       </div>
@@ -48,6 +48,10 @@
       <div class="col s12 m2">
         <h6>Situação</h6>
         {{ filter_form.situacao }}
+      </div>
+      <div class="col s12 m2">
+        <h6>Status</h6>
+        {{ filter_form.status }}
       </div>
     </div>
 

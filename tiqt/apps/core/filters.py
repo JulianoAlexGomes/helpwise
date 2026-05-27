@@ -31,4 +31,9 @@ def apply_filters(queryset, form):
     if form.cleaned_data.get('situacao'):
         queryset = queryset.filter(situacao=form.cleaned_data['situacao'])
 
+    if form.cleaned_data.get('status') != '':
+        status = form.cleaned_data.get('status')
+        if status is not None and status != '':
+            queryset = queryset.filter(status=status)
+
     return queryset

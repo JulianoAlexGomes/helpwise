@@ -75,6 +75,7 @@
       <li><a href="{% url 'canceled_tickets' %}"><i class="material-icons center">event_busy</i><span class="show-on-small">Tickets Cancelados</span></a></li>
       <li><a href="{% url 'ticket_desenv' %}"><i class="material-icons center">code</i><span class="show-on-small">Tickets Desenvolvimento</span></a></li>
       <li><a href="{% url 'everyone_tickets' %}"><i class="material-icons center">article</i><span class="show-on-small">Todos Tickets</span></a></li>
+      <li><a href="{% url 'ticket_kanban' %}"><i class="material-icons center">view_kanban</i><span class="show-on-small">Kanban</span></a></li>
       <li><div class="divider"></div></li>
       <li><a href="{% url 'new_ticket' %}"><i class="material-icons center">add</i><span class="show-on-small">Novo</span></a></li>
       <div class="center">
@@ -286,7 +287,15 @@
     <div class="qt-header">
       <i class="material-icons" style="color:#fff; font-size:22px;">confirmation_number</i>
       <h5>Novo Ticket</h5>
-      <span class="qt-kbd">N</span>
+      <a href="#!" class="modal-close"
+        style="display:flex; align-items:center; justify-content:center;
+               width:28px; height:28px; border-radius:50%;
+               background:rgba(255,255,255,.12); color:#fff;
+               transition:background .15s; text-decoration:none;"
+        onmouseover="this.style.background='rgba(255,255,255,.25)'"
+        onmouseout="this.style.background='rgba(255,255,255,.12)'">
+        <i class="material-icons" style="font-size:18px; line-height:1;">close</i>
+      </a>
     </div>
 
     <div class="qt-body">

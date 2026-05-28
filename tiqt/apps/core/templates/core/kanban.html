@@ -1,0 +1,486 @@
+{% extends 'base.html' %}
+
+{% block title %}Kanban — Sinos HelpDesk{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Quebra o kanban para fora do container de 80% do base.html */
+  .kanban-wrapper {
+    margin-left:  calc(-5vw);
+    margin-right: calc(-5vw);
+    padding: 0 24px;
+    box-sizing: border-box;
+  }
+
+  .kanban-board {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding-bottom: 24px;
+    overflow-x: auto;
+  }
+
+  .kanban-col {
+    flex: 1 1 0;
+    min-width: 280px;
+  }
+
+  .kanban-col-header {
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .kanban-col-header span {
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: #fff;
+  }
+
+  .kanban-col-header .badge-count {
+    background: rgba(255,255,255,0.25);
+    color: #fff;
+    border-radius: 12px;
+    padding: 2px 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+
+  .kanban-drop-zone {
+    min-height: 120px;
+    border-radius: 8px;
+    transition: background 0.2s;
+    padding: 4px;
+  }
+
+  .kanban-drop-zone.dragover {
+    background: rgba(0, 150, 136, 0.12);
+    outline: 2px dashed #00897b;
+  }
+
+  .kanban-drop-zone.dragover-close {
+    background: rgba(56, 142, 60, 0.12);
+    outline: 2px dashed #388e3c;
+  }
+
+  .ticket-card {
+    border-radius: 8px !important;
+    margin-bottom: 10px !important;
+    cursor: default;
+    transition: box-shadow 0.2s, opacity 0.2s;
+  }
+
+  .ticket-card[draggable="true"] { cursor: grab; }
+  .ticket-card[draggable="true"]:active { cursor: grabbing; }
+  .ticket-card.dragging { opacity: 0.45; }
+
+  .ticket-card .card-content { padding: 12px 14px !important; }
+
+  .ticket-card .card-id {
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-decoration: none;
+  }
+
+  .ticket-card .card-title {
+    font-size: 0.85rem;
+    font-weight: 500;
+    line-height: 1.35;
+    margin: 6px 0;
+    color: #333;
+  }
+
+  .ticket-card .card-meta {
+    font-size: 0.75rem;
+    color: #777;
+    margin: 3px 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .ticket-card .card-meta i { font-size: 13px; }
+
+  .ticket-card .card-date {
+    font-size: 0.7rem;
+    color: #aaa;
+    text-align: right;
+    margin-top: 8px;
+  }
+
+  .prio-chip {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    color: #fff;
+  }
+
+  .prio-alta    { background: #e53935; }
+  .prio-media   { background: #fb8c00; }
+  .prio-baixa   { background: #43a047; }
+  .prio-default { background: #78909c; }
+
+  .kanban-empty {
+    text-align: center;
+    padding: 16px 10px;
+    font-size: 0.82rem;
+    color: #bbb;
+  }
+
+  .kanban-filter {
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .kanban-filter select {
+    height: 36px !important;
+    padding: 0 8px !important;
+    font-size: 0.85rem !important;
+    border-radius: 6px !important;
+    border: 1px solid #ccc !important;
+    min-width: 200px;
+    background: #fff;
+  }
+
+  .kanban-filter label {
+    font-size: 0.82rem;
+    color: #555;
+    font-weight: 500;
+  }
+
+  /* Modal de encerramento */
+  #modal-close-ticket {
+    border-radius: 12px;
+    max-width: 620px;
+    height: 21rem;
+  }
+
+  #modal-close-ticket .modal-content { padding: 32px 34px 12px; }
+  #modal-close-ticket .modal-footer  { padding: 10px 20px 16px; border-top: 1px solid #eee; }
+
+  #modal-close-ticket textarea {
+    min-height: 110px;
+    border: 1px solid #ccc !important;
+    border-radius: 6px;
+    padding: 15px;
+    font-size: 0.88rem;
+    resize: vertical;
+  }
+
+  #modal-close-ticket textarea:focus { border-color: #00796b !important; box-shadow: none !important; }
+
+  #modal-solucao-error {
+    display: none;
+    color: #e53935;
+    font-size: 0.8rem;
+    margin-top: 4px;
+  }
+
+  @media (max-width: 600px) {
+    .kanban-col { min-width: 260px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="kanban-wrapper">
+<div class="container-fluid" style="padding:0;">
+
+  <!-- Filtro -->
+  <form method="get" class="kanban-filter">
+    <label for="sel-responsavel">Responsável:</label>
+    <select id="sel-responsavel" name="responsavel" onchange="this.form.submit()">
+      <option value="">Todos</option>
+      {% for u in usuarios %}
+        <option value="{{ u.pk }}" {% if responsavel_selecionado == u.pk|stringformat:"s" %}selected{% endif %}>
+          {{ u.get_full_name }}
+        </option>
+      {% endfor %}
+    </select>
+
+    <label for="sel-tipo">Tipo:</label>
+    <select id="sel-tipo" name="tipo" onchange="this.form.submit()">
+      <option value="">Todos</option>
+      {% for t in tipos %}
+        <option value="{{ t.pk }}" {% if tipo_selecionado == t.pk|stringformat:"s" %}selected{% endif %}>
+          {{ t.descricao }}
+        </option>
+      {% endfor %}
+    </select>
+
+    {% if responsavel_selecionado or tipo_selecionado %}
+      <a href="{% url 'ticket_kanban' %}" class="btn-flat teal-text" style="font-size: 0.82rem;">
+        <i class="material-icons tiny">close</i> Limpar filtros
+      </a>
+    {% endif %}
+  </form>
+
+  <!-- Board -->
+  <div class="kanban-board">
+
+    <!-- ── Aberto ─────────────────────────────────── -->
+    <div class="kanban-col">
+      <div class="kanban-col-header teal darken-1">
+        <span><i class="material-icons tiny" style="vertical-align:middle">inbox</i> Aberto</span>
+        <span class="badge-count" id="count-0">{{ tickets_aberto.count }}</span>
+      </div>
+      <div class="kanban-drop-zone" id="drop-0" data-status="0">
+        {% for ticket in tickets_aberto %}
+          {% include "core/_kanban_card.html" with ticket=ticket draggable=True %}
+        {% empty %}
+          <div class="kanban-empty">Nenhum ticket em aberto</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- ── Em Atendimento ─────────────────────────── -->
+    <div class="kanban-col">
+      <div class="kanban-col-header orange darken-2">
+        <span><i class="material-icons tiny" style="vertical-align:middle">assignment_ind</i> Em Atendimento</span>
+        <span class="badge-count" id="count-1">{{ tickets_em_atendimento.count }}</span>
+      </div>
+      <div class="kanban-drop-zone" id="drop-1" data-status="1">
+        {% for ticket in tickets_em_atendimento %}
+          {% include "core/_kanban_card.html" with ticket=ticket draggable=True %}
+        {% empty %}
+          <div class="kanban-empty">Nenhum ticket em atendimento</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- ── Encerrado ───────────────────────────────── -->
+    <div class="kanban-col">
+      <div class="kanban-col-header green darken-2">
+        <span><i class="material-icons tiny" style="vertical-align:middle">assignment_turned_in</i> Encerrado</span>
+        <span class="badge-count" id="count-2">{{ tickets_encerrado.count }}{% if tickets_encerrado.count == 30 %}+{% endif %}</span>
+      </div>
+      <div class="kanban-drop-zone" id="drop-2" data-status="2">
+        {% for ticket in tickets_encerrado %}
+          {% include "core/_kanban_card.html" with ticket=ticket draggable=False %}
+        {% empty %}
+          <div class="kanban-empty">Nenhum ticket encerrado</div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div><!-- /kanban-board -->
+
+  <!-- ── Modal: Encerrar ticket ─────────────────────── -->
+  <div id="modal-close-ticket" class="modal">
+    <div class="modal-content">
+      <h5 style="margin:0 0 4px; font-size:1.05rem; font-weight:700;">
+        <i class="material-icons tiny" style="vertical-align:middle; color:#388e3c">assignment_turned_in</i>
+        Encerrar Ticket <span id="modal-ticket-id" style="color:#388e3c"></span>
+      </h5>
+      <p style="font-size:0.82rem; color:#777; margin:0 0 14px;">Descreva a solução aplicada para registrar o encerramento.</p>
+
+      <label for="modal-solucao-text" style="font-size:0.82rem; font-weight:600; color:#444;">Solução *</label>
+      <textarea id="modal-solucao-text" placeholder="Descreva o que foi feito para resolver o ticket..."></textarea>
+      <span id="modal-solucao-error">Informe a solução antes de encerrar.</span>
+    </div>
+    <div class="modal-footer">
+      <a href="#!" class="modal-close btn-flat grey-text" style="margin-right:8px;">Cancelar</a>
+      <button id="btn-confirm-close" class="btn green darken-2" style="border-radius:6px;">
+        <i class="material-icons left">check</i>Encerrar
+      </button>
+    </div>
+  </div>
+  <div class="modal-overlay" style="z-index:999;"></div>
+
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const ACCEPT_URL = (pk) => `/ticket/${pk}/accept-ajax/`;
+  const CLOSE_URL  = (pk) => `/ticket/${pk}/close-ajax/`;
+
+  function getCsrf() {
+    const m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? m[1] : '';
+  }
+
+  // ── Inicializa modal Materialize ─────────────────────
+  const modalEl   = document.getElementById('modal-close-ticket');
+  const modalInst = M.Modal.init(modalEl, { dismissible: false });
+
+  let pendingPk   = null;   // pk do ticket sendo encerrado
+  let pendingCard = null;   // referência ao card DOM
+  let pendingFromStatus = null;
+
+  // ── Drag & Drop ─────────────────────────────────────
+  let draggingCard = null;
+
+  function bindDraggable(card) {
+    card.addEventListener('dragstart', e => {
+      draggingCard = card;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', card.dataset.pk);
+    });
+    card.addEventListener('dragend', () => {
+      if (draggingCard) draggingCard.classList.remove('dragging');
+      draggingCard = null;
+    });
+  }
+
+  document.querySelectorAll('.ticket-card[draggable="true"]').forEach(bindDraggable);
+
+  document.querySelectorAll('.kanban-drop-zone').forEach(zone => {
+    zone.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      zone.classList.add(zone.dataset.status === '2' ? 'dragover-close' : 'dragover');
+    });
+    zone.addEventListener('dragleave', e => {
+      if (!zone.contains(e.relatedTarget)) {
+        zone.classList.remove('dragover', 'dragover-close');
+      }
+    });
+    zone.addEventListener('drop', async e => {
+      e.preventDefault();
+      zone.classList.remove('dragover', 'dragover-close');
+      if (!draggingCard) return;
+
+      const pk         = draggingCard.dataset.pk;
+      const fromStatus = parseInt(draggingCard.dataset.status);
+      const toStatus   = parseInt(zone.dataset.status);
+
+      if (fromStatus === toStatus) return;
+
+      if (fromStatus === 0 && toStatus === 1) {
+        // Aberto → Em Atendimento
+        await acceptTicket(pk, zone, draggingCard);
+
+      } else if ((fromStatus === 0 || fromStatus === 1) && toStatus === 2) {
+        // Aberto/Em Atendimento → Encerrado: abrir modal
+        pendingPk         = pk;
+        pendingCard       = draggingCard;
+        pendingFromStatus = fromStatus;
+        document.getElementById('modal-ticket-id').textContent = `#${pk}`;
+        document.getElementById('modal-solucao-text').value = '';
+        document.getElementById('modal-solucao-error').style.display = 'none';
+        modalInst.open();
+
+      } else {
+        M.toast({ html: 'Transição não permitida via Kanban.', classes: 'orange darken-2' });
+      }
+    });
+  });
+
+  // ── Confirmar encerramento ───────────────────────────
+  document.getElementById('btn-confirm-close').addEventListener('click', async () => {
+    const solucao = document.getElementById('modal-solucao-text').value.trim();
+    const errorEl = document.getElementById('modal-solucao-error');
+
+    if (!solucao) {
+      errorEl.style.display = 'block';
+      return;
+    }
+    errorEl.style.display = 'none';
+
+    const btn = document.getElementById('btn-confirm-close');
+    btn.disabled = true;
+    btn.textContent = 'Encerrando...';
+
+    try {
+      const body = new URLSearchParams({ solucao });
+      const resp = await fetch(CLOSE_URL(pendingPk), {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCsrf(),
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body,
+      });
+
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({}));
+        M.toast({ html: data.error || 'Erro ao encerrar ticket', classes: 'red' });
+        return;
+      }
+
+      // Move card para coluna Encerrado
+      const zone2 = document.getElementById('drop-2');
+      pendingCard.dataset.status = '2';
+      pendingCard.removeAttribute('draggable');
+      pendingCard.style.cursor = 'default';
+      zone2.insertBefore(pendingCard, zone2.firstChild);
+
+      removeEmpty(zone2);
+      updateCount(pendingFromStatus, -1);
+      updateCount(2, +1);
+
+      modalInst.close();
+      M.toast({ html: `Ticket #${pendingPk} encerrado!`, classes: 'green darken-2' });
+
+    } catch {
+      M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="material-icons left">check</i>Encerrar';
+      pendingPk = pendingCard = pendingFromStatus = null;
+    }
+  });
+
+  // ── Accept ticket ────────────────────────────────────
+  async function acceptTicket(pk, targetZone, card) {
+    try {
+      const resp = await fetch(ACCEPT_URL(pk), {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
+      });
+
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({}));
+        M.toast({ html: data.error || 'Erro ao aceitar ticket', classes: 'red' });
+        return;
+      }
+
+      const data = await resp.json();
+
+      card.dataset.status = '1';
+      // Mantém draggable para permitir mover para Encerrado depois
+      targetZone.insertBefore(card, targetZone.firstChild);
+      removeEmpty(targetZone);
+
+      const respEl = card.querySelector('.responsavel-name');
+      if (respEl) respEl.textContent = data.responsavel;
+      const respRow = card.querySelector('.responsavel-row');
+      if (respRow) respRow.style.display = 'flex';
+
+      updateCount(0, -1);
+      updateCount(1, +1);
+      M.toast({ html: `Ticket #${pk} aceito!`, classes: 'teal darken-1' });
+
+    } catch {
+      M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
+    }
+  }
+
+  // ── Helpers ──────────────────────────────────────────
+  function updateCount(status, delta) {
+    const el = document.getElementById(`count-${status}`);
+    if (!el) return;
+    const current = parseInt(el.textContent) || 0;
+    el.textContent = Math.max(0, current + delta);
+  }
+
+  function removeEmpty(zone) {
+    const empty = zone.querySelector('.kanban-empty');
+    if (empty) empty.remove();
+  }
+})();
+</script>
+{% endblock %}

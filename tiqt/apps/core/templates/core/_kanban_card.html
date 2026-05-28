@@ -1,0 +1,34 @@
+{% with prio=ticket.prioridade.descricao|default:"" %}
+<div class="card ticket-card z-depth-1"
+     {% if draggable %}draggable="true"{% endif %}
+     data-pk="{{ ticket.pk }}"
+     data-status="{{ ticket.status }}">
+  <div class="card-content">
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+      <a href="{{ ticket.get_absolute_url }}" class="teal-text darken-2 card-id">#{{ ticket.pk }}</a>
+      <span class="prio-chip
+        {% if 'alta' in prio|lower or 'urgente' in prio|lower or 'crítica' in prio|lower or 'critica' in prio|lower %}prio-alta
+        {% elif 'média' in prio|lower or 'media' in prio|lower or 'normal' in prio|lower %}prio-media
+        {% elif 'baixa' in prio|lower %}prio-baixa
+        {% else %}prio-default{% endif %}">
+        {{ ticket.prioridade }}
+      </span>
+    </div>
+
+    <p class="card-title">{{ ticket.titulo|default:"(sem título)"|truncatechars:60 }}</p>
+
+    <div class="card-meta">
+      <i class="material-icons">business</i>
+      <span>{{ ticket.cliente }}</span>
+    </div>
+
+    <div class="card-meta responsavel-row" {% if not ticket.responsavel %}style="display:none"{% endif %}>
+      <i class="material-icons">person</i>
+      <span class="responsavel-name">{{ ticket.responsavel.get_full_name|default:"" }}</span>
+    </div>
+
+    <p class="card-date">{{ ticket.criado_em|date:"d/m/Y H:i" }}</p>
+  </div>
+</div>
+{% endwith %}

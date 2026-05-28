@@ -46,6 +46,9 @@ urlpatterns = [
     path('api/cep/<str:cep>/', views.buscar_cep, name='buscar_cep'),
     path('api/cnpj/<str:cnpj>/', views.buscar_cnpj, name='buscar_cnpj'),
     path('ticket/quick-create/', views.QuickTicketCreateView.as_view(), name='quick_ticket_create'),
+    path('ticket/kanban/', views.KanbanView.as_view(), name='ticket_kanban'),
+    path('ticket/<int:pk>/accept-ajax/', views.TicketAcceptAjaxView.as_view(), name='ticket_accept_ajax'),
+    path('ticket/<int:pk>/close-ajax/', views.TicketCloseAjaxView.as_view(), name='ticket_close_ajax'),
 
     path('notifications/', include('tiqt.apps.notifications.urls')),
 

@@ -43,6 +43,8 @@ urlpatterns = [
     path('clientes/autocomplete/',views.clientes_autocomplete,name='clientes_autocomplete'),
     path('api/clientes/autocomplete/',views.clientes_autocomplete,name='clientes_autocomplete'),
     path('api/clientes/busca/', views.clientes_busca_api, name='clientes_busca_api'),
+    path('api/cep/<str:cep>/', views.buscar_cep, name='buscar_cep'),
+    path('api/cnpj/<str:cnpj>/', views.buscar_cnpj, name='buscar_cnpj'),
     path('ticket/quick-create/', views.QuickTicketCreateView.as_view(), name='quick_ticket_create'),
 
     path('notifications/', include('tiqt.apps.notifications.urls')),

@@ -7,21 +7,45 @@ User = get_user_model()
 
 class ClienteForm(forms.ModelForm):
 
+    cep = forms.CharField(
+        max_length=9,
+        required=False,
+        label='Cep',
+        widget=forms.TextInput(attrs={'maxlength': '9'})
+    )
+
+    cnpj = forms.CharField(
+        max_length=18,
+        required=False,
+        label='Cnpj',
+        widget=forms.TextInput(attrs={'maxlength': '18'})
+    )
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if instance.cep:
+            instance.cep = instance.cep.replace('-', '')
+        if instance.cnpj:
+            instance.cnpj = ''.join(filter(str.isdigit, instance.cnpj))
+        if commit:
+            instance.save()
+        return instance
+
     class Meta:
         model = Cliente
         fields = [
+            'cnpj',
             'razao_social',
             'fantasia',
-            'cnpj',
             'telefone',
             'email',
-            'endereco',
-            'numero',
-            'bairro',
             'cep',
-            'complemento',
+            'endereco',
+            'bairro',
             'cidade',
             'uf',
+            'numero',
+            'complemento',
             'tributacao',
             'responsavel',
             'observacao',

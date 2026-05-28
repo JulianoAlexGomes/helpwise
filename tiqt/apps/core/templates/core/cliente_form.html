@@ -37,3 +37,152 @@
     </ul>
 {% endif %}
 {% endblock content %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var cepInput = document.getElementById('id_cep');
+  if (!cepInput) return;
+
+  var cepStatus = document.createElement('span');
+  cepStatus.style.cssText = 'font-size:12px; margin-left:8px;';
+  cepInput.parentNode.appendChild(cepStatus);
+
+  cepInput.addEventListener('input', function () {
+    var digits = this.value.replace(/\D/g, '').slice(0, 8);
+    this.value = digits.length > 5 ? digits.slice(0, 5) + '-' + digits.slice(5) : digits;
+  });
+
+  var cnpjInput = document.getElementById('id_cnpj');
+  if (cnpjInput) {
+    function formatarCnpj(valor) {
+      var d = valor.replace(/\D/g, '').slice(0, 14);
+      if (d.length < 14) return d;
+      return d.slice(0,2) + '.' + d.slice(2,5) + '.' + d.slice(5,8) + '/' + d.slice(8,12) + '-' + d.slice(12);
+    }
+
+    var cnpjStatus = document.createElement('span');
+    cnpjStatus.style.cssText = 'font-size:12px; margin-left:8px;';
+    cnpjInput.parentNode.appendChild(cnpjStatus);
+
+    function preencherCnpj(data) {
+      var campos = {
+        'id_razao_social': data.razao_social,
+        'id_fantasia':     data.fantasia,
+        'id_email':        data.email,
+        'id_telefone':     data.telefone,
+        'id_endereco':     data.logradouro,
+        'id_numero':       data.numero,
+        'id_complemento':  data.complemento,
+        'id_bairro':       data.bairro,
+      };
+      Object.entries(campos).forEach(function(entry) {
+        var el = document.getElementById(entry[0]);
+        if (el && entry[1]) el.value = entry[1];
+      });
+
+      if (data.cep) {
+        var cepEl = document.getElementById('id_cep');
+        if (cepEl) {
+          var d = data.cep.replace(/\D/g,'').slice(0,8);
+          cepEl.value = d.length > 5 ? d.slice(0,5) + '-' + d.slice(5) : d;
+        }
+      }
+      if (data.uf_id) {
+        var ufEl = document.getElementById('id_uf');
+        if (ufEl) { ufEl.value = data.uf_id; M.FormSelect.init(ufEl); }
+      }
+      if (data.cidade_id) {
+        var cidadeEl = document.getElementById('id_cidade');
+        if (cidadeEl) { cidadeEl.value = data.cidade_id; M.FormSelect.init(cidadeEl); }
+      }
+      M.updateTextFields();
+    }
+
+    function consultarCnpj(valor) {
+      var digits = valor.replace(/\D/g, '');
+      if (digits.length !== 14) return;
+      cnpjStatus.textContent = 'Buscando...';
+      cnpjStatus.style.color = '#9e9e9e';
+      fetch('/api/cnpj/' + digits + '/')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.erro) {
+            cnpjStatus.textContent = 'CNPJ não encontrado.';
+            cnpjStatus.style.color = '#e53935';
+            return;
+          }
+          preencherCnpj(data);
+          cnpjStatus.textContent = data.razao_social || 'Dados preenchidos.';
+          cnpjStatus.style.color = '#2e7d32';
+        })
+        .catch(function() {
+          cnpjStatus.textContent = 'Erro ao consultar CNPJ.';
+          cnpjStatus.style.color = '#e53935';
+        });
+    }
+
+    cnpjInput.addEventListener('blur', function () {
+      this.value = formatarCnpj(this.value);
+      M.updateTextFields();
+      consultarCnpj(this.value);
+    });
+
+    cnpjInput.addEventListener('paste', function () {
+      setTimeout(function () {
+        cnpjInput.value = formatarCnpj(cnpjInput.value);
+        M.updateTextFields();
+        consultarCnpj(cnpjInput.value);
+      }, 10);
+    });
+  }
+
+  cepInput.addEventListener('blur', function () {
+    var cep = this.value.replace(/\D/g, '');
+    if (cep.length !== 8) return;
+
+    cepStatus.textContent = 'Buscando...';
+    cepStatus.style.color = '#9e9e9e';
+
+    fetch('/api/cep/' + cep + '/')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.erro) {
+          cepStatus.textContent = 'CEP não encontrado.';
+          cepStatus.style.color = '#e53935';
+          return;
+        }
+
+        var endereco = document.getElementById('id_endereco');
+        var bairro   = document.getElementById('id_bairro');
+        var cidade   = document.getElementById('id_cidade');
+        var uf       = document.getElementById('id_uf');
+
+        if (endereco && data.logradouro) {
+          endereco.value = data.logradouro;
+          M.updateTextFields();
+        }
+        if (bairro && data.bairro) {
+          bairro.value = data.bairro;
+          M.updateTextFields();
+        }
+        if (uf && data.uf_id) {
+          uf.value = data.uf_id;
+          M.FormSelect.init(uf);
+        }
+        if (cidade && data.cidade_id) {
+          cidade.value = data.cidade_id;
+          M.FormSelect.init(cidade);
+        }
+
+        cepStatus.textContent = data.cidade + '/' + data.uf;
+        cepStatus.style.color = '#2e7d32';
+      })
+      .catch(function () {
+        cepStatus.textContent = 'Erro ao consultar CEP.';
+        cepStatus.style.color = '#e53935';
+      });
+  });
+});
+</script>
+{% endblock extra_js %}

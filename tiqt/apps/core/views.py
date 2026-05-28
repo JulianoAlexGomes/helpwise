@@ -28,6 +28,7 @@ from .serializers import ClienteSerializer
 from django.utils import timezone
 from .models import Ticket
 import os
+import requests as http_requests
 from django.contrib.auth import get_user_model
 from openpyxl import Workbook
 from django.http import HttpResponse
@@ -767,6 +768,156 @@ def clientes_busca_api(request):
                 'text': " - ".join(filter(None, [c.fantasia, c.razao_social, c.cnpj]))
             })
     return JsonResponse({'results': results})
+
+
+def buscar_cep(request, cep):
+    cep = cep.replace('-', '').replace('.', '').strip()
+    if len(cep) != 8 or not cep.isdigit():
+        return JsonResponse({'erro': 'CEP inválido'}, status=400)
+
+    apis = [
+        f"https://viacep.com.br/ws/{cep}/json/",
+        f"https://brasilapi.com.br/api/cep/v1/{cep}",
+        f"https://ws.apicep.com/cep/{cep}.json",
+    ]
+
+    endereco = None
+    for url in apis:
+        try:
+            resp = http_requests.get(url, timeout=3)
+            if resp.status_code != 200:
+                continue
+            data = resp.json()
+            if 'erro' in data:
+                continue
+            if 'street' in data:  # BrasilAPI
+                endereco = {
+                    'logradouro': data.get('street', ''),
+                    'bairro': data.get('neighborhood', ''),
+                    'cidade': data.get('city', ''),
+                    'uf': data.get('state', ''),
+                }
+            elif 'address' in data:  # APICEP
+                endereco = {
+                    'logradouro': data.get('address', ''),
+                    'bairro': data.get('district', ''),
+                    'cidade': data.get('city', ''),
+                    'uf': data.get('state', ''),
+                }
+            else:  # ViaCEP
+                endereco = {
+                    'logradouro': data.get('logradouro', ''),
+                    'bairro': data.get('bairro', ''),
+                    'cidade': data.get('localidade', ''),
+                    'uf': data.get('uf', ''),
+                }
+            break
+        except Exception:
+            continue
+
+    if not endereco:
+        return JsonResponse({'erro': 'CEP não encontrado'}, status=404)
+
+    uf_id = None
+    cidade_id = None
+    try:
+        uf_obj = Uf.objects.get(sigla__iexact=endereco['uf'])
+        uf_id = uf_obj.id
+    except Uf.DoesNotExist:
+        pass
+
+    try:
+        cidade_obj = Cidade.objects.filter(descricao__iexact=endereco['cidade']).first()
+        if cidade_obj:
+            cidade_id = cidade_obj.id
+    except Exception:
+        pass
+
+    return JsonResponse({
+        'logradouro': endereco['logradouro'],
+        'bairro': endereco['bairro'],
+        'cidade': endereco['cidade'],
+        'uf': endereco['uf'],
+        'cidade_id': cidade_id,
+        'uf_id': uf_id,
+    })
+
+
+def buscar_cnpj(request, cnpj):
+    cnpj = ''.join(filter(str.isdigit, cnpj))
+    if len(cnpj) != 14:
+        return JsonResponse({'erro': 'CNPJ inválido'}, status=400)
+
+    dados = None
+
+    # BrasilAPI
+    try:
+        resp = http_requests.get(f'https://brasilapi.com.br/api/cnpj/v1/{cnpj}', timeout=5)
+        if resp.status_code == 200:
+            d = resp.json()
+            telefone = (d.get('ddd_telefone_1') or '').replace(' ', '').replace('-', '')
+            cep_raw = (d.get('cep') or '').replace('-', '').replace('.', '')
+            dados = {
+                'razao_social': d.get('razao_social', ''),
+                'fantasia': d.get('nome_fantasia', ''),
+                'email': d.get('email', ''),
+                'telefone': telefone,
+                'logradouro': d.get('logradouro', ''),
+                'numero': d.get('numero', ''),
+                'complemento': d.get('complemento', ''),
+                'bairro': d.get('bairro', ''),
+                'cidade': d.get('municipio', ''),
+                'uf': d.get('uf', ''),
+                'cep': cep_raw,
+            }
+    except Exception:
+        pass
+
+    # CNPJ.ws fallback
+    if not dados:
+        try:
+            resp = http_requests.get(f'https://publica.cnpj.ws/cnpj/{cnpj}', timeout=5)
+            if resp.status_code == 200:
+                d = resp.json()
+                est = d.get('estabelecimento', {})
+                telefone = (est.get('telefone1') or '').replace(' ', '').replace('-', '')
+                cep_raw = (est.get('cep') or '').replace('-', '').replace('.', '')
+                dados = {
+                    'razao_social': d.get('razao_social', ''),
+                    'fantasia': est.get('nome_fantasia', '') or '',
+                    'email': est.get('email', '') or '',
+                    'telefone': telefone,
+                    'logradouro': f"{est.get('tipo_logradouro', '')} {est.get('logradouro', '')}".strip(),
+                    'numero': est.get('numero', '') or '',
+                    'complemento': est.get('complemento', '') or '',
+                    'bairro': est.get('bairro', '') or '',
+                    'cidade': (est.get('cidade') or {}).get('nome', ''),
+                    'uf': (est.get('estado') or {}).get('sigla', ''),
+                    'cep': cep_raw,
+                }
+        except Exception:
+            pass
+
+    if not dados:
+        return JsonResponse({'erro': 'CNPJ não encontrado'}, status=404)
+
+    uf_id = None
+    cidade_id = None
+    try:
+        uf_obj = Uf.objects.get(sigla__iexact=dados['uf'])
+        uf_id = uf_obj.id
+    except Uf.DoesNotExist:
+        pass
+    try:
+        cidade_obj = Cidade.objects.filter(descricao__iexact=dados['cidade']).first()
+        if cidade_obj:
+            cidade_id = cidade_obj.id
+    except Exception:
+        pass
+
+    dados['uf_id'] = uf_id
+    dados['cidade_id'] = cidade_id
+    return JsonResponse(dados)
 
 
 # ─── View: criação rápida de ticket via AJAX (modal) ──────────────────────────

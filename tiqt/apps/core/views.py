@@ -539,6 +539,55 @@ class TicketCancelView(LoginRequiredMixin, View):
         return HttpResponseRedirect(reverse("ticket_detail", kwargs={"pk": pk}))
 
 
+class KanbanView(LoginRequiredMixin, TemplateView):
+    template_name = 'core/kanban.html'
+
+    def get_context_data(self, **kwargs):
+        from .models import Tipo
+        context = super().get_context_data(**kwargs)
+        responsavel_id = self.request.GET.get('responsavel', '')
+        tipo_id        = self.request.GET.get('tipo', '')
+
+        qs = Ticket.objects.select_related('cliente', 'prioridade', 'responsavel', 'tipo')
+        if responsavel_id:
+            qs = qs.filter(responsavel_id=responsavel_id)
+        if tipo_id:
+            qs = qs.filter(tipo_id=tipo_id)
+
+        context['tickets_aberto']         = qs.filter(status=Ticket.ABERTO).order_by('-id')
+        context['tickets_em_atendimento'] = qs.filter(status=Ticket.EM_ATENDIMENTO).order_by('-id')
+        context['tickets_encerrado']      = qs.filter(status=Ticket.ENCERRADO).order_by('-encerrado_em')[:30]
+        context['usuarios']               = User.objects.filter(is_active=True).order_by('first_name')
+        context['tipos']                  = Tipo.objects.all().order_by('descricao')
+        context['responsavel_selecionado'] = responsavel_id
+        context['tipo_selecionado']        = tipo_id
+        return context
+
+
+class TicketAcceptAjaxView(LoginRequiredMixin, View):
+
+    def post(self, request, pk):
+        ticket = get_object_or_404(Ticket, pk=pk)
+        if ticket.status != Ticket.ABERTO:
+            return JsonResponse({'error': 'Ticket não está aberto'}, status=400)
+        ticket.iniciar_atendimento(request.user)
+        return JsonResponse({'ok': True, 'responsavel': request.user.get_full_name()})
+
+
+class TicketCloseAjaxView(LoginRequiredMixin, View):
+
+    def post(self, request, pk):
+        ticket = get_object_or_404(Ticket, pk=pk)
+        if ticket.status == Ticket.ENCERRADO:
+            return JsonResponse({'error': 'Ticket já está encerrado'}, status=400)
+        solucao_texto = request.POST.get('solucao', '').strip()
+        if not solucao_texto:
+            return JsonResponse({'error': 'Informe a solução antes de encerrar'}, status=400)
+        Solucao.objects.create(ticket=ticket, texto=solucao_texto, autor=request.user)
+        ticket.encerrar_atendimento()
+        return JsonResponse({'ok': True})
+
+
 class CloseTicketView(LoginRequiredMixin, View):
 
     def get(self, request, pk):

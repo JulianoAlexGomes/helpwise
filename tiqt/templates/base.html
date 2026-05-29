@@ -408,6 +408,130 @@
     </div>
   </div>
   <!-- fim modal-quick-ticket -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MODAL DE PESQUISA RÁPIDA DE TICKET (tecla X)
+  ═══════════════════════════════════════════════════════════ -->
+  <style>
+    #modal-busca-ticket {
+      width: 400px !important;
+      max-width: 94vw !important;
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    #modal-busca-ticket .bt-header {
+      background: #212121;
+      padding: 20px 28px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    #modal-busca-ticket .bt-header h5 {
+      margin: 0;
+      font-weight: 700;
+      font-size: 17px;
+      color: #fff;
+      flex: 1;
+    }
+    #modal-busca-ticket .bt-kbd {
+      font-size: 11px;
+      color: rgba(255,255,255,.5);
+      background: rgba(255,255,255,.1);
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      letter-spacing: 1px;
+    }
+    #modal-busca-ticket .bt-body {
+      padding: 24px 28px 8px;
+    }
+    #modal-busca-ticket .bt-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #757575;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      display: block;
+      margin-bottom: 7px;
+    }
+    #modal-busca-ticket .bt-input {
+      width: 100%;
+      padding: 11px 14px 11px 38px;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 15px;
+      outline: none;
+      box-sizing: border-box;
+      transition: border-color .2s;
+      background: #fff;
+      color: #212121;
+      height: auto !important;
+      box-shadow: none !important;
+      margin: 0 !important;
+    }
+    #modal-busca-ticket .bt-input:focus { border-color: #212121; }
+    #modal-busca-ticket .bt-input.bt-invalid { border-color: #e53935; }
+    #bt-erro {
+      display: none;
+      padding: 9px 13px;
+      background: #ffebee;
+      border: 1px solid #ffcdd2;
+      border-radius: 8px;
+      color: #c62828;
+      font-size: 13px;
+      margin-top: 8px;
+      align-items: center;
+      gap: 8px;
+    }
+    #modal-busca-ticket .bt-footer {
+      padding: 14px 20px 20px;
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      align-items: center;
+      border-top: 1px solid #f0f0f0;
+    }
+  </style>
+
+  <div id="modal-busca-ticket" class="modal">
+    <div class="bt-header">
+      <i class="material-icons" style="color:#fff; font-size:20px;">manage_search</i>
+      <h5>Ir para Ticket</h5>
+      <span class="bt-kbd">X</span>
+      <a href="#!" class="modal-close"
+        style="display:flex; align-items:center; justify-content:center;
+               width:28px; height:28px; border-radius:50%;
+               background:rgba(255,255,255,.12); color:#fff;
+               transition:background .15s; text-decoration:none;"
+        onmouseover="this.style.background='rgba(255,255,255,.25)'"
+        onmouseout="this.style.background='rgba(255,255,255,.12)'">
+        <i class="material-icons" style="font-size:18px; line-height:1;">close</i>
+      </a>
+    </div>
+    <div class="bt-body">
+      <label class="bt-label" for="bt-numero-input">Número do ticket</label>
+      <div style="position:relative;">
+        <span style="position:absolute; left:11px; top:50%; transform:translateY(-50%); color:#bdbdbd; pointer-events:none;">
+          <i class="material-icons" style="font-size:18px; line-height:1;">tag</i>
+        </span>
+        <input id="bt-numero-input" type="number" min="1" class="bt-input"
+          placeholder="Ex.: 1042">
+      </div>
+      <div id="bt-erro" style="display:none;">
+        <i class="material-icons" style="font-size:16px;">error_outline</i>
+        <span id="bt-erro-texto"></span>
+      </div>
+    </div>
+    <div class="bt-footer">
+      <a href="#!" class="modal-close btn-flat" style="color:#757575; font-weight:600; border-radius:6px;">
+        Cancelar
+      </a>
+      <button id="bt-btn-ir" class="btn black waves-effect waves-light" style="border-radius:8px; padding:0 20px;">
+        <i class="material-icons left">arrow_forward</i>Ir
+      </button>
+    </div>
+  </div>
+  <!-- fim modal-busca-ticket -->
   {% endif %}
 
   <!--JavaScript at end of body for optimized loading-->
@@ -477,12 +601,17 @@
       // Modal só abre via tecla N — botões da sidebar/dashboard usam a rota normal
     });
 
-    // ── Atalho "N" ────────────────────────────────────────────────────────────
+    // ── Atalhos de teclado ────────────────────────────────────────────────────
     document.addEventListener('keydown', function (e) {
       var tag = document.activeElement.tagName.toLowerCase();
-      if (e.key === 'n' && tag !== 'input' && tag !== 'textarea' && tag !== 'select') {
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
+      if (e.key === 'n') {
         e.preventDefault();
         abrirModal();
+      } else if (e.key === 'x' || e.key === 'X') {
+        e.preventDefault();
+        abrirBuscaTicket();
       }
     });
 
@@ -714,6 +843,53 @@
       if (dropdownEl) dropdownEl.style.display = 'none';
     }
 
+  })();
+  </script>
+
+  <script>
+  (function () {
+    var btModalEl   = document.getElementById('modal-busca-ticket');
+    var btModalInst = null;
+
+    document.addEventListener('DOMContentLoaded', function () {
+      btModalInst = M.Modal.init(btModalEl, { onOpenStart: function () {
+        var inp = document.getElementById('bt-numero-input');
+        inp.value = '';
+        inp.classList.remove('bt-invalid');
+        document.getElementById('bt-erro').style.display = 'none';
+        setTimeout(function () { inp.focus(); }, 150);
+      }});
+
+      document.getElementById('bt-btn-ir').addEventListener('click', irParaTicket);
+
+      document.getElementById('bt-numero-input').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); irParaTicket(); }
+      });
+    });
+
+    function abrirBuscaTicket() {
+      if (!btModalInst) btModalInst = M.Modal.getInstance(btModalEl);
+      btModalInst.open();
+    }
+
+    function irParaTicket() {
+      var inp = document.getElementById('bt-numero-input');
+      var val = inp.value.trim();
+      document.getElementById('bt-erro').style.display = 'none';
+      inp.classList.remove('bt-invalid');
+
+      if (!val || isNaN(val) || parseInt(val) < 1) {
+        inp.classList.add('bt-invalid');
+        document.getElementById('bt-erro-texto').textContent = 'Informe um número de ticket válido.';
+        document.getElementById('bt-erro').style.display = 'flex';
+        inp.focus();
+        return;
+      }
+
+      window.location.href = '/ticket/' + parseInt(val) + '/';
+    }
+
+    window.abrirBuscaTicket = abrirBuscaTicket;
   })();
   </script>
   {% endif %}

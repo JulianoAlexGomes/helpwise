@@ -31,7 +31,13 @@
 
       #slide-out li > a {
         height: 56px;
-        line-height: 56px;
+        display: flex !important;
+        align-items: center;
+        gap: 12px;
+        line-height: normal;
+      }
+      #slide-out li > a i.material-icons {
+        flex-shrink: 0;
       }
     </style>
     {% endif %}
@@ -47,8 +53,8 @@
           <div class="nav-wrapper">
          <a href="/" class="brand-logo" style="padding: 0 10px;">HelpWise</a>
             {% if user.is_authenticated %}
-          <a href="#" data-target="slide-out" class="sidenav-trigger"><i class="material-icons">menu</i></a>
-          <a href="#" id="toggle-sidenav" class="right"><i class="material-icons">chevron_left</i></a>
+          <a href="#" data-target="slide-out" class="sidenav-trigger"><i class="material-icons" translate="no">menu</i></a>
+          <a href="#" id="toggle-sidenav" class="right"><i class="material-icons" translate="no">chevron_left</i></a>
         {% endif %}
       </div>
     </nav>
@@ -65,19 +71,19 @@
           <span class="email white-text">{{ user.email|default:"- - -" }}</span>
         </div>
       </li>
-      <li><a href="{% url 'home' %}"><i class="material-icons center">dashboard</i><span class="show-on-small">Início</span></a></li>
-      <li><a href="{% url 'cliente_list' %}"><i class="material-icons center">people</i><span class="show-on-small">Clientes</span></a></li>
-      <li><a href="{% url 'cliente_create' %}"><i class="material-icons center">person_add</i><span class="show-on-small">Novo Cliente</span></a></li>
-      <li><a href="{% url 'my_tickets' %}"><i class="material-icons center">assignment</i><span class="show-on-small">Meus Tickets</span></a></li>
-      <li><a href="{% url 'open_tickets' %}"><i class="material-icons center">inbox</i><span class="show-on-small">Tickets Abertos</span></a></li>
-      <li><a href="{% url 'inprogress_tickets' %}"><i class="material-icons center">assignment_ind</i><span class="show-on-small">Tickets em Atendimento</span></a></li>
-      <li><a href="{% url 'closed_tickets' %}"><i class="material-icons center">assignment_turned_in</i><span class="show-on-small">Tickets Encerrados</span></a></li>
-      <li><a href="{% url 'canceled_tickets' %}"><i class="material-icons center">event_busy</i><span class="show-on-small">Tickets Cancelados</span></a></li>
-      <li><a href="{% url 'ticket_desenv' %}"><i class="material-icons center">code</i><span class="show-on-small">Tickets Desenvolvimento</span></a></li>
-      <li><a href="{% url 'everyone_tickets' %}"><i class="material-icons center">article</i><span class="show-on-small">Todos Tickets</span></a></li>
-      <li><a href="{% url 'ticket_kanban' %}"><i class="material-icons center">view_kanban</i><span class="show-on-small">Kanban</span></a></li>
+      <li><a href="{% url 'home' %}"><i class="material-icons center" translate="no">dashboard</i><span>Início</span></a></li>
+      <li><a href="{% url 'cliente_list' %}"><i class="material-icons center" translate="no">people</i><span>Clientes</span></a></li>
+      <li><a href="{% url 'cliente_create' %}"><i class="material-icons center" translate="no">person_add</i><span>Novo Cliente</span></a></li>
+      <li><a href="{% url 'my_tickets' %}"><i class="material-icons center" translate="no">assignment</i><span>Meus Tickets</span></a></li>
+      <li><a href="{% url 'open_tickets' %}"><i class="material-icons center" translate="no">inbox</i><span>Tickets Abertos</span></a></li>
+      <li><a href="{% url 'inprogress_tickets' %}"><i class="material-icons center" translate="no">assignment_ind</i><span>Tickets em Atendimento</span></a></li>
+      <li><a href="{% url 'closed_tickets' %}"><i class="material-icons center" translate="no">assignment_turned_in</i><span>Tickets Encerrados</span></a></li>
+      <li><a href="{% url 'canceled_tickets' %}"><i class="material-icons center" translate="no">event_busy</i><span>Tickets Cancelados</span></a></li>
+      <li><a href="{% url 'ticket_desenv' %}"><i class="material-icons center" translate="no">code</i><span>Tickets Desenvolvimento</span></a></li>
+      <li><a href="{% url 'everyone_tickets' %}"><i class="material-icons center" translate="no">article</i><span>Todos Tickets</span></a></li>
+      <li><a href="{% url 'ticket_kanban' %}"><i class="material-icons center" translate="no">view_kanban</i><span>Kanban</span></a></li>
       <li><div class="divider"></div></li>
-      <li><a href="{% url 'new_ticket' %}"><i class="material-icons center">add</i><span class="show-on-small">Novo</span></a></li>
+      <li><a href="{% url 'new_ticket' %}"><i class="material-icons center" translate="no">add</i><span>Novo</span></a></li>
       <div class="center">
         <form  method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit" class="btn" style="margin-top: 10px;">Logoff</button></form>
       </div>

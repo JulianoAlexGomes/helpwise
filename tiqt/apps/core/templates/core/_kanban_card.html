@@ -1,5 +1,5 @@
 {% with prio=ticket.prioridade.descricao|default:"" %}
-<div class="card ticket-card z-depth-1"
+<div class="card ticket-card z-depth-1 {% if ticket.status == 2 %}ticket-card-closed{% endif %}"
      {% if draggable %}draggable="true"{% endif %}
      data-pk="{{ ticket.pk }}"
      data-status="{{ ticket.status }}">

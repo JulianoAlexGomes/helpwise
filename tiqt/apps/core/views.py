@@ -243,6 +243,7 @@ class MyTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
 
     def get_table_data(self, **kwargs):
         return Ticket.objects.filter(Q(status=Ticket.ABERTO) | Q(status=Ticket.EM_ATENDIMENTO),responsavel=self.request.user)
+    
 
 class OpenTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     template_name = 'core/tickets_list.html'

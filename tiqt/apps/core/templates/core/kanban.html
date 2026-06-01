@@ -207,6 +207,27 @@
   @media (max-width: 600px) {
     .kanban-col { min-width: 260px; }
   }
+
+  html.dark #modal-close-ticket {
+  background-color: var(--hw-surface) !important;
+  color: var(--hw-text) !important;
+  }
+  html.dark #modal-close-ticket p,
+  html.dark #modal-close-ticket label {
+    color: var(--hw-text2) !important;
+  }
+  html.dark #modal-close-ticket .modal-footer {
+    background-color: var(--hw-surface) !important;
+    border-top-color: var(--hw-border) !important;
+  }
+  html.dark #modal-close-ticket textarea {
+    background-color: var(--hw-input-bg) !important;
+    color: var(--hw-text) !important;
+    border-color: var(--hw-border) !important;
+  }
+  html.dark #modal-close-ticket textarea::placeholder {
+    color: var(--hw-text3) !important;
+  }
 </style>
 {% endblock %}
 

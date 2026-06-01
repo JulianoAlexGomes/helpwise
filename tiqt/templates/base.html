@@ -319,7 +319,38 @@
       html.dark-transition *,
       html.dark-transition *::before,
       html.dark-transition *::after {
-        transition: background-color .25s ease, color .2s ease, border-color .2s ease, box-shadow .2s ease !important;
+        transition: background-color .25s ease, color .2s ease, border-color .2s ease, box-shadow .2s ease !important
+        
+      }
+
+       /* ── Collapsible sidebar dark ─────────────────────────── */
+      html.dark #slide-out .collapsible-header {
+        color: var(--hw-text) !important;
+        background-color: transparent !important;
+      }
+      html.dark #slide-out .collapsible-header i.material-icons {
+        color: #fff !important;
+      }
+      html.dark #slide-out .collapsible-header:hover {
+        background-color: var(--hw-hover) !important;
+      }
+      html.dark #slide-out .collapsible-body {
+        background-color: rgba(255,255,255,.03) !important;
+      }
+      html.dark #slide-out .collapsible-body li > a {
+        color: var(--hw-text) !important;
+      }
+      html.dark #slide-out .collapsible-body li > a:hover {
+        background-color: var(--hw-hover) !important;
+      }
+
+      /* Remove scrollbar da sidebar */
+      #slide-out::-webkit-scrollbar {
+        display: none;
+      }
+      #slide-out {
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE */
       }
     </style>
 
@@ -362,11 +393,26 @@
       <li><a href="{% url 'cliente_list' %}"><i class="material-icons center" translate="no">people</i><span>Clientes</span></a></li>
       <li><a href="{% url 'cliente_create' %}"><i class="material-icons center" translate="no">person_add</i><span>Novo Cliente</span></a></li>
       <li><a href="{% url 'my_tickets' %}"><i class="material-icons center" translate="no">assignment</i><span>Meus Tickets</span></a></li>
-      <li><a href="{% url 'open_tickets' %}"><i class="material-icons center" translate="no">inbox</i><span>Tickets Abertos</span></a></li>
-      <li><a href="{% url 'inprogress_tickets' %}"><i class="material-icons center" translate="no">assignment_ind</i><span>Tickets em Atendimento</span></a></li>
-      <li><a href="{% url 'closed_tickets' %}"><i class="material-icons center" translate="no">assignment_turned_in</i><span>Tickets Encerrados</span></a></li>
-      <li><a href="{% url 'canceled_tickets' %}"><i class="material-icons center" translate="no">event_busy</i><span>Tickets Cancelados</span></a></li>
-      <li><a href="{% url 'ticket_desenv' %}"><i class="material-icons center" translate="no">code</i><span>Tickets Desenvolvimento</span></a></li>
+      <li>
+        <ul class="collapsible collapsible-accordion" style="margin-left:30; box-shadow:none;">
+          <li>
+            <a class="collapsible-header" style="height:56px; display:flex; align-items:center; gap:10px; padding:0 2px;">
+              <i class="material-icons" translate="no">confirmation_number</i>
+              <span style="flex:1;">Tickets</span>
+              <i class="material-icons">arrow_drop_down</i>
+            </a>
+            <div class="collapsible-body" style="padding:0;">
+              <ul>
+                <li><a href="{% url 'open_tickets' %}" style="padding-left:32px;"><i class="material-icons" translate="no">inbox</i><span>Abertos</span></a></li>
+                <li><a href="{% url 'inprogress_tickets' %}" style="padding-left:32px;"><i class="material-icons" translate="no">assignment_ind</i><span>Em Atendimento</span></a></li>
+                <li><a href="{% url 'closed_tickets' %}" style="padding-left:32px;"><i class="material-icons" translate="no">assignment_turned_in</i><span>Encerrados</span></a></li>
+                <li><a href="{% url 'canceled_tickets' %}" style="padding-left:32px;"><i class="material-icons" translate="no">event_busy</i><span>Cancelados</span></a></li>
+                <li><a href="{% url 'ticket_desenv' %}" style="padding-left:32px;"><i class="material-icons" translate="no">code</i><span>Desenvolvimento</span></a></li>
+              </ul>
+            </div>
+          </li>
+        </ul>
+      </li>
       <li><a href="{% url 'everyone_tickets' %}"><i class="material-icons center" translate="no">article</i><span>Todos Tickets</span></a></li>
       <li><a href="{% url 'ticket_kanban' %}"><i class="material-icons center" translate="no">view_kanban</i><span>Kanban</span></a></li>
       <li><div class="divider"></div></li>

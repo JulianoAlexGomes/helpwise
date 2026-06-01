@@ -21,15 +21,16 @@ class ClienteForm(forms.ModelForm):
         widget=forms.TextInput(attrs={'maxlength': '18'})
     )
 
+    def clean_cnpj(self):
+        value = self.cleaned_data.get('cnpj', '')
+        return ''.join(filter(str.isdigit, value))
+
+    def clean_cep(self):
+        value = self.cleaned_data.get('cep', '')
+        return value.replace('-', '')
+
     def save(self, commit=True):
-        instance = super().save(commit=False)
-        if instance.cep:
-            instance.cep = instance.cep.replace('-', '')
-        if instance.cnpj:
-            instance.cnpj = ''.join(filter(str.isdigit, instance.cnpj))
-        if commit:
-            instance.save()
-        return instance
+        return super().save(commit=commit)
 
     class Meta:
         model = Cliente

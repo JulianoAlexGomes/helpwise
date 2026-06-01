@@ -6,7 +6,10 @@
       "Bash(pip --version)",
       "Bash(pip install *)",
       "Bash(python *)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\projetos sinos\\\\helpwise\" -Force)",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\projetos sinos\\\\helpwise\\\\tiqt\" | Where-Object { $_.PSIsContainer } | Select-Object Name)"
     ]
   }
 }

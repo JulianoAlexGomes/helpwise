@@ -119,10 +119,9 @@
 
                 {% if cliente.certificados.all %}
                     {% for certificado in cliente.certificados.all %}
-                        <a href="{% url 'cliente_certificado' certificado.pk %}"
-                        title="Baixar certificado">
+                         <a href="{{ certificado.arquivo.url }}" title="Baixar certificado" download>
                             <i class="material-icons">download</i>
-                        </a>
+                         </a>
                     {% endfor %}
                 {% endif %}
             </td>

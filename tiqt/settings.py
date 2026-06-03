@@ -9,36 +9,35 @@ from django.contrib.messages import constants as messages
 PROJECT_DIR = Path(__file__).parent
 
 SECRET_KEY = config('SECRET_KEY')
-
 DEBUG = True
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'helpwise',
-        'USER': 'help',
-        'PASSWORD': 'SenhaForte123!',
-        'HOST': '31.97.164.192',
-        'PORT': '3306',
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
-        }
-    }
-}
 
-# DEBUG = True
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'help',
-#         'USER': 'root',
-#         'PASSWORD': 'lucas',
-#         'HOST': 'localhost',
+#         'NAME': 'helpwise',
+#         'USER': 'help',
+#         'PASSWORD': 'SenhaForte123!',
+#         'HOST': '31.97.164.192',
 #         'PORT': '3306',
 #         'OPTIONS': {
 #             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
 #         }
 #     }
 # }
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'help',
+        'USER': 'root',
+        'PASSWORD': 'lucas',
+        'HOST': 'localhost',
+        'PORT': '3306',
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
+        }
+    }
+}
 
 
 

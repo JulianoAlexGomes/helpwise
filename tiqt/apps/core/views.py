@@ -226,6 +226,9 @@ from datetime import datetime
 
 def download_certificado(request, cliente_id):
     cliente = get_object_or_404(Cliente, id=cliente_id)
+    if not cliente.certificado_digital:
+        messages.error(request, 'Este cliente não possui certificado digital.')
+        return redirect('cliente_list')
     file_path = cliente.certificado_digital.path
     if os.path.exists(file_path):
         with open(file_path, 'rb') as fh:

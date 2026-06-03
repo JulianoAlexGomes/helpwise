@@ -875,6 +875,22 @@
 
   <!--JavaScript at end of body for optimized loading-->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+
+  <!-- ── Django messages → toasts Materialize ──────────────────── -->
+  {% if messages %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      {% for message in messages %}
+        M.toast({
+          html: '{{ message|escapejs }}',
+          classes: '{% if message.tags == "error" %}red darken-1{% elif message.tags == "success" %}green darken-1{% elif message.tags == "warning" %}orange darken-2{% else %}blue-grey darken-1{% endif %}',
+          displayLength: 5000
+        });
+      {% endfor %}
+    });
+  </script>
+  {% endif %}
+
   <script>
     M.AutoInit();
 

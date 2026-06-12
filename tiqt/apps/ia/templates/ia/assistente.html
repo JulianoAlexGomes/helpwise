@@ -1,0 +1,399 @@
+{% extends 'base.html' %}
+
+{% block title %}Assistente de IA{% endblock title %}
+
+{% block extra_css %}
+<style>
+  .ia-header { display:flex; align-items:center; gap:12px; margin-bottom:4px; }
+  .ia-header .material-icons { font-size:30px; }
+  .ia-sub { margin:0 0 18px; }
+
+  .ia-label {
+    display:block; font-size:12px; font-weight:700; letter-spacing:.5px;
+    text-transform:uppercase; color:#757575; margin-bottom:8px;
+  }
+  .ia-field { margin-bottom:22px; }
+
+  /* Select e textarea estilizados (nativos -> dark mode já cobre) */
+  .ia-select, .ia-textarea {
+    width:100%; box-sizing:border-box; padding:12px 14px;
+    border:1.5px solid #e0e0e0; border-radius:10px; font-size:14px;
+    background:#fff; color:#212121; outline:none; transition:border-color .2s;
+  }
+  .ia-select:focus, .ia-textarea:focus { border-color:#212121; }
+  .ia-textarea { min-height:84px; resize:vertical; line-height:1.5; }
+
+  /* Dropzone de upload */
+  #id_imagem { display:none; }
+  .ia-dropzone {
+    border:2px dashed #cfcfcf; border-radius:14px; padding:30px 20px;
+    text-align:center; cursor:pointer; transition:.18s; background:#fafafa;
+  }
+  .ia-dropzone:hover, .ia-dropzone.dragover {
+    border-color:#212121; background:#f1f1f1;
+  }
+  .ia-dropzone .ia-up-icon { font-size:46px; color:#9e9e9e; }
+  .ia-dropzone p { margin:10px 0 2px; font-weight:600; color:#424242; }
+  .ia-dropzone small { color:#9e9e9e; }
+
+  .ia-preview-wrap { position:relative; display:inline-block; margin-top:4px; }
+  #ia-preview {
+    max-height:260px; max-width:100%; border-radius:12px;
+    box-shadow:0 4px 16px rgba(0,0,0,.15);
+  }
+  .ia-preview-name {
+    display:block; margin-top:8px; font-size:13px; color:#616161;
+    word-break:break-all;
+  }
+  .ia-remove {
+    position:absolute; top:-10px; right:-10px; width:30px; height:30px;
+    border-radius:50%; background:#e53935; color:#fff; border:none;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 2px 6px rgba(0,0,0,.3);
+  }
+  .ia-remove .material-icons { font-size:18px; }
+
+  /* Resposta — fallback em texto cru (antes do markdown carregar) */
+  .ia-resposta { white-space:pre-wrap; line-height:1.65; font-size:15px; }
+
+  /* Resposta — markdown renderizado */
+  .ia-md { white-space:normal; line-height:1.65; font-size:15px; color:#37474f; }
+  .ia-md > *:first-child { margin-top:0; }
+  .ia-md > *:last-child { margin-bottom:0; }
+  .ia-md h1, .ia-md h2, .ia-md h3, .ia-md h4 {
+    font-size:16px; font-weight:700; margin:20px 0 10px; color:#212121;
+    display:flex; align-items:center; gap:8px;
+  }
+  .ia-md p { margin:0 0 12px; }
+  .ia-md strong { font-weight:700; color:#212121; }
+  .ia-md a { color:#1565c0; }
+
+  /* Listas numeradas viram "etapas" */
+  .ia-md ol { list-style:none; counter-reset:step; padding:0; margin:0 0 12px; }
+  .ia-md ol > li {
+    position:relative; padding:12px 14px 12px 48px; margin-bottom:8px;
+    background:#f6f7f9; border-radius:10px; counter-increment:step;
+  }
+  .ia-md ol > li::before {
+    content:counter(step); position:absolute; left:12px; top:11px;
+    width:26px; height:26px; background:#212121; color:#fff; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:700;
+  }
+  .ia-md ol > li > ul, .ia-md ol > li > ol { margin-top:8px; }
+
+  /* Listas com marcador */
+  .ia-md ul { list-style:none; padding:0; margin:0 0 12px; }
+  .ia-md ul > li { position:relative; padding:4px 0 4px 20px; }
+  .ia-md ul > li::before {
+    content:''; position:absolute; left:4px; top:13px;
+    width:6px; height:6px; border-radius:50%; background:#9e9e9e;
+  }
+
+  /* Código */
+  .ia-md code {
+    background:#eceff1; padding:2px 6px; border-radius:5px;
+    font-size:13px; font-family:monospace;
+  }
+  .ia-md pre {
+    background:#f4f4f4; padding:12px 14px; border-radius:8px; overflow:auto;
+  }
+  .ia-md pre code { background:none; padding:0; }
+  .ia-md blockquote {
+    margin:0 0 12px; padding:8px 14px; border-left:3px solid #bdbdbd;
+    background:#fafafa; color:#616161;
+  }
+
+  /* Dark mode da resposta */
+  html.dark .ia-md { color:var(--hw-text) !important; }
+  html.dark .ia-md h1, html.dark .ia-md h2,
+  html.dark .ia-md h3, html.dark .ia-md h4,
+  html.dark .ia-md strong { color:var(--hw-text) !important; }
+  html.dark .ia-md a { color:#64b5f6 !important; }
+  html.dark .ia-md ol > li { background:var(--hw-surface2) !important; }
+  html.dark .ia-md ol > li::before { background:#64b5f6 !important; color:#0f1117 !important; }
+  html.dark .ia-md code, html.dark .ia-md pre {
+    background:var(--hw-surface3) !important; color:var(--hw-text) !important;
+  }
+  html.dark .ia-md blockquote {
+    background:var(--hw-surface2) !important; border-left-color:var(--hw-border) !important;
+    color:var(--hw-text2) !important;
+  }
+
+  /* ── Dark mode ─────────────────────────────────────────── */
+  html.dark .ia-label { color:var(--hw-text2) !important; }
+  html.dark .ia-select, html.dark .ia-textarea {
+    background:var(--hw-input-bg) !important; color:var(--hw-text) !important;
+    border-color:var(--hw-border) !important;
+  }
+  html.dark .ia-select:focus, html.dark .ia-textarea:focus {
+    border-color:#64b5f6 !important;
+  }
+  html.dark .ia-dropzone {
+    background:var(--hw-surface2) !important; border-color:var(--hw-border) !important;
+  }
+  html.dark .ia-dropzone:hover, html.dark .ia-dropzone.dragover {
+    background:var(--hw-hover) !important; border-color:#64b5f6 !important;
+  }
+  html.dark .ia-dropzone p { color:var(--hw-text) !important; }
+  html.dark .ia-dropzone small,
+  html.dark .ia-preview-name { color:var(--hw-text2) !important; }
+
+  /* Cards das duas soluções */
+  .ia-card-empresa { border-left:4px solid #2e7d32; }
+  .ia-card-externa { border-left:4px solid #1565c0; }
+  .ia-card-titulo { display:flex; align-items:center; gap:8px; }
+  .ia-badge {
+    font-size:10px; font-weight:700; letter-spacing:.5px; text-transform:uppercase;
+    padding:3px 9px; border-radius:20px; margin-left:4px;
+  }
+  .ia-badge-empresa { background:#e8f5e9; color:#2e7d32; }
+  .ia-badge-externa { background:#e3f2fd; color:#1565c0; }
+  html.dark .ia-badge-empresa { background:rgba(46,125,50,.18); color:#81c784; }
+  html.dark .ia-badge-externa { background:rgba(21,101,192,.18); color:#64b5f6; }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="row">
+  <div class="col s12 m10 offset-m1 l8 offset-l2">
+
+    <div class="ia-header">
+      <i class="material-icons" translate="no">smart_toy</i>
+      <h5 style="margin:0;">Assistente de Erros</h5>
+    </div>
+    <p class="ia-sub grey-text text-darken-1">
+      Envie o print do erro e a IA sugere as soluções mais prováveis.
+    </p>
+
+    <div class="card">
+      <div class="card-content">
+        <form method="post" enctype="multipart/form-data" id="ia-form">
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+            <div class="card-panel red lighten-4 red-text text-darken-4">
+              {{ form.non_field_errors }}
+            </div>
+          {% endif %}
+
+          <!-- Upload -->
+          <div class="ia-field">
+            <label class="ia-label">Print do erro <span class="grey-text" style="text-transform:none; font-weight:400;">(opcional)</span></label>
+
+            <div class="ia-dropzone" id="ia-dropzone">
+              <div id="ia-dropzone-empty">
+                <i class="material-icons ia-up-icon" translate="no">cloud_upload</i>
+                <p>Clique ou arraste o print aqui</p>
+                <small>PNG ou JPG, até 5 MB</small>
+              </div>
+              <div class="ia-preview-wrap" id="ia-preview-wrap" style="display:none;">
+                <button type="button" class="ia-remove" id="ia-remove" title="Remover">
+                  <i class="material-icons">close</i>
+                </button>
+                <img id="ia-preview" alt="Pré-visualização do erro">
+                <span class="ia-preview-name" id="ia-preview-name"></span>
+              </div>
+            </div>
+
+            {{ form.imagem }}
+            {% if form.imagem.errors %}
+              <span class="red-text">{{ form.imagem.errors|striptags }}</span>
+            {% endif %}
+          </div>
+
+          <!-- Departamento -->
+          <div class="ia-field">
+            <label class="ia-label" for="{{ form.departamento.id_for_label }}">Departamento</label>
+            {{ form.departamento }}
+          </div>
+
+          <!-- Descrição -->
+          <div class="ia-field">
+            <label class="ia-label" for="{{ form.descricao.id_for_label }}">O que aconteceu</label>
+            {{ form.descricao }}
+            {% if form.descricao.errors %}
+              <span class="red-text">{{ form.descricao.errors|striptags }}</span>
+            {% endif %}
+          </div>
+
+          <button class="btn black waves-effect waves-light" type="submit" id="ia-submit">
+            <i class="material-icons left">send</i>Analisar
+          </button>
+        </form>
+      </div>
+    </div>
+
+    {% if consulta %}
+
+    <!-- Card 1: Solução da empresa (prioritária) -->
+    <div class="card ia-card-empresa">
+      <div class="card-content">
+        <span class="card-title ia-card-titulo">
+          <i class="material-icons green-text" translate="no">verified</i>
+          Solução da empresa
+          <span class="ia-badge ia-badge-empresa">oficial</span>
+        </span>
+        {% if solucao_empresa %}
+          <div class="ia-resposta ia-md-target">{{ solucao_empresa }}</div>
+        {% else %}
+          <p class="grey-text text-darken-1" style="margin:0;">
+            Nenhuma solução da base da empresa se aplica a este erro
+            (ou a base ainda não foi alimentada).
+          </p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Card 2: Solução externa (geral) -->
+    <div class="card ia-card-externa">
+      <div class="card-content">
+        <span class="card-title ia-card-titulo">
+          <i class="material-icons blue-text" translate="no">public</i>
+          Solução externa (geral)
+          <span class="ia-badge ia-badge-externa">sugestão</span>
+        </span>
+        {% if solucao_externa %}
+          <div class="ia-resposta ia-md-target">{{ solucao_externa }}</div>
+        {% else %}
+          <p class="grey-text text-darken-1" style="margin:0;">Sem sugestão geral.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Feedback -->
+    <div class="card">
+      <div class="card-action">
+        {% if consulta.resolveu is None %}
+          <span class="grey-text text-darken-1">Alguma destas resolveu?</span>
+          <form method="post" action="{% url 'ia_feedback' consulta.pk %}" style="display:inline;">
+            {% csrf_token %}
+            <button name="resolveu" value="sim" class="btn-flat green-text">
+              <i class="material-icons left">thumb_up</i>Sim
+            </button>
+            <button name="resolveu" value="nao" class="btn-flat red-text">
+              <i class="material-icons left">thumb_down</i>Não
+            </button>
+          </form>
+          <a href="{% url 'new_ticket' %}" class="btn-flat right">
+            <i class="material-icons left">confirmation_number</i>Abrir chamado
+          </a>
+        {% else %}
+          <span class="grey-text text-darken-1">Obrigado pelo retorno!</span>
+          {% if not consulta.resolveu %}
+            <a href="{% url 'new_ticket' %}" class="btn-flat right">
+              <i class="material-icons left">confirmation_number</i>Abrir chamado
+            </a>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Renderiza as respostas (markdown) com sanitização -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+    <script>
+    (function () {
+      if (typeof marked === 'undefined') return;  // fallback: texto cru
+      document.querySelectorAll('.ia-md-target').forEach(function (el) {
+        var html = marked.parse(el.textContent);
+        if (typeof DOMPurify !== 'undefined') html = DOMPurify.sanitize(html);
+        el.innerHTML = html;
+        el.classList.remove('ia-resposta');
+        el.classList.add('ia-md');
+      });
+    })();
+    </script>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var input    = document.getElementById('id_imagem');
+  var dropzone = document.getElementById('ia-dropzone');
+  var emptyBox = document.getElementById('ia-dropzone-empty');
+  var prevWrap = document.getElementById('ia-preview-wrap');
+  var prevImg  = document.getElementById('ia-preview');
+  var prevName = document.getElementById('ia-preview-name');
+  var removeBt = document.getElementById('ia-remove');
+  var form     = document.getElementById('ia-form');
+  var submitBt = document.getElementById('ia-submit');
+
+  if (!input || !dropzone) return;
+
+  function mostrarPreview(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      prevImg.src = e.target.result;
+      prevName.textContent = file.name;
+      emptyBox.style.display = 'none';
+      prevWrap.style.display = 'inline-block';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Clicar na área abre o seletor (menos quando clica no botão remover)
+  dropzone.addEventListener('click', function (e) {
+    if (e.target.closest('#ia-remove')) return;
+    input.click();
+  });
+
+  input.addEventListener('change', function () {
+    if (input.files && input.files[0]) mostrarPreview(input.files[0]);
+  });
+
+  // Remover imagem
+  removeBt.addEventListener('click', function (e) {
+    e.stopPropagation();
+    input.value = '';
+    prevImg.src = '';
+    prevWrap.style.display = 'none';
+    emptyBox.style.display = '';
+  });
+
+  // Arrastar e soltar
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    dropzone.addEventListener(ev, function (e) {
+      e.preventDefault(); e.stopPropagation();
+      dropzone.classList.add('dragover');
+    });
+  });
+  ['dragleave', 'drop'].forEach(function (ev) {
+    dropzone.addEventListener(ev, function (e) {
+      e.preventDefault(); e.stopPropagation();
+      dropzone.classList.remove('dragover');
+    });
+  });
+  dropzone.addEventListener('drop', function (e) {
+    var file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!file) return;
+    // Coloca o arquivo solto dentro do input para o Django receber
+    var dt = new DataTransfer();
+    dt.items.add(file);
+    input.files = dt.files;
+    mostrarPreview(file);
+  });
+
+  // Estado de carregando ao enviar (a IA leva alguns segundos)
+  form.addEventListener('submit', function (e) {
+    var temImagem = input.files && input.files[0];
+    var desc = document.getElementById('id_descricao');
+    var temDesc = desc && desc.value.trim().length > 0;
+    if (!temImagem && !temDesc) {
+      e.preventDefault();
+      alert('Envie o print do erro ou descreva o problema para analisar.');
+      return;
+    }
+    submitBt.disabled = true;
+    submitBt.innerHTML =
+      '<i class="material-icons left" style="animation:spin 1s linear infinite;">hourglass_empty</i>Analisando...';
+  });
+})();
+</script>
+<style>@keyframes spin { from {transform:rotate(0);} to {transform:rotate(360deg);} }</style>
+{% endblock extra_js %}

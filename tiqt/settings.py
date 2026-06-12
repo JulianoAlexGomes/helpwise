@@ -11,6 +11,10 @@ PROJECT_DIR = Path(__file__).parent
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = True
 
+
+GROQ_API_KEY = config('GROQ_API_KEY', default='')
+IA_MODELO = config('IA_MODELO', default='meta-llama/llama-4-scout-17b-16e-instruct')
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
@@ -71,6 +75,7 @@ INSTALLED_APPS = [
     "channels", 
     "tiqt.apps.notifications",
     "rest_framework",
+    "tiqt.apps.ia",
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"

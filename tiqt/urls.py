@@ -51,6 +51,7 @@ urlpatterns = [
     path('ticket/<int:pk>/close-ajax/', views.TicketCloseAjaxView.as_view(), name='ticket_close_ajax'),
 
     path('notifications/', include('tiqt.apps.notifications.urls')),
+    path('', include('tiqt.apps.ia.urls')),
 
     # API
     path('api/', include('tiqt.apps.core.api_urls')),

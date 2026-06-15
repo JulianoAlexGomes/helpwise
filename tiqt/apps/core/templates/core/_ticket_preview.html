@@ -1,0 +1,66 @@
+{% with prio=ticket.prioridade.descricao|default:"" %}
+<div class="tp-preview">
+
+  <!-- Cabeçalho -->
+  <div class="tp-head">
+    <div>
+      <span class="tp-id">#{{ ticket.pk }}</span>
+      <span class="tp-status tp-status-{{ ticket.status }}">{{ ticket.get_status_display }}</span>
+    </div>
+    <span class="prio-chip
+      {% if 'alta' in prio|lower or 'urgente' in prio|lower or 'crítica' in prio|lower or 'critica' in prio|lower %}prio-alta
+      {% elif 'média' in prio|lower or 'media' in prio|lower or 'normal' in prio|lower %}prio-media
+      {% elif 'baixa' in prio|lower %}prio-baixa
+      {% else %}prio-default{% endif %}">{{ ticket.prioridade }}</span>
+  </div>
+
+  <h5 class="tp-title">{{ ticket.titulo|default:"(sem título)" }}</h5>
+
+  <!-- Detalhes -->
+  <div class="tp-grid">
+    <div class="tp-field"><span class="tp-label">Cliente</span><span class="tp-value">{{ ticket.cliente }}</span></div>
+    <div class="tp-field"><span class="tp-label">Tipo</span><span class="tp-value">{{ ticket.tipo|default:"—" }}</span></div>
+    <div class="tp-field"><span class="tp-label">Responsável</span><span class="tp-value">{{ ticket.responsavel.get_full_name|default:"—" }}</span></div>
+    <div class="tp-field"><span class="tp-label">Atendente</span><span class="tp-value">{{ ticket.atendente.get_full_name|default:"—" }}</span></div>
+    <div class="tp-field"><span class="tp-label">Situação</span><span class="tp-value">{{ ticket.situacao|default:"—" }}</span></div>
+    <div class="tp-field"><span class="tp-label">Prioridade</span><span class="tp-value">{{ ticket.prioridade|default:"—" }}</span></div>
+    <div class="tp-field"><span class="tp-label">Criado em</span><span class="tp-value">{{ ticket.criado_em|date:"d/m/Y H:i" }}</span></div>
+    {% if ticket.iniciado_em %}
+    <div class="tp-field"><span class="tp-label">Iniciado em</span><span class="tp-value">{{ ticket.iniciado_em|date:"d/m/Y H:i" }}</span></div>
+    {% endif %}
+    {% if ticket.encerrado_em %}
+    <div class="tp-field"><span class="tp-label">Encerrado em</span><span class="tp-value">{{ ticket.encerrado_em|date:"d/m/Y H:i" }}</span></div>
+    {% endif %}
+  </div>
+
+  <!-- Solução -->
+  {% if solucoes %}
+    <div class="tp-section">
+      <h6 class="tp-section-title"><i class="material-icons tiny">check_circle</i> Solução</h6>
+      {% for solucao in solucoes %}
+        <div class="tp-block">
+          <div class="tp-block-meta">{{ solucao.autor.get_full_name|default:"—" }} • {{ solucao.criado_em|date:"d/m/Y H:i" }}</div>
+          <div class="tp-block-text">{{ solucao.texto|linebreaksbr }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- Últimos comentários -->
+  <div class="tp-section">
+    <h6 class="tp-section-title"><i class="material-icons tiny">forum</i> Últimos comentários</h6>
+    {% for comentario in comentarios %}
+      <div class="tp-block">
+        <div class="tp-block-meta">
+          {{ comentario.autor.get_full_name|default:"—" }} • {{ comentario.criado_em|date:"d/m/Y H:i" }}
+          {% if comentario.tipo %} • {{ comentario.tipo }}{% endif %}
+        </div>
+        <div class="tp-block-text">{{ comentario.texto|truncatechars:300|linebreaksbr }}</div>
+      </div>
+    {% empty %}
+      <p class="tp-empty">Nenhum comentário registrado.</p>
+    {% endfor %}
+  </div>
+
+</div>
+{% endwith %}

@@ -49,6 +49,7 @@ urlpatterns = [
     path('ticket/kanban/', views.KanbanView.as_view(), name='ticket_kanban'),
     path('ticket/<int:pk>/accept-ajax/', views.TicketAcceptAjaxView.as_view(), name='ticket_accept_ajax'),
     path('ticket/<int:pk>/close-ajax/', views.TicketCloseAjaxView.as_view(), name='ticket_close_ajax'),
+    path('ticket/<int:pk>/preview-ajax/', views.TicketPreviewAjaxView.as_view(), name='ticket_preview_ajax'),
 
     path('notifications/', include('tiqt.apps.notifications.urls')),
     path('', include('tiqt.apps.ia.urls')),

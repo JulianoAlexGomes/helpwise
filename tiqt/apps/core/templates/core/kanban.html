@@ -176,6 +176,18 @@
     font-weight: 500;
   }
 
+  .kanban-filter .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Mantém a largura do select estilizado pelo Materialize dentro do grupo */
+  .kanban-filter .filter-group .select-wrapper {
+    min-width: 200px;
+    margin: 0;
+  }
+
   /* Modal de encerramento */
   #modal-close-ticket {
     border-radius: 12px;
@@ -228,6 +240,101 @@
   html.dark #modal-close-ticket textarea::placeholder {
     color: var(--hw-text3) !important;
   }
+
+  /* ── Modal de pré-visualização ───────────────────── */
+  #modal-ticket-preview {
+    border-radius: 12px;
+    max-width: 720px;
+    width: 90%;
+    max-height: 82%;
+  }
+  #modal-ticket-preview .modal-content { padding: 26px 30px; }
+  #modal-ticket-preview .modal-footer  { border-top: 1px solid #eee; }
+
+  .ticket-card .card-id { cursor: pointer; }
+  .ticket-card .card-id:hover { text-decoration: underline; }
+
+  .tp-loading { display: flex; justify-content: center; padding: 40px 0; }
+
+  .tp-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+  .tp-id { font-weight: 700; font-size: 1.1rem; color: #00796b; margin-right: 8px; }
+  .tp-status {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 10px;
+    color: #fff;
+    vertical-align: middle;
+  }
+  .tp-status-0 { background: #00897b; }
+  .tp-status-1 { background: #fb8c00; }
+  .tp-status-2 { background: #388e3c; }
+  .tp-status-3 { background: #78909c; }
+
+  .tp-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 10px 0 18px;
+    color: #333;
+  }
+
+  .tp-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 24px;
+    margin-bottom: 8px;
+  }
+  .tp-field { display: flex; flex-direction: column; }
+  .tp-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .04em; color: #999; font-weight: 700; }
+  .tp-value { font-size: 0.9rem; color: #333; }
+
+  .tp-section { margin-top: 22px; }
+  .tp-section-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: #00796b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 10px;
+  }
+  .tp-block {
+    background: #f7f7f7;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .tp-block-meta { font-size: 0.72rem; color: #888; margin-bottom: 4px; }
+  .tp-block-text { font-size: 0.88rem; color: #333; line-height: 1.4; }
+  .tp-empty { font-size: 0.85rem; color: #bbb; }
+
+  @media (max-width: 600px) {
+    .tp-grid { grid-template-columns: 1fr; }
+  }
+
+  html.dark #modal-ticket-preview {
+    background-color: var(--hw-surface) !important;
+    color: var(--hw-text) !important;
+  }
+  html.dark #modal-ticket-preview .modal-footer {
+    background-color: var(--hw-surface) !important;
+    border-top-color: var(--hw-border) !important;
+  }
+  html.dark .tp-title,
+  html.dark .tp-value,
+  html.dark .tp-block-text { color: var(--hw-text) !important; }
+  html.dark .tp-block { background-color: var(--hw-input-bg) !important; }
+  html.dark .tp-label,
+  html.dark .tp-block-meta { color: var(--hw-text3) !important; }
 </style>
 {% endblock %}
 
@@ -237,27 +344,43 @@
 
   <!-- Filtro -->
   <form method="get" class="kanban-filter">
-    <label for="sel-responsavel">Responsável:</label>
-    <select id="sel-responsavel" name="responsavel" onchange="this.form.submit()">
-      <option value="">Todos</option>
-      {% for u in usuarios %}
-        <option value="{{ u.pk }}" {% if responsavel_selecionado == u.pk|stringformat:"s" %}selected{% endif %}>
-          {{ u.get_full_name }}
-        </option>
-      {% endfor %}
-    </select>
+    <div class="filter-group">
+      <label for="sel-responsavel">Responsável:</label>
+      <select id="sel-responsavel" name="responsavel" onchange="this.form.submit()">
+        <option value="">Todos</option>
+        {% for u in usuarios %}
+          <option value="{{ u.pk }}" {% if responsavel_selecionado == u.pk|stringformat:"s" %}selected{% endif %}>
+            {{ u.get_full_name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
 
-    <label for="sel-tipo">Tipo:</label>
-    <select id="sel-tipo" name="tipo" onchange="this.form.submit()">
-      <option value="">Todos</option>
-      {% for t in tipos %}
-        <option value="{{ t.pk }}" {% if tipo_selecionado == t.pk|stringformat:"s" %}selected{% endif %}>
-          {{ t.descricao }}
-        </option>
-      {% endfor %}
-    </select>
+    <div class="filter-group">
+      <label for="sel-atendente">Atendente:</label>
+      <select id="sel-atendente" name="atendente" onchange="this.form.submit()">
+        <option value="">Todos</option>
+        {% for u in usuarios %}
+          <option value="{{ u.pk }}" {% if atendente_selecionado == u.pk|stringformat:"s" %}selected{% endif %}>
+            {{ u.get_full_name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
 
-    {% if responsavel_selecionado or tipo_selecionado %}
+    <div class="filter-group">
+      <label for="sel-tipo">Tipo:</label>
+      <select id="sel-tipo" name="tipo" onchange="this.form.submit()">
+        <option value="">Todos</option>
+        {% for t in tipos %}
+          <option value="{{ t.pk }}" {% if tipo_selecionado == t.pk|stringformat:"s" %}selected{% endif %}>
+            {{ t.descricao }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    {% if responsavel_selecionado or atendente_selecionado or tipo_selecionado %}
       <a href="{% url 'ticket_kanban' %}" class="btn-flat teal-text" style="font-size: 0.82rem;">
         <i class="material-icons tiny">close</i> Limpar filtros
       </a>
@@ -336,6 +459,27 @@
   </div>
   <div class="modal-overlay" style="z-index:999;"></div>
 
+  <!-- ── Modal: Pré-visualização do ticket ───────────── -->
+  <div id="modal-ticket-preview" class="modal modal-fixed-footer">
+    <div class="modal-content" id="ticket-preview-body">
+      <div class="tp-loading">
+        <div class="preloader-wrapper small active">
+          <div class="spinner-layer spinner-teal-only">
+            <div class="circle-clipper left"><div class="circle"></div></div>
+            <div class="gap-patch"><div class="circle"></div></div>
+            <div class="circle-clipper right"><div class="circle"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <a href="#!" class="modal-close btn-flat grey-text" style="margin-right:8px;">Fechar</a>
+      <a href="#" id="btn-open-ticket" class="btn teal darken-1" style="border-radius:6px;" target="_blank">
+        <i class="material-icons left">open_in_new</i>Abrir ticket
+      </a>
+    </div>
+  </div>
+
 </div>
 </div>
 {% endblock %}
@@ -358,6 +502,40 @@
   let pendingPk   = null;   // pk do ticket sendo encerrado
   let pendingCard = null;   // referência ao card DOM
   let pendingFromStatus = null;
+
+  // ── Pré-visualização do ticket ──────────────────────
+  const PREVIEW_URL = (pk) => `/ticket/${pk}/preview-ajax/`;
+  const previewEl   = document.getElementById('modal-ticket-preview');
+  const previewInst = M.Modal.init(previewEl, {});
+  const previewBody = document.getElementById('ticket-preview-body');
+  const btnOpen     = document.getElementById('btn-open-ticket');
+
+  const LOADER_HTML = previewBody.innerHTML;
+
+  async function openPreview(pk) {
+    previewBody.innerHTML = LOADER_HTML;
+    btnOpen.href = `/ticket/${pk}/`;
+    previewInst.open();
+    try {
+      const resp = await fetch(PREVIEW_URL(pk), {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      if (!resp.ok) {
+        previewBody.innerHTML = '<p class="tp-empty">Não foi possível carregar o ticket.</p>';
+        return;
+      }
+      previewBody.innerHTML = await resp.text();
+    } catch {
+      previewBody.innerHTML = '<p class="tp-empty">Erro de rede ao carregar o ticket.</p>';
+    }
+  }
+
+  document.querySelectorAll('.js-ticket-preview').forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      openPreview(link.dataset.pk);
+    });
+  });
 
   // ── Drag & Drop ─────────────────────────────────────
   let draggingCard = null;

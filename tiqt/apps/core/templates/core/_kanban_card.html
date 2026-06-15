@@ -6,7 +6,7 @@
   <div class="card-content">
 
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-      <a href="{{ ticket.get_absolute_url }}" class="teal-text darken-2 card-id">#{{ ticket.pk }}</a>
+      <a href="{{ ticket.get_absolute_url }}" class="teal-text darken-2 card-id js-ticket-preview" data-pk="{{ ticket.pk }}">#{{ ticket.pk }}</a>
       <span class="prio-chip
         {% if 'alta' in prio|lower or 'urgente' in prio|lower or 'crítica' in prio|lower or 'critica' in prio|lower %}prio-alta
         {% elif 'média' in prio|lower or 'media' in prio|lower or 'normal' in prio|lower %}prio-media

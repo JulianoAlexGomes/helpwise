@@ -550,11 +550,14 @@ class KanbanView(LoginRequiredMixin, TemplateView):
         from .models import Tipo
         context = super().get_context_data(**kwargs)
         responsavel_id = self.request.GET.get('responsavel', '')
+        atendente_id   = self.request.GET.get('atendente', '')
         tipo_id        = self.request.GET.get('tipo', '')
 
-        qs = Ticket.objects.select_related('cliente', 'prioridade', 'responsavel', 'tipo')
+        qs = Ticket.objects.select_related('cliente', 'prioridade', 'responsavel', 'atendente', 'tipo')
         if responsavel_id:
             qs = qs.filter(responsavel_id=responsavel_id)
+        if atendente_id:
+            qs = qs.filter(atendente_id=atendente_id)
         if tipo_id:
             qs = qs.filter(tipo_id=tipo_id)
 
@@ -564,8 +567,27 @@ class KanbanView(LoginRequiredMixin, TemplateView):
         context['usuarios']               = User.objects.filter(is_active=True).order_by('first_name')
         context['tipos']                  = Tipo.objects.all().order_by('descricao')
         context['responsavel_selecionado'] = responsavel_id
+        context['atendente_selecionado']   = atendente_id
         context['tipo_selecionado']        = tipo_id
         return context
+
+
+class TicketPreviewAjaxView(LoginRequiredMixin, View):
+    """Retorna um resumo (pré-visualização) do ticket para exibir em modal no Kanban."""
+
+    def get(self, request, pk):
+        ticket = get_object_or_404(
+            Ticket.objects.select_related(
+                'cliente', 'prioridade', 'responsavel', 'atendente', 'tipo', 'situacao'
+            ),
+            pk=pk,
+        )
+        context = {
+            'ticket': ticket,
+            'comentarios': ticket.comentarios.select_related('autor', 'tipo').order_by('-criado_em')[:5],
+            'solucoes': ticket.solucao_set.select_related('autor').order_by('-criado_em'),
+        }
+        return render(request, 'core/_ticket_preview.html', context)
 
 
 class TicketAcceptAjaxView(LoginRequiredMixin, View):

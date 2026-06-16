@@ -1,5 +1,5 @@
 {% with prio=ticket.prioridade.descricao|default:"" %}
-<div class="tp-preview">
+<div class="tp-preview" data-ticket-pk="{{ ticket.pk }}">
 
   <!-- Cabeçalho -->
   <div class="tp-head">
@@ -19,11 +19,54 @@
   <!-- Detalhes -->
   <div class="tp-grid">
     <div class="tp-field"><span class="tp-label">Cliente</span><span class="tp-value">{{ ticket.cliente }}</span></div>
-    <div class="tp-field"><span class="tp-label">Tipo</span><span class="tp-value">{{ ticket.tipo|default:"—" }}</span></div>
-    <div class="tp-field"><span class="tp-label">Responsável</span><span class="tp-value">{{ ticket.responsavel.get_full_name|default:"—" }}</span></div>
-    <div class="tp-field"><span class="tp-label">Atendente</span><span class="tp-value">{{ ticket.atendente.get_full_name|default:"—" }}</span></div>
-    <div class="tp-field"><span class="tp-label">Situação</span><span class="tp-value">{{ ticket.situacao|default:"—" }}</span></div>
-    <div class="tp-field"><span class="tp-label">Prioridade</span><span class="tp-value">{{ ticket.prioridade|default:"—" }}</span></div>
+
+    <div class="tp-field">
+      <span class="tp-label">Tipo</span>
+      <select class="tp-edit browser-default" data-field="tipo">
+        {% for t in tipos %}
+          <option value="{{ t.pk }}" {% if ticket.tipo_id == t.pk %}selected{% endif %}>{{ t.descricao }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="tp-field">
+      <span class="tp-label">Responsável</span>
+      <select class="tp-edit browser-default" data-field="responsavel">
+        <option value="">—</option>
+        {% for u in usuarios %}
+          <option value="{{ u.pk }}" {% if ticket.responsavel_id == u.pk %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="tp-field">
+      <span class="tp-label">Atendente</span>
+      <select class="tp-edit browser-default" data-field="atendente">
+        <option value="">—</option>
+        {% for u in usuarios %}
+          <option value="{{ u.pk }}" {% if ticket.atendente_id == u.pk %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="tp-field">
+      <span class="tp-label">Situação</span>
+      <select class="tp-edit browser-default" data-field="situacao">
+        {% for s in situacoes %}
+          <option value="{{ s.pk }}" {% if ticket.situacao_id == s.pk %}selected{% endif %}>{{ s.descricao }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="tp-field">
+      <span class="tp-label">Prioridade</span>
+      <select class="tp-edit browser-default" data-field="prioridade">
+        {% for p in prioridades %}
+          <option value="{{ p.pk }}" {% if ticket.prioridade_id == p.pk %}selected{% endif %}>{{ p.descricao }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
     <div class="tp-field"><span class="tp-label">Criado em</span><span class="tp-value">{{ ticket.criado_em|date:"d/m/Y H:i" }}</span></div>
     {% if ticket.iniciado_em %}
     <div class="tp-field"><span class="tp-label">Iniciado em</span><span class="tp-value">{{ ticket.iniciado_em|date:"d/m/Y H:i" }}</span></div>

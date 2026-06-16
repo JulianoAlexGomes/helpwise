@@ -295,6 +295,25 @@
   .tp-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .04em; color: #999; font-weight: 700; }
   .tp-value { font-size: 0.9rem; color: #333; }
 
+  .tp-edit {
+    display: block;
+    width: 100%;
+    height: 32px;
+    margin-top: 3px;
+    padding: 0 6px;
+    font-size: 0.88rem;
+    color: #333;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+  }
+  .tp-edit:focus { border-color: #00796b; outline: none; }
+  html.dark .tp-edit {
+    background-color: var(--hw-input-bg) !important;
+    color: var(--hw-text) !important;
+    border-color: var(--hw-border) !important;
+  }
+
   .tp-section { margin-top: 22px; }
   .tp-section-title {
     font-size: 0.82rem;
@@ -474,6 +493,9 @@
     </div>
     <div class="modal-footer">
       <a href="#!" class="modal-close btn-flat grey-text" style="margin-right:8px;">Fechar</a>
+      <button id="btn-save-preview" class="btn orange darken-2" style="border-radius:6px; margin-right:8px;">
+        <i class="material-icons left">save</i>Salvar
+      </button>
       <a href="#" id="btn-open-ticket" class="btn teal darken-1" style="border-radius:6px;" target="_blank">
         <i class="material-icons left">open_in_new</i>Abrir ticket
       </a>
@@ -509,12 +531,16 @@
   const previewInst = M.Modal.init(previewEl, {});
   const previewBody = document.getElementById('ticket-preview-body');
   const btnOpen     = document.getElementById('btn-open-ticket');
+  const btnSave     = document.getElementById('btn-save-preview');
 
   const LOADER_HTML = previewBody.innerHTML;
+  let currentPreviewPk = null;
 
   async function openPreview(pk) {
+    currentPreviewPk = pk;
     previewBody.innerHTML = LOADER_HTML;
     btnOpen.href = `/ticket/${pk}/`;
+    btnSave.style.display = 'none';
     previewInst.open();
     try {
       const resp = await fetch(PREVIEW_URL(pk), {
@@ -525,6 +551,8 @@
         return;
       }
       previewBody.innerHTML = await resp.text();
+      // Mostra o botão Salvar apenas quando há campos editáveis carregados
+      btnSave.style.display = previewBody.querySelector('.tp-edit') ? '' : 'none';
     } catch {
       previewBody.innerHTML = '<p class="tp-empty">Erro de rede ao carregar o ticket.</p>';
     }
@@ -535,6 +563,65 @@
       e.preventDefault();
       openPreview(link.dataset.pk);
     });
+  });
+
+  // ── Salvar alterações do preview ────────────────────
+  btnSave.addEventListener('click', async () => {
+    if (!currentPreviewPk) return;
+
+    const body = new URLSearchParams();
+    previewBody.querySelectorAll('.tp-edit').forEach(sel => {
+      body.append(sel.dataset.field, sel.value);
+    });
+
+    btnSave.disabled = true;
+    const originalHtml = btnSave.innerHTML;
+    btnSave.innerHTML = '<i class="material-icons left">hourglass_empty</i>Salvando...';
+
+    try {
+      const resp = await fetch(PREVIEW_URL(currentPreviewPk), {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCsrf(),
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body,
+      });
+
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        M.toast({ html: data.error || 'Erro ao salvar alterações', classes: 'red' });
+        return;
+      }
+
+      // Atualiza dados visíveis no card correspondente
+      const card = document.querySelector(`.ticket-card[data-pk="${currentPreviewPk}"]`);
+      if (card) {
+        const respEl = card.querySelector('.responsavel-name');
+        if (respEl && data.responsavel) respEl.textContent = data.responsavel === '—' ? '' : data.responsavel;
+        const respRow = card.querySelector('.responsavel-row');
+        if (respRow) respRow.style.display = data.responsavel && data.responsavel !== '—' ? 'flex' : 'none';
+
+        const chip = card.querySelector('.prio-chip');
+        if (chip && data.prioridade) {
+          chip.textContent = data.prioridade;
+          const p = data.prioridade.toLowerCase();
+          chip.classList.remove('prio-alta', 'prio-media', 'prio-baixa', 'prio-default');
+          if (/(alta|urgente|crítica|critica)/.test(p))      chip.classList.add('prio-alta');
+          else if (/(média|media|normal)/.test(p))           chip.classList.add('prio-media');
+          else if (/baixa/.test(p))                          chip.classList.add('prio-baixa');
+          else                                               chip.classList.add('prio-default');
+        }
+      }
+
+      M.toast({ html: `Ticket #${currentPreviewPk} atualizado!`, classes: 'green darken-2' });
+    } catch {
+      M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
+    } finally {
+      btnSave.disabled = false;
+      btnSave.innerHTML = originalHtml;
+    }
   });
 
   // ── Drag & Drop ─────────────────────────────────────

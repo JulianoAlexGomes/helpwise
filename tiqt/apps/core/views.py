@@ -42,6 +42,7 @@ from django.db.models.functions import TruncMonth, Cast
 from django.template.loader import render_to_string
 from .forms import TicketFilterForm, NewTicketForm
 from .filters import apply_filters
+from tiqt.apps.notifications.services import notificar_atribuicao
 import json
 from collections import Counter
 
@@ -471,6 +472,7 @@ class NewTicketView(LoginRequiredMixin, View):
             ticket = form.save(commit=False)
             ticket.atendente = request.user
             ticket.save()
+            notificar_atribuicao(ticket, ator=request.user)
             return redirect(reverse('ticket_detail', args=[ticket.pk]))
 
         return render(request, 'core/ticket_form.html', {'form': form})
@@ -573,9 +575,11 @@ class KanbanView(LoginRequiredMixin, TemplateView):
 
 
 class TicketPreviewAjaxView(LoginRequiredMixin, View):
-    """Retorna um resumo (pré-visualização) do ticket para exibir em modal no Kanban."""
+    """Retorna um resumo (pré-visualização) do ticket para exibir em modal no Kanban
+    e permite editar campos básicos (responsável, atendente, situação, prioridade, tipo)."""
 
     def get(self, request, pk):
+        from .models import Tipo, Situacao
         ticket = get_object_or_404(
             Ticket.objects.select_related(
                 'cliente', 'prioridade', 'responsavel', 'atendente', 'tipo', 'situacao'
@@ -586,8 +590,45 @@ class TicketPreviewAjaxView(LoginRequiredMixin, View):
             'ticket': ticket,
             'comentarios': ticket.comentarios.select_related('autor', 'tipo').order_by('-criado_em')[:5],
             'solucoes': ticket.solucao_set.select_related('autor').order_by('-criado_em'),
+            'usuarios': User.objects.filter(is_active=True).order_by('first_name'),
+            'tipos': Tipo.objects.all().order_by('descricao'),
+            'prioridades': Prioridade.objects.all().order_by('descricao'),
+            'situacoes': Situacao.objects.all().order_by('descricao'),
         }
         return render(request, 'core/_ticket_preview.html', context)
+
+    def post(self, request, pk):
+        ticket = get_object_or_404(Ticket, pk=pk)
+
+        def set_fk(field, value, allow_empty=False):
+            value = (value or '').strip()
+            if not value:
+                if allow_empty:
+                    setattr(ticket, field + '_id', None)
+                return
+            setattr(ticket, field + '_id', value)
+
+        set_fk('responsavel', request.POST.get('responsavel'), allow_empty=True)
+        set_fk('atendente', request.POST.get('atendente'), allow_empty=True)
+        set_fk('situacao', request.POST.get('situacao'))
+        set_fk('prioridade', request.POST.get('prioridade'))
+        set_fk('tipo', request.POST.get('tipo'))
+
+        try:
+            ticket.save(update_fields=['responsavel', 'atendente', 'situacao', 'prioridade', 'tipo'])
+        except Exception as exc:
+            return JsonResponse({'error': f'Não foi possível salvar: {exc}'}, status=400)
+
+        return JsonResponse({
+            'ok': True,
+            'responsavel': ticket.responsavel.get_full_name() if ticket.responsavel else '—',
+            'atendente': ticket.atendente.get_full_name() if ticket.atendente else '—',
+            'prioridade': ticket.prioridade.descricao if ticket.prioridade else '—',
+            'tipo': ticket.tipo.descricao if ticket.tipo else '—',
+            'situacao': ticket.situacao.descricao if ticket.situacao else '—',
+        })
+
+
 
 
 class TicketAcceptAjaxView(LoginRequiredMixin, View):
@@ -1004,6 +1045,7 @@ class QuickTicketCreateView(LoginRequiredMixin, View):
         departamento_id = request.POST.get('departamento')
         tipo_id         = request.POST.get('tipo') or 3
         prioridade_id   = request.POST.get('prioridade') or 2
+        atendente_id    = request.POST.get('atendente') or None
         responsavel_id  = request.POST.get('responsavel') or None
 
         if not cliente_id or not titulo or not departamento_id:
@@ -1016,8 +1058,10 @@ class QuickTicketCreateView(LoginRequiredMixin, View):
             tipo_id=tipo_id,
             prioridade_id=prioridade_id,
             situacao_id=1,
-            atendente=request.user,
+            atendente_id=atendente_id if atendente_id else request.user.pk,
             responsavel_id=responsavel_id if responsavel_id else None,
         )
+
+        notificar_atribuicao(ticket, ator=request.user)
 
         return JsonResponse({'redirect': reverse('ticket_detail', kwargs={'pk': ticket.pk})})

@@ -1,45 +1,35 @@
-# from django.shortcuts import render
-
-# from django.http import JsonResponse
-# from .models import Notification
-# from asgiref.sync import async_to_sync
-# from channels.layers import get_channel_layer
-
-# def send_notification(request):
-#     message = "Uma nova informação foi adicionada ao banco!"
-#     Notification.objects.create(message=message)
-
-#     # Envia a notificação para os WebSockets
-#     channel_layer = get_channel_layer()
-#     async_to_sync(channel_layer.group_send)(
-#         "notifications",
-#         {"type": "send_notification", "message": message},
-#     )
-
-#     return JsonResponse({"message": "Notificação enviada!"})
-
-
-import json
-from asgiref.sync import async_to_sync
-from channels.layers import get_channel_layer
+from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 
-def send_notification(request):
-    channel_layer = get_channel_layer()
-    message = "Teste de notificação em tempo real!"
-    
-    # Enviar a mensagem para o grupo "notifications"
-    async_to_sync(channel_layer.group_send)(
-        "notifications",  
+from .models import Notification
+
+
+@login_required
+def list_notifications(request):
+    """Lista as notificações recentes do usuário logado + total não lidas."""
+    qs = Notification.objects.filter(recipient=request.user)[:20]
+    data = [
         {
-            "type": "send_message",
-            "message": message
+            'id': n.id,
+            'message': n.message,
+            'url': n.url,
+            'is_read': n.is_read,
+            'created_at': n.created_at.strftime('%d/%m/%Y %H:%M'),
         }
-    )
+        for n in qs
+    ]
+    unread = Notification.objects.filter(recipient=request.user, is_read=False).count()
+    return JsonResponse({'notifications': data, 'unread': unread})
 
-    return JsonResponse({"message": "Notificação enviada!"})
 
-from django.shortcuts import render
-
-def notification_test(request):
-    return render(request, "notifications/test.html")
+@login_required
+@require_POST
+def mark_read(request):
+    """Marca como lidas as notificações do usuário (todas, ou apenas uma se vier `id`)."""
+    qs = Notification.objects.filter(recipient=request.user, is_read=False)
+    notif_id = request.POST.get('id')
+    if notif_id:
+        qs = qs.filter(id=notif_id)
+    qs.update(is_read=True)
+    return JsonResponse({'ok': True})

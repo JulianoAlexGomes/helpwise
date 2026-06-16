@@ -485,12 +485,28 @@
       {% if user.is_authenticated %}
     <ul id="slide-out" class="sidenav sidenav-fixed z-depth-1" style="height: 100%; transform: translateX(0%);">
       <li>
-        <div class="user-view">
+        <div class="user-view" style="position:relative;">
               <div class="background black">
         <img alt="" src="https://via.placeholder.com/300x200/00796b/00796b"/>
           </div>
-        <img class="circle" alt="" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde"/>
-          <span class="name white-text">{{ user.get_full_name  }}</span>
+        <a href="{% url 'perfil' %}" title="Editar perfil"
+           style="position:absolute; top:12px; right:12px; z-index:2;
+                  display:flex; align-items:center; justify-content:center;
+                  width:32px; height:32px; border-radius:50%;
+                  background:rgba(255,255,255,.15); color:#fff;
+                  transition:background .15s;"
+           onmouseover="this.style.background='rgba(255,255,255,.3)'"
+           onmouseout="this.style.background='rgba(255,255,255,.15)'">
+          <i class="material-icons" style="font-size:18px;">edit</i>
+        </a>
+        <a href="{% url 'perfil' %}" class="circle" style="display:block;">
+          {% if user.foto %}
+            <img class="circle" alt="" src="{{ user.foto.url }}" style="object-fit:cover;"/>
+          {% else %}
+            <img class="circle" alt="" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde"/>
+          {% endif %}
+        </a>
+          <span class="name white-text"><a href="{% url 'perfil' %}" class="white-text">{{ user.get_full_name|default:user.username }}</a></span>
           <span class="email white-text">{{ user.email|default:"- - -" }}</span>
         </div>
       </li>

@@ -207,3 +207,39 @@ class NewTicketForm(forms.ModelForm):
             'situacao',
             'responsavel',
         ]
+
+
+class PerfilForm(forms.ModelForm):
+    """Edição do próprio usuário: dados básicos + troca de senha opcional."""
+
+    senha_atual = forms.CharField(
+        required=False, widget=forms.PasswordInput, label='Senha atual'
+    )
+    nova_senha = forms.CharField(
+        required=False, widget=forms.PasswordInput, label='Nova senha'
+    )
+    confirmar_senha = forms.CharField(
+        required=False, widget=forms.PasswordInput, label='Confirmar nova senha'
+    )
+
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email', 'foto']
+
+    def clean(self):
+        cleaned = super().clean()
+        atual = cleaned.get('senha_atual')
+        nova = cleaned.get('nova_senha')
+        confirmar = cleaned.get('confirmar_senha')
+
+        # Só valida senha se o usuário preencheu algum dos campos
+        if atual or nova or confirmar:
+            if not self.instance.check_password(atual or ''):
+                self.add_error('senha_atual', 'Senha atual incorreta.')
+            if not nova:
+                self.add_error('nova_senha', 'Informe a nova senha.')
+            elif len(nova) < 6:
+                self.add_error('nova_senha', 'A nova senha deve ter ao menos 6 caracteres.')
+            if nova != confirmar:
+                self.add_error('confirmar_senha', 'As senhas não conferem.')
+        return cleaned

@@ -1,0 +1,323 @@
+{% extends 'base.html' %}
+
+{% block title %}Meu Perfil — Sinos HelpDesk{% endblock %}
+
+{% block extra_css %}
+<style>
+  .perfil-wrap { max-width: 640px; margin: 8px auto 40px; }
+
+  .perfil-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 6px 28px rgba(0,0,0,.10);
+    overflow: hidden;
+  }
+
+  /* ── Cabeçalho com avatar ──────────────────────────── */
+  .perfil-hero {
+    background: linear-gradient(135deg, #00897b 0%, #00695c 100%);
+    padding: 30px 30px 26px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    color: #fff;
+  }
+  .perfil-avatar {
+    position: relative;
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.18);
+    border: 2px solid rgba(255,255,255,.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .perfil-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+  .perfil-avatar-cam {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 22px;
+    background: rgba(0,0,0,.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity .2s;
+  }
+  .perfil-avatar:hover .perfil-avatar-cam { opacity: 1; }
+  .perfil-avatar-cam i { font-size: 15px; color: #fff; }
+  .perfil-hero-info { min-width: 0; }
+  .perfil-hero-name { font-size: 20px; font-weight: 700; line-height: 1.2; }
+  .perfil-hero-mail {
+    font-size: 13px;
+    opacity: .85;
+    margin-top: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .perfil-hero-user {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .3px;
+    background: rgba(255,255,255,.16);
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+
+  .perfil-body { padding: 26px 30px 8px; }
+
+  .perfil-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: #00897b;
+    margin: 8px 0 16px;
+  }
+  .perfil-section:not(:first-child) { margin-top: 26px; }
+  .perfil-section i { font-size: 17px; }
+  .perfil-section .perfil-line { flex: 1; height: 1px; background: #eee; }
+
+  .perfil-field { margin-bottom: 18px; }
+  .perfil-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: #616161;
+    margin-bottom: 7px;
+  }
+  .perfil-input-wrap { position: relative; }
+  .perfil-input-wrap > i.lead {
+    position: absolute;
+    left: 13px; top: 50%; transform: translateY(-50%);
+    color: #bdbdbd; font-size: 19px; pointer-events: none;
+  }
+  .perfil-input {
+    width: 100%;
+    padding: 12px 14px 12px 42px !important;
+    border: 1.5px solid #e3e3e3 !important;
+    border-radius: 10px !important;
+    font-size: 14px;
+    outline: none;
+    box-sizing: border-box !important;
+    transition: border-color .2s, box-shadow .2s;
+    background: #fafafa;
+    color: #212121;
+    height: 46px !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+  }
+  /* Campos com botão de mostrar/ocultar senha precisam de espaço à direita */
+  .perfil-input-wrap:has(.perfil-toggle) .perfil-input { padding-right: 44px !important; }
+  .perfil-input:focus {
+    border-color: #00897b;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(0,137,123,.12) !important;
+  }
+  .perfil-input:disabled { opacity: .65; cursor: not-allowed; }
+  .perfil-toggle {
+    position: absolute;
+    right: 8px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer;
+    color: #9e9e9e; padding: 6px; display: flex; outline: none;
+  }
+  .perfil-toggle:hover { color: #00897b; }
+  .perfil-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .perfil-errors { color: #e53935; font-size: 12px; margin-top: 5px; }
+  .perfil-hint { font-size: 12.5px; color: #9e9e9e; margin: -8px 0 16px; }
+
+  .perfil-foot {
+    padding: 18px 30px 26px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    border-top: 1px solid #f0f0f0;
+  }
+
+  @media (max-width: 560px) {
+    .perfil-grid-2 { grid-template-columns: 1fr; }
+    .perfil-hero { flex-direction: column; text-align: center; }
+  }
+
+  /* ── Dark mode ─────────────────────────────────────── */
+  html.dark .perfil-card { background-color: var(--hw-surface) !important; box-shadow: 0 6px 28px rgba(0,0,0,.55) !important; }
+  html.dark .perfil-hero { background: linear-gradient(135deg, #0b3d38 0%, #06262290 100%) !important; }
+  html.dark .perfil-input { background-color: var(--hw-input-bg) !important; color: var(--hw-text) !important; border-color: var(--hw-border) !important; }
+  html.dark .perfil-input:focus { border-color: #4db6ac !important; background-color: var(--hw-surface2) !important; box-shadow: 0 0 0 3px rgba(77,182,172,.15) !important; }
+  html.dark .perfil-label { color: var(--hw-text2) !important; }
+  html.dark .perfil-section .perfil-line { background: var(--hw-border) !important; }
+  html.dark .perfil-foot { border-top-color: var(--hw-border) !important; }
+  html.dark .perfil-hint { color: var(--hw-text3) !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="perfil-wrap">
+  <form method="post" class="perfil-card" autocomplete="off" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <!-- Hero -->
+    <div class="perfil-hero">
+      <label class="perfil-avatar" for="id_foto" title="Alterar foto">
+        <img id="perfil-avatar-img" src="{% if user.foto %}{{ user.foto.url }}{% endif %}"
+             alt="" {% if not user.foto %}style="display:none;"{% endif %}>
+        <span id="perfil-avatar-letra" {% if user.foto %}style="display:none;"{% endif %}>
+          {% with fn=user.get_full_name|default:user.username %}{{ fn|slice:":1" }}{% endwith %}
+        </span>
+        <span class="perfil-avatar-cam"><i class="material-icons">photo_camera</i></span>
+      </label>
+      <input type="file" name="foto" id="id_foto" accept="image/*" style="display:none;">
+      <div class="perfil-hero-info">
+        <div class="perfil-hero-name">{{ user.get_full_name|default:user.username }}</div>
+        <div class="perfil-hero-mail">{{ user.email|default:"sem e-mail cadastrado" }}</div>
+        <span class="perfil-hero-user"><i class="material-icons" style="font-size:13px;">person</i>{{ user.username }}</span>
+      </div>
+    </div>
+
+    <div class="perfil-body">
+      {% if form.non_field_errors %}
+        <div class="perfil-errors">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <!-- Dados pessoais -->
+      <div class="perfil-section">
+        <i class="material-icons">badge</i> Dados pessoais <span class="perfil-line"></span>
+      </div>
+
+      <div class="perfil-grid-2">
+        <div class="perfil-field">
+          <label class="perfil-label" for="id_first_name">Nome</label>
+          <div class="perfil-input-wrap">
+            <i class="material-icons lead">person_outline</i>
+            <input type="text" name="first_name" id="id_first_name" class="perfil-input browser-default"
+                   value="{{ form.first_name.value|default:'' }}" maxlength="150" placeholder="Seu nome">
+          </div>
+          {% if form.first_name.errors %}<div class="perfil-errors">{{ form.first_name.errors|striptags }}</div>{% endif %}
+        </div>
+        <div class="perfil-field">
+          <label class="perfil-label" for="id_last_name">Sobrenome</label>
+          <div class="perfil-input-wrap">
+            <i class="material-icons lead">person_outline</i>
+            <input type="text" name="last_name" id="id_last_name" class="perfil-input browser-default"
+                   value="{{ form.last_name.value|default:'' }}" maxlength="150" placeholder="Seu sobrenome">
+          </div>
+          {% if form.last_name.errors %}<div class="perfil-errors">{{ form.last_name.errors|striptags }}</div>{% endif %}
+        </div>
+      </div>
+
+      <div class="perfil-field">
+        <label class="perfil-label" for="id_email">E-mail</label>
+        <div class="perfil-input-wrap">
+          <i class="material-icons lead">mail_outline</i>
+          <input type="email" name="email" id="id_email" class="perfil-input browser-default"
+                 value="{{ form.email.value|default:'' }}" placeholder="voce@empresa.com">
+        </div>
+        {% if form.email.errors %}<div class="perfil-errors">{{ form.email.errors|striptags }}</div>{% endif %}
+      </div>
+
+      <!-- Segurança -->
+      <div class="perfil-section">
+        <i class="material-icons">lock_outline</i> Segurança <span class="perfil-line"></span>
+      </div>
+      <p class="perfil-hint">Preencha apenas se quiser trocar a senha.</p>
+
+      <div class="perfil-field">
+        <label class="perfil-label" for="id_senha_atual">Senha atual</label>
+        <div class="perfil-input-wrap">
+          <i class="material-icons lead">vpn_key</i>
+          <input type="password" name="senha_atual" id="id_senha_atual" class="perfil-input browser-default" placeholder="••••••••">
+          <button type="button" class="perfil-toggle" data-target="id_senha_atual" aria-label="Mostrar senha">
+            <i class="material-icons" style="font-size:19px;">visibility_off</i>
+          </button>
+        </div>
+        {% if form.senha_atual.errors %}<div class="perfil-errors">{{ form.senha_atual.errors|striptags }}</div>{% endif %}
+      </div>
+
+      <div class="perfil-grid-2">
+        <div class="perfil-field">
+          <label class="perfil-label" for="id_nova_senha">Nova senha</label>
+          <div class="perfil-input-wrap">
+            <i class="material-icons lead">lock</i>
+            <input type="password" name="nova_senha" id="id_nova_senha" class="perfil-input browser-default" placeholder="Mínimo 6 caracteres">
+            <button type="button" class="perfil-toggle" data-target="id_nova_senha" aria-label="Mostrar senha">
+              <i class="material-icons" style="font-size:19px;">visibility_off</i>
+            </button>
+          </div>
+          {% if form.nova_senha.errors %}<div class="perfil-errors">{{ form.nova_senha.errors|striptags }}</div>{% endif %}
+        </div>
+        <div class="perfil-field">
+          <label class="perfil-label" for="id_confirmar_senha">Confirmar nova senha</label>
+          <div class="perfil-input-wrap">
+            <i class="material-icons lead">lock</i>
+            <input type="password" name="confirmar_senha" id="id_confirmar_senha" class="perfil-input browser-default" placeholder="Repita a nova senha">
+            <button type="button" class="perfil-toggle" data-target="id_confirmar_senha" aria-label="Mostrar senha">
+              <i class="material-icons" style="font-size:19px;">visibility_off</i>
+            </button>
+          </div>
+          {% if form.confirmar_senha.errors %}<div class="perfil-errors">{{ form.confirmar_senha.errors|striptags }}</div>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="perfil-foot">
+      <a href="{% url 'home' %}" class="btn-flat" style="color:#757575; font-weight:600; border-radius:8px;">Cancelar</a>
+      <button type="submit" class="btn waves-effect waves-light" style="background:#00897b; border-radius:10px; padding:0 26px;">
+        <i class="material-icons left">save</i>Salvar alterações
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+  document.querySelectorAll('.perfil-toggle').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var input = document.getElementById(btn.dataset.target);
+      var icon  = btn.querySelector('i');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.textContent = 'visibility';
+      } else {
+        input.type = 'password';
+        icon.textContent = 'visibility_off';
+      }
+    });
+  });
+
+  // Preview da foto de perfil ao selecionar
+  (function () {
+    var fileInput = document.getElementById('id_foto');
+    var img       = document.getElementById('perfil-avatar-img');
+    var letra     = document.getElementById('perfil-avatar-letra');
+    if (!fileInput) return;
+    fileInput.addEventListener('change', function () {
+      var file = fileInput.files && fileInput.files[0];
+      if (!file) return;
+      img.src = URL.createObjectURL(file);
+      img.style.display = '';
+      if (letra) letra.style.display = 'none';
+    });
+  })();
+</script>
+{% endblock %}

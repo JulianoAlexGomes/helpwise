@@ -8,6 +8,7 @@ from tiqt.apps.core.views import excluir_arquivo, download_certificado, Certific
 
 urlpatterns = [
     path('', views.HomeView, name='home'),
+    path('perfil/', views.PerfilView.as_view(), name='perfil'),
     path('ticket/new/', views.NewTicketView.as_view(), name='new_ticket'),
     path('ticket/my/', views.MyTicketsView.as_view(), name='my_tickets'),
     path('ticket/open/', views.OpenTicketsView.as_view(), name='open_tickets'),

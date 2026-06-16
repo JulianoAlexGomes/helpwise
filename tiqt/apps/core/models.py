@@ -9,7 +9,7 @@ import uuid
 from django.conf import settings
 
 class User(AbstractUser):
-    pass
+    foto = models.ImageField(upload_to='avatares/', null=True, blank=True)
 
 class Departamento(models.Model):
     descricao = models.CharField(max_length=100)

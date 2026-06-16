@@ -472,7 +472,7 @@ class NewTicketView(LoginRequiredMixin, View):
             ticket = form.save(commit=False)
             ticket.atendente = request.user
             ticket.save()
-            notificar_atribuicao(ticket, ator=request.user)
+            notificar_atribuicao(ticket, ator=request.user, notificar_ator=False)
             return redirect(reverse('ticket_detail', args=[ticket.pk]))
 
         return render(request, 'core/ticket_form.html', {'form': form})
@@ -493,6 +493,31 @@ class TicketUpdateView(LoginRequiredMixin, View):
             form.save()
             return redirect(reverse('ticket_detail', args=[ticket.pk]))
         return render(request, 'core/ticket_form.html', {'form': form, 'ticket': ticket})
+
+
+class PerfilView(LoginRequiredMixin, View):
+    """Permite ao usuário editar seus próprios dados e trocar a senha."""
+
+    def get(self, request):
+        from .forms import PerfilForm
+        form = PerfilForm(instance=request.user)
+        return render(request, 'core/perfil.html', {'form': form})
+
+    def post(self, request):
+        from .forms import PerfilForm
+        from django.contrib.auth import update_session_auth_hash
+        form = PerfilForm(request.POST, request.FILES, instance=request.user)
+        if form.is_valid():
+            user = form.save()
+            nova_senha = form.cleaned_data.get('nova_senha')
+            if nova_senha:
+                user.set_password(nova_senha)
+                user.save()
+                update_session_auth_hash(request, user)  # mantém o login ativo
+            messages.success(request, 'Perfil atualizado com sucesso!')
+            return redirect('perfil')
+        return render(request, 'core/perfil.html', {'form': form})
+
 
 class TicketDetailView(View):
     def get(self, request, pk):
@@ -1062,6 +1087,6 @@ class QuickTicketCreateView(LoginRequiredMixin, View):
             responsavel_id=responsavel_id if responsavel_id else None,
         )
 
-        notificar_atribuicao(ticket, ator=request.user)
+        notificar_atribuicao(ticket, ator=request.user, notificar_ator=False)
 
         return JsonResponse({'redirect': reverse('ticket_detail', kwargs={'pk': ticket.pk})})

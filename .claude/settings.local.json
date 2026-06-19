@@ -12,7 +12,18 @@
       "PowerShell(Get-ChildItem -Path \"c:\\\\projetos sinos\\\\helpwise\\\\tiqt\" | Where-Object { $_.PSIsContainer } | Select-Object Name)",
       "Bash(cd \"c:/projetos sinos/helpwise\" && find /c/Users/sinos/AppData/Local/Python/pythoncore-3.14-64/Lib/site-packages/django_tables2 -name \"*.html\" 2>/dev/null | head; echo \"---\"; cat \"/c/Users/sinos/AppData/Local/Python/pythoncore-3.14-64/Lib/site-packages/django_tables2/templates/django_tables2/table.html\" 2>/dev/null | grep -n -i \"pagination\\\\|current\\\\|active\\\\|page\" | head -40)",
       "Read(//c/Users/sinos/AppData/Local/Python/pythoncore-3.14-64/Lib/site-packages/django_tables2/**)",
-      "Read(//c/Users/sinos/AppData/Local/Python/pythoncore-3.14-64/Lib/site-packages/django_tables2/templates/django_tables2/**)"
+      "Read(//c/Users/sinos/AppData/Local/Python/pythoncore-3.14-64/Lib/site-packages/django_tables2/templates/django_tables2/**)",
+      "Bash(ls -la \"/c/Users/sinos/Downloads/favicon_io\")",
+      "Read(//c/Users/sinos/Downloads/favicon_io/**)",
+      "Bash(cp \"/c/Users/sinos/Downloads/favicon_io/favicon.ico\" \\\\ *)",
+      "Bash(ls -la \"/c/Users/sinos/Downloads/\" | grep -i \"ChatGPT Image\")",
+      "Read(//c/Users/sinos/Downloads//**)",
+      "Bash(cd \"/c/projetos sinos/helpwise\" && echo \"=== models com Comment/Mensagem ===\" && grep -rniE \"class .*\\(coment|mensag|message|reply|interac\\)\" --include=\"*.py\" tiqt/ | head -20 && echo \"\" && echo \"=== perfil/avatar/foto fields ===\" && grep -rniE \"\\(avatar|foto|photo|imagem|profile\\)\" --include=\"*.py\" tiqt/apps/ | head -20)",
+      "Read(//c/c/projetos sinos/**)",
+      "Bash(grep -nA6 \"\\\\.td-avatar\" tiqt/apps/core/templates/core/ticket_detail.html)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\sinos\\Downloads\\favicon_io"
     ]
   }
 }

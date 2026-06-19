@@ -2,50 +2,217 @@
 {% load crispy_forms_tags %}
 {% load static %}
 
-{% block content %}
-<h5>{% if object %}Editar Cliente:{% else %}Novo Cliente:{% endif %}</h5>
-<form method="post" enctype="multipart/form-data"> {% csrf_token %}
-    {{ form|crispy }}
-    <div class="file-field input-field">
-        <div class="btn">
-            <span>Certificados</span>
-            <input type="file" name="certificados" multiple>
-        </div>
-        <div class="file-path-wrapper">
-            <input class="file-path validate" type="text" placeholder="Upload de um ou mais certificados">
-        </div>
-    </div>
-    <button class="btn" type="submit">Salvar</button>
-    {% if object %}
-        <a href="{% url 'cliente_delete' object.pk %}" class="btn right red lighten-1" style="margin-left: 8px;">Excluir</a>
-    {% endif %}
-    <a href="{% url 'cliente_list' %}" class="btn right red lighten-1">Cancelar</a>
-</form>
+{% block title %}{% if object %}Editar Cliente{% else %}Novo Cliente{% endif %} · HelpWise{% endblock %}
 
-{% if object and object.certificados.exists %}
-    <h5>Certificados:</h5>
-    <ul>
-        {% for certificado in object.certificados.all %}
-            <li>
-                <a href="{{ certificado.arquivo.url }}" download>{{ certificado.arquivo.name }}</a>
-                <form method="post" action="{% url 'certificado_delete' certificado.pk %}" style="display:inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="btn red">Excluir</button>
-                </form>
-            </li>
-        {% endfor %}
-    </ul>
-{% endif %}
+{% block extra_css %}
+<style>
+  body { background: #eef1f4; }
+  .cf-wrap { max-width: 920px; margin: 0 auto; }
+
+  /* Cabeçalho */
+  .cf-head { display: flex; align-items: center; gap: 14px; margin: 2px 0 18px; }
+  .cf-back { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 9px; flex-shrink: 0; color: #6b7280; background: rgba(0,0,0,.04); transition: all .15s; }
+  .cf-back:hover { background: rgba(0,0,0,.08); color: #1c1d1f; }
+  .cf-head-icon { display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0; background: linear-gradient(135deg, var(--hw-brand), var(--hw-brand-2)); color: #fff; }
+  .cf-head-icon i { font-size: 23px; }
+  .cf-head-info h1 { font-size: 21px; font-weight: 700; color: #1c1d1f; margin: 0; letter-spacing: -.3px; line-height: 1.2; }
+  .cf-head-info p { font-size: 13px; color: #8a8f98; margin: 2px 0 0; }
+
+  /* Card */
+  .cf-card { background: #fff; border: 1px solid #ececef; border-radius: 14px; padding: 24px 26px 20px; box-shadow: 0 1px 3px rgba(0,0,0,.05); margin-bottom: 18px; }
+  .cf-card-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .4px; margin: 6px 0 14px; }
+  .cf-card-title i { font-size: 18px; color: var(--hw-brand); }
+
+  /* Grid de campos */
+  .cf-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+  .cf-fields > div { margin-bottom: 15px; min-width: 0; }
+  .cf-fields .mb-3:has(textarea) { grid-column: 1 / -1; }
+  @media only screen and (max-width: 640px) { .cf-fields { grid-template-columns: 1fr; } }
+
+  .cf-card .form-label, .cf-card label { display: block; font-size: 12.5px; font-weight: 600; color: #44474c; margin-bottom: 6px; }
+  .cf-card .asteriskField { color: #e53935; margin-left: 3px; }
+
+  /* Esconde o <select> original convertido pelo Materialize */
+  .cf-card select.form-select, .cf-card .select-wrapper > select { display: none !important; }
+
+  .cf-card .form-control,
+  .cf-card textarea.form-control,
+  .cf-card .select-wrapper input.select-dropdown {
+    border: 1.5px solid #e2e4e8 !important; border-radius: 9px !important; height: 44px !important;
+    padding: 0 13px !important; box-sizing: border-box !important; box-shadow: none !important;
+    background-color: #fff !important; color: #1c1d1f !important; font-size: 14px !important;
+    margin: 0 !important; width: 100% !important; transition: border-color .15s, box-shadow .15s;
+  }
+  .cf-card textarea.form-control { height: auto !important; min-height: 84px !important; padding: 11px 13px !important; line-height: 1.5; }
+  .cf-card .form-control:focus, .cf-card .select-wrapper input.select-dropdown:focus { border-color: var(--hw-brand) !important; box-shadow: 0 0 0 3px rgba(0,121,107,.13) !important; }
+  .cf-card .invalid-feedback, .cf-card .errorlist, .cf-card .text-danger { color: #e53935 !important; font-size: 12px; margin-top: 5px; list-style: none; padding: 0; }
+  .cf-card .select-wrapper .caret { fill: #8a8f98; }
+
+  /* Certificados — dropzone */
+  .cf-cert-label { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: #44474c; margin-bottom: 7px; }
+  .cf-cert-label i { font-size: 17px; color: var(--hw-brand); }
+  .cf-upload { display: flex; flex-direction: column; padding: 14px 16px; cursor: pointer; border: 1.5px dashed #d6d9de; border-radius: 11px; background: #fafbfc; transition: all .15s; }
+  .cf-upload:hover, .cf-upload.drag { border-color: var(--hw-brand); background: rgba(0,121,107,.05); }
+  .cf-upload-prompt { display: flex; align-items: center; gap: 11px; }
+  .cf-upload-prompt > i { font-size: 24px; color: var(--hw-brand); }
+  .cf-upload-title { font-size: 13px; font-weight: 600; color: #1c1d1f; }
+  .cf-upload-sub { font-size: 11.5px; color: #8a8f98; }
+  .cf-preview { display: flex; flex-wrap: wrap; gap: 8px; }
+  .cf-preview:empty { display: none; }
+  .cf-upload .cf-preview:not(:empty) { margin-top: 12px; }
+  .cf-chip { display: inline-flex; align-items: center; gap: 7px; max-width: 260px; padding: 7px 11px; border: 1px solid #e2e4e8; border-radius: 9px; background: #fff; font-size: 12.5px; color: #2a2c30; }
+  .cf-chip > i { font-size: 17px; color: var(--hw-brand); flex-shrink: 0; }
+  .cf-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cf-chip .cf-x { cursor: pointer; border: none; background: transparent; color: #9ca3af; padding: 0; display: flex; font-size: 16px; }
+  .cf-chip .cf-x:hover { color: #e53935; }
+
+  /* Certificados já salvos */
+  .cf-cert-list { display: flex; flex-direction: column; gap: 8px; }
+  .cf-cert-item { display: flex; align-items: center; gap: 10px; padding: 9px 13px; border: 1px solid #ececef; border-radius: 10px; background: #fafbfc; }
+  .cf-cert-item > i { color: var(--hw-brand); font-size: 19px; }
+  .cf-cert-item a { flex: 1; min-width: 0; color: #2a2c30; font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cf-cert-del { background: transparent !important; border: none; box-shadow: none !important; padding: 0; height: 30px; width: 30px; display: flex; align-items: center; justify-content: center; border-radius: 7px; cursor: pointer; color: #b0b3b8; }
+  .cf-cert-del:hover { background: rgba(229,57,53,.12); color: #e53935; }
+
+  /* Ações */
+  .cf-actions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 4px; padding-top: 18px; border-top: 1px solid #f0f0f2; }
+  .cf-actions .cf-del { margin-right: auto; }
+  .cf-btn-flat { color: #6b7280 !important; font-weight: 600; text-transform: none; border-radius: 8px; }
+  .cf-btn-flat:hover { background: rgba(0,0,0,.05) !important; }
+  .cf-btn-del { color: #e53935 !important; font-weight: 600; text-transform: none; border-radius: 8px; }
+  .cf-btn-del:hover { background: rgba(229,57,53,.1) !important; }
+  .cf-btn-save { background: var(--hw-brand) !important; border-radius: 9px; text-transform: none; font-weight: 600; padding: 0 24px; box-shadow: none !important; }
+  .cf-btn-save:hover { background: var(--hw-brand-2) !important; }
+
+  /* ── Dark mode ── */
+  html.dark .cf-head-info h1 { color: var(--hw-text); }
+  html.dark .cf-back { background: rgba(255,255,255,.06); color: var(--hw-text2); }
+  html.dark .cf-back:hover { background: rgba(255,255,255,.12); color: var(--hw-text); }
+  html.dark .cf-card { background: var(--hw-surface) !important; border-color: var(--hw-border) !important; box-shadow: none !important; }
+  html.dark .cf-card .form-label, html.dark .cf-card label, html.dark .cf-cert-label { color: var(--hw-text2) !important; }
+  html.dark .cf-card .form-control,
+  html.dark .cf-card textarea.form-control,
+  html.dark .cf-card .select-wrapper input.select-dropdown { background-color: var(--hw-input-bg) !important; border-color: var(--hw-border) !important; color: var(--hw-text) !important; }
+  html.dark .cf-upload { background: var(--hw-input-bg); border-color: var(--hw-border); }
+  html.dark .cf-upload-title { color: var(--hw-text); }
+  html.dark .cf-chip, html.dark .cf-cert-item { background: var(--hw-surface2); border-color: var(--hw-border); }
+  html.dark .cf-chip, html.dark .cf-cert-item a { color: var(--hw-text); }
+  html.dark .cf-actions { border-top-color: var(--hw-border); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cf-wrap">
+  <div class="cf-head">
+    <a href="{% url 'cliente_list' %}" class="cf-back" title="Voltar"><i class="material-icons" translate="no">arrow_back</i></a>
+    <div class="cf-head-icon"><i class="material-icons" translate="no">{% if object %}edit{% else %}person_add{% endif %}</i></div>
+    <div class="cf-head-info">
+      <h1>{% if object %}Editar Cliente{% else %}Novo Cliente{% endif %}</h1>
+      <p>{% if object %}Atualize os dados do cliente{% else %}Informe o CNPJ para preencher automaticamente{% endif %}</p>
+    </div>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+
+    <div class="cf-card">
+      <div class="cf-card-title"><i class="material-icons" translate="no">business</i> Dados do cliente</div>
+      <div class="cf-fields">{{ form|crispy }}</div>
+    </div>
+
+    <div class="cf-card">
+      <div class="cf-card-title"><i class="material-icons" translate="no">verified</i> Certificados</div>
+      <div class="cf-upload" data-input="id_certificados">
+        <div class="cf-upload-prompt">
+          <i class="material-icons" translate="no">upload_file</i>
+          <span>
+            <span class="cf-upload-title">Anexar certificados</span><br>
+            <span class="cf-upload-sub">Clique ou arraste um ou mais arquivos</span>
+          </span>
+        </div>
+        <div class="cf-preview" id="cf-pv-certificados"></div>
+      </div>
+      <input type="file" name="certificados" id="id_certificados" multiple hidden>
+
+      {% if object and object.certificados.exists %}
+        <div class="cf-cert-list" style="margin-top:14px;">
+          {% for certificado in object.certificados.all %}
+            <div class="cf-cert-item">
+              <i class="material-icons" translate="no">description</i>
+              <a href="{{ certificado.arquivo.url }}" download>{{ certificado.arquivo.name }}</a>
+              <form method="post" action="{% url 'certificado_delete' certificado.pk %}" style="margin:0; line-height:0;">
+                {% csrf_token %}
+                <button type="submit" class="cf-cert-del" title="Excluir certificado"
+                        onclick="return confirm('Excluir este certificado?');"><i class="material-icons" translate="no">delete_outline</i></button>
+              </form>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="cf-actions">
+        {% if object %}
+          <a href="{% url 'cliente_delete' object.pk %}" class="btn-flat cf-btn-del cf-del waves-effect"><i class="material-icons left">delete</i>Excluir cliente</a>
+        {% endif %}
+        <a href="{% url 'cliente_list' %}" class="btn-flat cf-btn-flat waves-effect">Cancelar</a>
+        <button class="btn cf-btn-save waves-effect waves-light" type="submit">
+          <i class="material-icons left">{% if object %}save{% else %}check{% endif %}</i>{% if object %}Salvar alterações{% else %}Cadastrar cliente{% endif %}
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
 {% endblock content %}
 
 {% block extra_js %}
 <script>
+// ── Preview dos certificados (chips + remover + drag&drop) ──
+(function () {
+  var input = document.getElementById('id_certificados');
+  var box   = document.querySelector('.cf-upload[data-input="id_certificados"]');
+  var preview = document.getElementById('cf-pv-certificados');
+  if (!input || !box || !preview) return;
+
+  function render() {
+    preview.innerHTML = '';
+    Array.prototype.forEach.call(input.files, function (file, i) {
+      var chip = document.createElement('div');
+      chip.className = 'cf-chip';
+      chip.innerHTML = '<i class="material-icons" translate="no">description</i><span>' + file.name + '</span>' +
+                       '<button type="button" class="cf-x" data-i="' + i + '" title="Remover">&times;</button>';
+      preview.appendChild(chip);
+    });
+  }
+  function rebuild(skip) {
+    var dt = new DataTransfer();
+    Array.prototype.forEach.call(input.files, function (f, i) { if (i !== skip) dt.items.add(f); });
+    input.files = dt.files; render();
+  }
+  function addFiles(list) {
+    var dt = new DataTransfer();
+    Array.prototype.forEach.call(input.files, function (f) { dt.items.add(f); });
+    Array.prototype.forEach.call(list, function (f) { dt.items.add(f); });
+    input.files = dt.files; render();
+  }
+  input.addEventListener('change', render);
+  box.addEventListener('click', function (e) { if (e.target.closest('.cf-preview')) return; input.click(); });
+  preview.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var btn = e.target.closest('.cf-x');
+    if (btn) rebuild(parseInt(btn.dataset.i, 10));
+  });
+  ['dragover', 'dragenter'].forEach(function (ev) { box.addEventListener(ev, function (e) { e.preventDefault(); box.classList.add('drag'); }); });
+  ['dragleave', 'dragend', 'drop'].forEach(function (ev) { box.addEventListener(ev, function () { box.classList.remove('drag'); }); });
+  box.addEventListener('drop', function (e) { e.preventDefault(); if (e.dataTransfer && e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
+})();
+
+// ── Autofill CNPJ / CEP ──
 document.addEventListener('DOMContentLoaded', function () {
   var cepInput = document.getElementById('id_cep');
   if (!cepInput) return;
 
   var cepStatus = document.createElement('span');
-  cepStatus.style.cssText = 'font-size:12px; margin-left:8px;';
+  cepStatus.style.cssText = 'font-size:12px; margin-top:4px; display:block;';
   cepInput.parentNode.appendChild(cepStatus);
 
   cepInput.addEventListener('input', function () {
@@ -62,7 +229,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     var cnpjStatus = document.createElement('span');
-    cnpjStatus.style.cssText = 'font-size:12px; margin-left:8px;';
+    cnpjStatus.style.cssText = 'font-size:12px; margin-top:4px; display:block;';
     cnpjInput.parentNode.appendChild(cnpjStatus);
 
     function preencherCnpj(data) {
@@ -99,24 +266,39 @@ document.addEventListener('DOMContentLoaded', function () {
       M.updateTextFields();
     }
 
-    function consultarCnpj(valor) {
+    function consultarCnpj(valor, tentativa) {
       var digits = valor.replace(/\D/g, '');
       if (digits.length !== 14) return;
-      cnpjStatus.textContent = 'Buscando...';
+      tentativa = tentativa || 1;
+      var MAX = 3;
+
+      cnpjStatus.textContent = tentativa > 1 ? 'Buscando... (tentativa ' + tentativa + ')' : 'Buscando...';
       cnpjStatus.style.color = '#9e9e9e';
+
+      function tentarDeNovo() {
+        if (tentativa < MAX) {
+          setTimeout(function () { consultarCnpj(valor, tentativa + 1); }, 700);
+          return true;
+        }
+        return false;
+      }
+
       fetch('/api/cnpj/' + digits + '/')
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (data.erro) {
+        .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+        .then(function (res) {
+          // 404/erro nas APIs externas costuma ser flakiness — tenta de novo antes de desistir
+          if (!res.ok || res.data.erro) {
+            if (tentarDeNovo()) return;
             cnpjStatus.textContent = 'CNPJ não encontrado.';
             cnpjStatus.style.color = '#e53935';
             return;
           }
-          preencherCnpj(data);
-          cnpjStatus.textContent = data.razao_social || 'Dados preenchidos.';
+          preencherCnpj(res.data);
+          cnpjStatus.textContent = res.data.razao_social || 'Dados preenchidos.';
           cnpjStatus.style.color = '#2e7d32';
         })
-        .catch(function() {
+        .catch(function () {
+          if (tentarDeNovo()) return;
           cnpjStatus.textContent = 'Erro ao consultar CNPJ.';
           cnpjStatus.style.color = '#e53935';
         });
@@ -158,22 +340,10 @@ document.addEventListener('DOMContentLoaded', function () {
         var cidade   = document.getElementById('id_cidade');
         var uf       = document.getElementById('id_uf');
 
-        if (endereco && data.logradouro) {
-          endereco.value = data.logradouro;
-          M.updateTextFields();
-        }
-        if (bairro && data.bairro) {
-          bairro.value = data.bairro;
-          M.updateTextFields();
-        }
-        if (uf && data.uf_id) {
-          uf.value = data.uf_id;
-          M.FormSelect.init(uf);
-        }
-        if (cidade && data.cidade_id) {
-          cidade.value = data.cidade_id;
-          M.FormSelect.init(cidade);
-        }
+        if (endereco && data.logradouro) { endereco.value = data.logradouro; M.updateTextFields(); }
+        if (bairro && data.bairro) { bairro.value = data.bairro; M.updateTextFields(); }
+        if (uf && data.uf_id) { uf.value = data.uf_id; M.FormSelect.init(uf); }
+        if (cidade && data.cidade_id) { cidade.value = data.cidade_id; M.FormSelect.init(cidade); }
 
         cepStatus.textContent = data.cidade + '/' + data.uf;
         cepStatus.style.color = '#2e7d32';

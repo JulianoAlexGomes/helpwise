@@ -278,7 +278,7 @@ class OpenTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
         return context
 
     table_pagination = {
-        'per_page': 10000
+        'per_page': 10
     }
 
 class InProgressTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
@@ -757,6 +757,7 @@ class ClienteListView(ListView):
     model = Cliente
     template_name = 'core/cliente_list.html'
     context_object_name = 'clientes'
+    paginate_by = 15
 
     def get_queryset(self):
         queryset = Cliente.objects.all().order_by('fantasia')
@@ -993,7 +994,7 @@ def buscar_cnpj(request, cnpj):
 
     # BrasilAPI
     try:
-        resp = http_requests.get(f'https://brasilapi.com.br/api/cnpj/v1/{cnpj}', timeout=5)
+        resp = http_requests.get(f'https://brasilapi.com.br/api/cnpj/v1/{cnpj}', timeout=10)
         if resp.status_code == 200:
             d = resp.json()
             telefone = (d.get('ddd_telefone_1') or '').replace(' ', '').replace('-', '')
@@ -1017,7 +1018,7 @@ def buscar_cnpj(request, cnpj):
     # CNPJ.ws fallback
     if not dados:
         try:
-            resp = http_requests.get(f'https://publica.cnpj.ws/cnpj/{cnpj}', timeout=5)
+            resp = http_requests.get(f'https://publica.cnpj.ws/cnpj/{cnpj}', timeout=10)
             if resp.status_code == 200:
                 d = resp.json()
                 est = d.get('estabelecimento', {})

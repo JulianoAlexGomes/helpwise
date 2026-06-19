@@ -1,5 +1,81 @@
 {% extends 'base.html' %}
 
+{% block title %}Dashboard · HelpWise{% endblock %}
+
+{% block extra_css %}
+<style>
+  {% if user.is_authenticated %}body { background: #eef1f4; }{% endif %}
+  .dash-wrap { max-width: 1280px; margin: 0 auto; }
+
+  /* Cabeçalho */
+  .dash-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 2px 0 18px; }
+  .dash-head h1 { font-size: 21px; font-weight: 700; color: #1c1d1f; margin: 0; letter-spacing: -.3px; }
+  .dash-head p { font-size: 13px; color: #8a8f98; margin: 3px 0 0; }
+  .dash-new { background: var(--hw-brand) !important; border-radius: 9px; text-transform: none; font-weight: 600; padding: 0 20px; box-shadow: none !important; }
+  .dash-new:hover { background: var(--hw-brand-2) !important; }
+
+  /* Cards de resumo */
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 18px; }
+  @media only screen and (max-width: 900px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media only screen and (max-width: 520px) { .stat-grid { grid-template-columns: 1fr; } }
+  .stat-card { background: #fff; border: 1px solid #ececef; border-radius: 14px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+  .stat-top { display: flex; align-items: center; justify-content: space-between; }
+  .stat-icon { width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+  .stat-icon i { font-size: 24px; }
+  .stat-label { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #8a8f98; margin: 14px 0 2px; }
+  .stat-num { font-size: 30px; font-weight: 700; line-height: 1; color: #1c1d1f; }
+  .stat-link { display: inline-flex; align-items: center; gap: 4px; margin-top: 14px; font-size: 12.5px; font-weight: 600; }
+  .stat-link i { font-size: 15px; }
+
+  .stat-open   .stat-icon { background: rgba(0,150,136,.12); }   .stat-open   .stat-icon i, .stat-open   .stat-link { color: #00897b; }
+  .stat-prog   .stat-icon { background: rgba(245,124,0,.14); }   .stat-prog   .stat-icon i, .stat-prog   .stat-link { color: #ef6c00; }
+  .stat-done   .stat-icon { background: rgba(76,175,80,.16); }   .stat-done   .stat-icon i, .stat-done   .stat-link { color: #2e7d32; }
+  .stat-cancel .stat-icon { background: rgba(229,57,53,.12); }   .stat-cancel .stat-icon i, .stat-cancel .stat-link { color: #e53935; }
+
+  /* Cards genéricos */
+  .dash-card { background: #fff; border: 1px solid #ececef; border-radius: 14px; padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,.05); margin-bottom: 18px; }
+  .dash-card-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: #1c1d1f; margin-bottom: 14px; }
+  .dash-card-title i { font-size: 19px; color: var(--hw-brand); }
+
+  /* Filtros */
+  .dash-filters-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; align-items: end; }
+  @media only screen and (max-width: 1000px) { .dash-filters-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media only screen and (max-width: 520px) { .dash-filters-grid { grid-template-columns: 1fr; } }
+  .dash-field > .dash-lbl { display: block; font-size: 12px; font-weight: 600; color: #44474c; margin-bottom: 5px; }
+  .dash-card input[type=date],
+  .dash-card .select-wrapper input.select-dropdown {
+    border: 1.5px solid #e2e4e8 !important; border-radius: 9px !important; height: 42px !important;
+    padding: 0 12px !important; box-sizing: border-box !important; box-shadow: none !important;
+    background-color: #fff !important; color: #1c1d1f !important; font-size: 13.5px !important;
+    margin: 0 !important; width: 100% !important; transition: border-color .15s, box-shadow .15s;
+  }
+  .dash-card input[type=date]:focus,
+  .dash-card .select-wrapper input.select-dropdown:focus { border-color: var(--hw-brand) !important; box-shadow: 0 0 0 3px rgba(0,121,107,.13) !important; }
+  .dash-card .select-wrapper { margin: 0 !important; }
+  .dash-card .select-wrapper > select { display: none !important; }
+  .dash-card .select-wrapper .caret { fill: #8a8f98; }
+  .dash-btn { width: 100%; background: var(--hw-brand) !important; border-radius: 9px; text-transform: none; font-weight: 600; box-shadow: none !important; }
+  .dash-btn:hover { background: var(--hw-brand-2) !important; }
+
+  /* Gráficos */
+  .dash-charts { display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; }
+  @media only screen and (max-width: 900px) { .dash-charts { grid-template-columns: 1fr; } }
+  .dash-charts .dash-card { margin-bottom: 18px; }
+
+  .dash-empty { display: flex; align-items: center; gap: 12px; background: #fff8e1; border: 1px solid #ffe082; border-left: 4px solid #ffc107; border-radius: 12px; padding: 16px 18px; color: #6b5400; font-size: 14px; }
+  .dash-empty i { color: #ffa000; }
+
+  /* ── Dark mode ── */
+  html.dark .dash-head h1 { color: var(--hw-text); }
+  html.dark .stat-card, html.dark .dash-card { background: var(--hw-surface) !important; border-color: var(--hw-border) !important; box-shadow: none !important; }
+  html.dark .stat-num, html.dark .dash-card-title { color: var(--hw-text) !important; }
+  html.dark .dash-field > .dash-lbl { color: var(--hw-text2) !important; }
+  html.dark .dash-card input[type=date],
+  html.dark .dash-card .select-wrapper input.select-dropdown { background-color: var(--hw-input-bg) !important; border-color: var(--hw-border) !important; color: var(--hw-text) !important; }
+  html.dark .dash-empty { background: rgba(255,193,7,.08); border-color: rgba(255,193,7,.3); color: #ffd54f; }
+</style>
+{% endblock %}
+
 {% block content %}
 {% if not user.is_authenticated %}
 <div class="center" style="margin-top: 80px;">
@@ -8,287 +84,192 @@
   <p class="grey-text">Faça login para acessar o sistema.</p>
   <form method="post" action="{% url 'login' %}">
     {% csrf_token %}
-    <button type="submit" class="btn black waves-effect">
-      <i class="material-icons left">login</i>Entrar
-    </button>
+    <button type="submit" class="btn black waves-effect"><i class="material-icons left">login</i>Entrar</button>
   </form>
 </div>
 {% endif %}
 
 {% if user.is_authenticated %}
+<div class="dash-wrap">
 
-<div style="margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-  <div>
-    <h5 style="margin: 0; font-weight: 600;">Dashboard</h5>
-    <span class="grey-text text-darken-1" style="font-size: 13px;">
-      Olá, {{ user.first_name|default:user.username }} &mdash; {{ data_inicio }} a {{ data_fim }}
-    </span>
+  <div class="dash-head">
+    <div>
+      <h1>Dashboard</h1>
+      <p>Olá, {{ user.first_name|default:user.username }} — período de {{ data_inicio }} a {{ data_fim }}</p>
+    </div>
+    <a href="{% url 'new_ticket' %}" class="btn dash-new waves-effect waves-light"><i class="material-icons left">add</i>Novo Ticket</a>
   </div>
-  <a href="{% url 'new_ticket' %}" class="btn black waves-effect waves-light">
-    <i class="material-icons left">add</i>Novo Ticket
-  </a>
-</div>
 
-<!-- ===================== -->
-<!-- CARDS DE RESUMO -->
-<!-- ===================== -->
-<div class="row" style="margin-bottom: 0;">
-
-  <div class="col s6 m3">
-    <div class="card" style="border-radius: 8px; border-top: 4px solid #009688; margin-bottom: 16px;">
-      <div class="card-content" style="padding: 16px;">
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-          <div>
-            <p style="margin: 0; font-size: 12px; color: #757575; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Abertos</p>
-            <h4 style="margin: 4px 0 0; font-weight: 700; color: #009688;">{{ atendimentos_aberto }}</h4>
-          </div>
-          <i class="material-icons" style="font-size: 36px; color: #b2dfdb;">inbox</i>
+  <!-- Cards de resumo -->
+  <div class="stat-grid">
+    <div class="stat-card stat-open">
+      <div class="stat-top">
+        <div>
+          <div class="stat-label">Abertos</div>
+          <div class="stat-num">{{ atendimentos_aberto }}</div>
         </div>
+        <div class="stat-icon"><i class="material-icons" translate="no">inbox</i></div>
       </div>
-      <div class="card-action" style="padding: 8px 16px; border-top: 1px solid #f0f0f0;">
-        <a href="{% url 'open_tickets' %}" style="color: #009688; font-size: 12px; font-weight: 600;">
-          Ver tickets <i class="material-icons" style="font-size: 14px; vertical-align: middle;">arrow_forward</i>
-        </a>
+      <a href="{% url 'open_tickets' %}" class="stat-link">Ver tickets <i class="material-icons" translate="no">arrow_forward</i></a>
+    </div>
+
+    <div class="stat-card stat-prog">
+      <div class="stat-top">
+        <div>
+          <div class="stat-label">Em Atendimento</div>
+          <div class="stat-num">{{ atendimentos_andamento }}</div>
+        </div>
+        <div class="stat-icon"><i class="material-icons" translate="no">assignment_ind</i></div>
       </div>
+      <a href="{% url 'inprogress_tickets' %}" class="stat-link">Ver tickets <i class="material-icons" translate="no">arrow_forward</i></a>
+    </div>
+
+    <div class="stat-card stat-done">
+      <div class="stat-top">
+        <div>
+          <div class="stat-label">Encerrados</div>
+          <div class="stat-num">{{ atendimentos_encerrados }}</div>
+        </div>
+        <div class="stat-icon"><i class="material-icons" translate="no">assignment_turned_in</i></div>
+      </div>
+      <a href="{% url 'closed_tickets' %}" class="stat-link">Ver tickets <i class="material-icons" translate="no">arrow_forward</i></a>
+    </div>
+
+    <div class="stat-card stat-cancel">
+      <div class="stat-top">
+        <div>
+          <div class="stat-label">Cancelados</div>
+          <div class="stat-num">{{ atendimentos_cancelados }}</div>
+        </div>
+        <div class="stat-icon"><i class="material-icons" translate="no">event_busy</i></div>
+      </div>
+      <a href="{% url 'canceled_tickets' %}" class="stat-link">Ver tickets <i class="material-icons" translate="no">arrow_forward</i></a>
     </div>
   </div>
 
-  <div class="col s6 m3">
-    <div class="card" style="border-radius: 8px; border-top: 4px solid #ff9800; margin-bottom: 16px;">
-      <div class="card-content" style="padding: 16px;">
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-          <div>
-            <p style="margin: 0; font-size: 12px; color: #757575; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Em Atendimento</p>
-            <h4 style="margin: 4px 0 0; font-weight: 700; color: #ff9800;">{{ atendimentos_andamento }}</h4>
-          </div>
-          <i class="material-icons" style="font-size: 36px; color: #ffe0b2;">assignment_ind</i>
+  <!-- Filtros -->
+  <div class="dash-card">
+    <div class="dash-card-title"><i class="material-icons" translate="no">filter_list</i> Filtros</div>
+    <form method="get">
+      <div class="dash-filters-grid">
+        <div class="dash-field">
+          <span class="dash-lbl">Data início</span>
+          <input type="date" name="data_inicio" value="{{ data_inicio }}">
+        </div>
+        <div class="dash-field">
+          <span class="dash-lbl">Data fim</span>
+          <input type="date" name="data_fim" value="{{ data_fim }}">
+        </div>
+        <div class="dash-field">
+          <span class="dash-lbl">Usuários</span>
+          <select name="usuarios" multiple>
+            {% for u in usuarios %}
+              <option value="{{ u.id }}" {% if u.id|stringformat:"s" in usuarios_selecionados %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="dash-field">
+          <span class="dash-lbl">Departamento</span>
+          <select name="departamento">
+            <option value="">Todos</option>
+            {% for d in departamentos %}
+              <option value="{{ d.id }}" {% if d.id|stringformat:"s" == departamento_selecionado %}selected{% endif %}>{{ d.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="dash-field">
+          <span class="dash-lbl">&nbsp;</span>
+          <button class="btn dash-btn waves-effect waves-light"><i class="material-icons left">search</i>Filtrar</button>
         </div>
       </div>
-      <div class="card-action" style="padding: 8px 16px; border-top: 1px solid #f0f0f0;">
-        <a href="{% url 'inprogress_tickets' %}" style="color: #ff9800; font-size: 12px; font-weight: 600;">
-          Ver tickets <i class="material-icons" style="font-size: 14px; vertical-align: middle;">arrow_forward</i>
-        </a>
-      </div>
-    </div>
-  </div>
-
-  <div class="col s6 m3">
-    <div class="card" style="border-radius: 8px; border-top: 4px solid #4caf50; margin-bottom: 16px;">
-      <div class="card-content" style="padding: 16px;">
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-          <div>
-            <p style="margin: 0; font-size: 12px; color: #757575; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Encerrados</p>
-            <h4 style="margin: 4px 0 0; font-weight: 700; color: #4caf50;">{{ atendimentos_encerrados }}</h4>
-          </div>
-          <i class="material-icons" style="font-size: 36px; color: #c8e6c9;">assignment_turned_in</i>
-        </div>
-      </div>
-      <div class="card-action" style="padding: 8px 16px; border-top: 1px solid #f0f0f0;">
-        <a href="{% url 'closed_tickets' %}" style="color: #4caf50; font-size: 12px; font-weight: 600;">
-          Ver tickets <i class="material-icons" style="font-size: 14px; vertical-align: middle;">arrow_forward</i>
-        </a>
-      </div>
-    </div>
-  </div>
-
-  <div class="col s6 m3">
-    <div class="card" style="border-radius: 8px; border-top: 4px solid #e53935; margin-bottom: 16px;">
-      <div class="card-content" style="padding: 16px;">
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-          <div>
-            <p style="margin: 0; font-size: 12px; color: #757575; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Cancelados</p>
-            <h4 style="margin: 4px 0 0; font-weight: 700; color: #e53935;">{{ atendimentos_cancelados }}</h4>
-          </div>
-          <i class="material-icons" style="font-size: 36px; color: #ffcdd2;">event_busy</i>
-        </div>
-      </div>
-      <div class="card-action" style="padding: 8px 16px; border-top: 1px solid #f0f0f0;">
-        <a href="{% url 'canceled_tickets' %}" style="color: #e53935; font-size: 12px; font-weight: 600;">
-          Ver tickets <i class="material-icons" style="font-size: 14px; vertical-align: middle;">arrow_forward</i>
-        </a>
-      </div>
-    </div>
-  </div>
-
-</div>
-
-<!-- ===================== -->
-<!-- FILTROS -->
-<!-- ===================== -->
-<div class="card" style="border-radius: 8px; margin-bottom: 16px;">
-  <div class="card-content" style="padding: 16px 20px 0;">
-    <span class="card-title" style="font-size: 15px; font-weight: 600; color: #424242; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-      <i class="material-icons" style="font-size: 18px; color: #757575;">filter_list</i> Filtros
-    </span>
-    <form method="get" class="row" style="margin-bottom: 0;">
-
-      <div class="input-field col s12 m2">
-        <input type="date" name="data_inicio" value="{{ data_inicio }}">
-        <label class="active">Data início</label>
-      </div>
-
-      <div class="input-field col s12 m2">
-        <input type="date" name="data_fim" value="{{ data_fim }}">
-        <label class="active">Data fim</label>
-      </div>
-
-      <div class="input-field col s12 m3">
-        <select name="usuarios" multiple>
-          {% for u in usuarios %}
-            <option value="{{ u.id }}"
-              {% if u.id|stringformat:"s" in usuarios_selecionados %}selected{% endif %}
-            >
-              {{ u.get_full_name|default:u.username }}
-            </option>
-          {% endfor %}
-        </select>
-        <label>Usuários</label>
-      </div>
-
-      <div class="input-field col s12 m3">
-        <select name="departamento">
-          <option value="">Todos</option>
-          {% for d in departamentos %}
-            <option value="{{ d.id }}" {% if d.id|stringformat:"s" == departamento_selecionado %}selected{% endif %}>
-              {{ d.nome }}
-            </option>
-          {% endfor %}
-        </select>
-        <label>Departamento</label>
-      </div>
-
-      <div class="input-field col s12 m2 center-align" style="display: flex; align-items: flex-end; padding-bottom: 8px;">
-        <button class="btn black waves-effect waves-light" style="width: 100%;">
-          <i class="material-icons left">search</i>Filtrar
-        </button>
-      </div>
-
     </form>
   </div>
-</div>
 
-{% if labels_usuarios %}
-
-<!-- ===================== -->
-<!-- GRÁFICOS -->
-<!-- ===================== -->
-<div class="row">
-  <div class="col s12 m7">
-    <div class="card" style="border-radius: 8px;">
-      <div class="card-content">
-        <span class="card-title" style="font-size: 15px; font-weight: 600; color: #424242; display: flex; align-items: center; gap: 8px;">
-          <i class="material-icons" style="font-size: 18px; color: #757575;">bar_chart</i> Atendimentos por Usuário
-        </span>
-        <canvas id="stackedChart" height="200"></canvas>
-      </div>
+  {% if labels_usuarios %}
+  <!-- Gráficos -->
+  <div class="dash-charts">
+    <div class="dash-card">
+      <div class="dash-card-title"><i class="material-icons" translate="no">bar_chart</i> Atendimentos por Usuário</div>
+      <canvas id="stackedChart" height="200"></canvas>
+    </div>
+    <div class="dash-card">
+      <div class="dash-card-title"><i class="material-icons" translate="no">donut_large</i> Distribuição Geral</div>
+      <canvas id="doughnutChart" height="200"></canvas>
     </div>
   </div>
 
-  <div class="col s12 m5">
-    <div class="card" style="border-radius: 8px;">
-      <div class="card-content">
-        <span class="card-title" style="font-size: 15px; font-weight: 600; color: #424242; display: flex; align-items: center; gap: 8px;">
-          <i class="material-icons" style="font-size: 18px; color: #757575;">donut_large</i> Distribuição Geral
-        </span>
-        <canvas id="doughnutChart" height="200"></canvas>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===================== -->
-<!-- EVOLUÇÃO DIÁRIA -->
-<!-- ===================== -->
-<div class="card" style="border-radius: 8px;">
-  <div class="card-content">
-    <span class="card-title" style="font-size: 15px; font-weight: 600; color: #424242; display: flex; align-items: center; gap: 8px;">
-      <i class="material-icons" style="font-size: 18px; color: #757575;">show_chart</i> Evolução Diária de Atendimentos
-    </span>
+  <div class="dash-card">
+    <div class="dash-card-title"><i class="material-icons" translate="no">show_chart</i> Evolução Diária de Atendimentos</div>
     <canvas id="dailyChart" height="80"></canvas>
   </div>
-</div>
+  {% else %}
+  <div class="dash-empty">
+    <i class="material-icons" translate="no">info_outline</i>
+    <span>Nenhum atendimento encontrado para os filtros selecionados.</span>
+  </div>
+  {% endif %}
 
-{% else %}
-<div class="card-panel" style="border-radius: 8px; background: #fff8e1; border-left: 4px solid #ffc107; display: flex; align-items: center; gap: 12px;">
-  <i class="material-icons" style="color: #ffc107;">info_outline</i>
-  <span>Nenhum atendimento encontrado para os filtros selecionados.</span>
 </div>
-{% endif %}
-
 {% endif %}
 {% endblock content %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-
-  M.FormSelect.init(document.querySelectorAll('select'));
+  M.FormSelect.init(document.querySelectorAll('.dash-card select'));
 
   {% if labels_usuarios %}
-  // ======================
-  // GRÁFICO EMPILHADO
-  // ======================
+  // Cores que se adaptam ao tema
+  var dark = document.documentElement.classList.contains('dark');
+  Chart.defaults.color = dark ? '#8b949e' : '#6b7280';
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  var gridColor = dark ? 'rgba(255,255,255,.07)' : '#f0f1f3';
+  var surface   = dark ? '#1a1d23' : '#ffffff';
+
+  // Barras empilhadas
   new Chart(document.getElementById('stackedChart'), {
     type: 'bar',
     data: {
       labels: {{ labels_usuarios|safe }},
       datasets: [
-        { label: 'Aberto',         data: {{ dados_abertos|safe }},    backgroundColor: '#009688' },
-        { label: 'Em Atendimento', data: {{ dados_andamento|safe }},  backgroundColor: '#ff9800' },
-        { label: 'Encerrado',      data: {{ dados_encerrados|safe }}, backgroundColor: '#4caf50' },
-        { label: 'Cancelado',      data: {{ dados_cancelados|safe }}, backgroundColor: '#e53935' }
+        { label: 'Aberto',         data: {{ dados_abertos|safe }},    backgroundColor: '#009688', borderRadius: 4 },
+        { label: 'Em Atendimento', data: {{ dados_andamento|safe }},  backgroundColor: '#ff9800', borderRadius: 4 },
+        { label: 'Encerrado',      data: {{ dados_encerrados|safe }}, backgroundColor: '#4caf50', borderRadius: 4 },
+        { label: 'Cancelado',      data: {{ dados_cancelados|safe }}, backgroundColor: '#e53935', borderRadius: 4 }
       ]
     },
     options: {
       responsive: true,
       scales: {
         x: { stacked: true, grid: { display: false } },
-        y: { stacked: true, beginAtZero: true, grid: { color: '#f0f0f0' } }
+        y: { stacked: true, beginAtZero: true, grid: { color: gridColor } }
       },
       plugins: {
-        legend: { position: 'bottom' },
-        tooltip: {
-          callbacks: {
-            footer: (items) => 'Total: ' + items.reduce((s, i) => s + i.raw, 0)
-          }
-        }
+        legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, padding: 14 } },
+        tooltip: { callbacks: { footer: (items) => 'Total: ' + items.reduce((s, i) => s + i.raw, 0) } }
       }
     }
   });
 
-  // ======================
-  // GRÁFICO ROSCA
-  // ======================
+  // Rosca
   new Chart(document.getElementById('doughnutChart'), {
     type: 'doughnut',
     data: {
       labels: ['Aberto', 'Em Atendimento', 'Encerrado', 'Cancelado'],
       datasets: [{
-        data: [
-          {{ atendimentos_aberto }},
-          {{ atendimentos_andamento }},
-          {{ atendimentos_encerrados }},
-          {{ atendimentos_cancelados }}
-        ],
+        data: [{{ atendimentos_aberto }}, {{ atendimentos_andamento }}, {{ atendimentos_encerrados }}, {{ atendimentos_cancelados }}],
         backgroundColor: ['#009688', '#ff9800', '#4caf50', '#e53935'],
-        borderWidth: 2,
-        borderColor: '#fff'
+        borderWidth: 3, borderColor: surface
       }]
     },
     options: {
-      responsive: true,
-      cutout: '65%',
-      plugins: {
-        legend: { position: 'bottom' }
-      }
+      responsive: true, cutout: '66%',
+      plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, padding: 14 } } }
     }
   });
 
-  // ======================
-  // EVOLUÇÃO DIÁRIA
-  // ======================
+  // Evolução diária
   new Chart(document.getElementById('dailyChart'), {
     type: 'line',
     data: {
@@ -296,24 +277,16 @@ document.addEventListener('DOMContentLoaded', function () {
       datasets: [{
         label: 'Atendimentos',
         data: {{ dados_dias|safe }},
-        borderColor: '#212121',
-        backgroundColor: 'rgba(33,33,33,0.06)',
-        borderWidth: 2,
-        tension: 0.4,
-        fill: true,
-        pointBackgroundColor: '#212121',
-        pointRadius: 4
+        borderColor: '#00897b',
+        backgroundColor: 'rgba(0,137,123,0.10)',
+        borderWidth: 2, tension: 0.4, fill: true,
+        pointBackgroundColor: '#00897b', pointRadius: 3
       }]
     },
     options: {
       responsive: true,
-      scales: {
-        y: { beginAtZero: true, grid: { color: '#f0f0f0' } },
-        x: { grid: { display: false } }
-      },
-      plugins: {
-        legend: { display: false }
-      }
+      scales: { y: { beginAtZero: true, grid: { color: gridColor } }, x: { grid: { display: false } } },
+      plugins: { legend: { display: false } }
     }
   });
   {% endif %}

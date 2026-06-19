@@ -9,7 +9,10 @@
       "Bash(curl *)",
       "Bash(Get-ChildItem -Path \"c:\\\\projetos sinos\\\\helpwise\" -Force)",
       "Bash(Select-Object Name, PSIsContainer)",
-      "PowerShell(Get-ChildItem -Path \"c:\\\\projetos sinos\\\\helpwise\\\\tiqt\" | Where-Object { $_.PSIsContainer } | Select-Object Name)"
+      "PowerShell(Get-ChildItem -Path \"c:\\\\projetos sinos\\\\helpwise\\\\tiqt\" | Where-Object { $_.PSIsContainer } | Select-Object Name)",
+      "Bash(cd \"c:/projetos sinos/helpwise\" && find /c/Users/sinos/AppData/Local/Python/pythoncore-3.14-64/Lib/site-packages/django_tables2 -name \"*.html\" 2>/dev/null | head; echo \"---\"; cat \"/c/Users/sinos/AppData/Local/Python/pythoncore-3.14-64/Lib/site-packages/django_tables2/templates/django_tables2/table.html\" 2>/dev/null | grep -n -i \"pagination\\\\|current\\\\|active\\\\|page\" | head -40)",
+      "Read(//c/Users/sinos/AppData/Local/Python/pythoncore-3.14-64/Lib/site-packages/django_tables2/**)",
+      "Read(//c/Users/sinos/AppData/Local/Python/pythoncore-3.14-64/Lib/site-packages/django_tables2/templates/django_tables2/**)"
     ]
   }
 }

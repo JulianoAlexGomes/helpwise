@@ -125,9 +125,19 @@
     color: #fff; font-weight: 700; font-size: 15px;
     overflow: hidden;
   }
-  .td-avatar img:not(.active) {
-    width: 100% !important; height: 100% !important;
-    object-fit: cover; display: block; cursor: zoom-in; border-radius: 50%;
+  .td-avatar img {
+    width: 100%; height: 100%; object-fit: cover; display: block; cursor: zoom-in;
+  }
+  /* Lightbox proprio para ampliar a foto (retrato e paisagem) */
+  .avatar-lightbox {
+    position: fixed; inset: 0; z-index: 10000;
+    background: rgba(0,0,0,.85); display: none;
+    align-items: center; justify-content: center; cursor: zoom-out;
+  }
+  .avatar-lightbox.open { display: flex; }
+  .avatar-lightbox img {
+    max-width: 90vw; max-height: 90vh;
+    border-radius: 10px; box-shadow: 0 12px 48px rgba(0,0,0,.5);
   }
   .td-comment-meta { flex: 1; min-width: 0; }
   .td-comment-author { font-size: 13.5px; font-weight: 600; color: #1c1d1f; line-height: 1.2; }
@@ -268,7 +278,7 @@
           <div class="td-comment-head">
             <div class="td-avatar">
               {% if comment.autor.foto %}
-                <img class="materialboxed" src="{{ comment.autor.foto.url }}" alt="{{ comment.autor.get_full_name|default:comment.autor.username }}">
+                <img src="{{ comment.autor.foto.url }}" alt="{{ comment.autor.get_full_name|default:comment.autor.username }}" onclick="hwOpenAvatar(this.src)">
               {% else %}
                 {{ comment.autor.get_full_name|default:comment.autor.username|first|upper }}
               {% endif %}
@@ -373,6 +383,11 @@
   </ul>
 </div>
 {% endwith %}
+
+<!-- Lightbox para ampliar a foto do autor do comentario -->
+<div id="avatar-lightbox" class="avatar-lightbox" onclick="hwCloseAvatar()">
+  <img src="" alt="">
+</div>
 {% endblock content %}
 
 {% block extra_js %}
@@ -454,5 +469,20 @@
     setupUpload('id_imagens',  'td-pv-imagens',  true);
   });
 })();
+
+// Lightbox da foto do autor (independente do Materialbox)
+function hwOpenAvatar(src) {
+  var lb = document.getElementById('avatar-lightbox');
+  if (!lb) return;
+  lb.querySelector('img').src = src;
+  lb.classList.add('open');
+}
+function hwCloseAvatar() {
+  var lb = document.getElementById('avatar-lightbox');
+  if (lb) lb.classList.remove('open');
+}
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') hwCloseAvatar();
+});
 </script>
 {% endblock %}

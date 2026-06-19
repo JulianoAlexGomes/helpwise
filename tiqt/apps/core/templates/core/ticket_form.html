@@ -2,14 +2,334 @@
 {% load crispy_forms_tags %}
 {% load static %}
 
+{% block title %}{% if ticket %}Editar Ticket{% else %}Novo Ticket{% endif %} · HelpWise{% endblock %}
+
+{% block extra_css %}
+<style>
+  .tk-wrap { max-width: 800px; margin: 0 auto; }
+
+  /* Cabeçalho */
+  .tk-head { display: flex; align-items: center; gap: 14px; margin: 4px 0 20px; }
+  .tk-back {
+    display: flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px; border-radius: 9px; flex-shrink: 0;
+    color: #6b7280; background: rgba(0,0,0,.04); transition: all .15s;
+  }
+  .tk-back:hover { background: rgba(0,0,0,.08); color: #1c1d1f; }
+  .tk-head-icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--hw-brand), var(--hw-brand-2));
+    color: #fff;
+  }
+  .tk-head-icon i { font-size: 23px; }
+  .tk-head h1 { font-size: 21px; font-weight: 700; color: #1c1d1f; margin: 0; letter-spacing: -.3px; line-height: 1.2; }
+  .tk-head p { font-size: 13px; color: #8a8f98; margin: 2px 0 0; }
+
+  /* Card */
+  .tk-card {
+    background: #fff;
+    border: 1px solid #ececef;
+    border-radius: 14px;
+    padding: 26px 28px 22px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  }
+
+  /* Grid de campos */
+  .tk-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+  .tk-fields > div { margin-bottom: 16px; min-width: 0; }  /* min-width:0 permite truncar */
+  .tk-fields > div:first-child { grid-column: 1 / -1; }   /* título ocupa a linha toda */
+  @media only screen and (max-width: 640px) { .tk-fields { grid-template-columns: 1fr; } }
+
+  /* Rótulos */
+  .tk-card .form-label, .tk-card label {
+    display: block; font-size: 12.5px; font-weight: 600;
+    color: #44474c; margin-bottom: 6px; letter-spacing: .1px;
+  }
+  .tk-card .asteriskField { color: #e53935; margin-left: 3px; }
+
+  /* O Materialize converte o <select> num campo próprio; esconde o original */
+  .tk-card select.form-select,
+  .tk-card .select-wrapper > select { display: none !important; }
+
+  /* Inputs de texto + selects (campo visível do Materialize) */
+  .tk-card .form-control,
+  .tk-card textarea.form-control,
+  .tk-card .select-wrapper input.select-dropdown {
+    border: 1.5px solid #e2e4e8 !important;
+    border-radius: 9px !important;
+    height: 44px !important;
+    padding: 0 13px !important;
+    box-sizing: border-box !important;
+    box-shadow: none !important;
+    background-color: #fff !important;
+    color: #1c1d1f !important;
+    font-size: 14px !important;
+    margin: 0 !important;
+    width: 100% !important;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .tk-card textarea.form-control { height: auto !important; min-height: 92px !important; padding: 11px 13px !important; line-height: 1.5; }
+  .tk-card .form-control:focus,
+  .tk-card .select-wrapper input.select-dropdown:focus {
+    border-color: var(--hw-brand) !important;
+    box-shadow: 0 0 0 3px rgba(0,121,107,.13) !important;
+  }
+  .tk-card .select-wrapper { margin-bottom: 0; }
+  .tk-card .select-wrapper .caret { fill: #8a8f98; }
+
+  /* Mensagens de erro / ajuda */
+  .tk-card .invalid-feedback, .tk-card .errorlist, .tk-card .text-danger {
+    color: #e53935 !important; font-size: 12px; margin-top: 5px; list-style: none; padding: 0;
+  }
+  .tk-card .form-text, .tk-card .helptext { color: #9ca3af !important; font-size: 12px; margin-top: 4px; }
+  .tk-card .is-invalid, .tk-card .is-invalid.select-dropdown { border-color: #e53935 !important; }
+
+  /* select2 (usado na edição) */
+  .tk-card .select2-container { width: 100% !important; }
+  .tk-card .select2-container--default .select2-selection--single {
+    height: 44px !important; border: 1.5px solid #e2e4e8 !important; border-radius: 9px !important;
+    display: flex !important; align-items: center !important;
+  }
+  .tk-card .select2-container--default .select2-selection--single .select2-selection__rendered {
+    padding-left: 13px !important; color: #1c1d1f !important; line-height: normal !important;
+  }
+  .tk-card .select2-container--default .select2-selection--single .select2-selection__arrow { height: 42px !important; right: 6px !important; }
+  .tk-card .select2-container--focus .select2-selection--single,
+  .tk-card .select2-container--open .select2-selection--single {
+    border-color: var(--hw-brand) !important; box-shadow: 0 0 0 3px rgba(0,121,107,.13) !important;
+  }
+
+  /* Ações */
+  .tk-actions {
+    display: flex; justify-content: flex-end; align-items: center; gap: 10px;
+    margin-top: 22px; padding-top: 18px; border-top: 1px solid #f0f0f2;
+  }
+  .tk-btn-cancel {
+    color: #6b7280 !important; font-weight: 600; border-radius: 8px; text-transform: none;
+  }
+  .tk-btn-cancel:hover { background: rgba(0,0,0,.05) !important; }
+  .tk-btn-save {
+    background: var(--hw-brand) !important; border-radius: 9px; text-transform: none;
+    font-weight: 600; padding: 0 22px; box-shadow: none !important; letter-spacing: .2px;
+  }
+  .tk-btn-save:hover { background: var(--hw-brand-2) !important; }
+
+  /* ── Dark mode ── */
+  html.dark .tk-head h1 { color: var(--hw-text); }
+  html.dark .tk-back { background: rgba(255,255,255,.06); color: var(--hw-text2); }
+  html.dark .tk-back:hover { background: rgba(255,255,255,.12); color: var(--hw-text); }
+  html.dark .tk-card { background: var(--hw-surface) !important; border-color: var(--hw-border) !important; box-shadow: none !important; }
+  html.dark .tk-card .form-label, html.dark .tk-card label { color: var(--hw-text2) !important; }
+  html.dark .tk-actions { border-top-color: var(--hw-border); }
+  html.dark .tk-btn-cancel:hover { background: rgba(255,255,255,.07) !important; }
+
+  /* ── Dropdown dos selects (Materialize) no dark mode ── */
+  html.dark .tk-card .dropdown-content,
+  html.dark .dropdown-content {
+    background-color: var(--hw-surface2) !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,.5) !important;
+  }
+  html.dark .dropdown-content li > span,
+  html.dark .dropdown-content li > a { color: var(--hw-text) !important; }
+  html.dark .dropdown-content li:hover,
+  html.dark .dropdown-content li.selected { background-color: var(--hw-hover) !important; }
+
+  /* ══ Busca de cliente (autocomplete, igual modal "N") ══ */
+  .tk-cli-search { position: relative; }
+  .tk-cli-lupa { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 19px; pointer-events: none; }
+  .tk-card .tk-cli-input {
+    width: 100% !important; height: 44px !important; padding: 0 13px 0 38px !important;
+    box-sizing: border-box !important; margin: 0 !important;
+    border: 1.5px solid #e2e4e8 !important; border-radius: 9px !important;
+    font-size: 14px !important; color: #1c1d1f !important; outline: none !important;
+    background-color: #fff !important; box-shadow: none !important;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .tk-card .tk-cli-input:focus { border-color: var(--hw-brand) !important; box-shadow: 0 0 0 3px rgba(0,121,107,.13) !important; }
+  html.dark .tk-card .tk-cli-input { background-color: var(--hw-input-bg) !important; border-color: var(--hw-border) !important; color: var(--hw-text) !important; }
+  html.dark .tk-card .tk-cli-input:focus { border-color: var(--hw-brand) !important; }
+  .tk-cli-dropdown {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 50;
+    background: #fff; border: 1.5px solid #e2e4e8; border-radius: 9px; box-shadow: 0 8px 24px rgba(0,0,0,.12);
+    max-height: 230px; overflow-y: auto;
+  }
+  .tk-cli-item { display: flex; align-items: center; gap: 8px; padding: 10px 13px; font-size: 13.5px; color: #1c1d1f; cursor: pointer; border-bottom: 1px solid #f3f4f6; }
+  .tk-cli-item:last-child { border-bottom: none; }
+  .tk-cli-item i { font-size: 16px; color: #9ca3af; }
+  .tk-cli-item:hover, .tk-cli-item.foc { background: #f3f4f6; }
+  .tk-cli-empty { padding: 12px 14px; text-align: center; color: #9ca3af; font-size: 13px; }
+  .tk-cli, .tk-cli-search { min-width: 0; }
+  .tk-cli-selected {
+    display: none; align-items: center; gap: 9px; min-height: 44px; padding: 6px 13px; overflow: hidden;
+    background: rgba(0,121,107,.08); border: 1.5px solid rgba(0,121,107,.3); border-radius: 9px;
+    font-size: 13.5px; color: #1c1d1f;
+  }
+  .tk-cli-selected > i.material-icons { color: var(--hw-brand); font-size: 18px; flex-shrink: 0; }
+  .tk-cli-nome { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tk-cli-clear {
+    display: inline-flex; align-items: center; gap: 4px; padding: 5px 11px; border-radius: 7px;
+    border: 1.5px solid #e2e4e8; background: #fff; color: #44474c; font-size: 11.5px; font-weight: 700;
+    text-decoration: none; white-space: nowrap; transition: all .15s; flex-shrink: 0;
+  }
+  .tk-cli-clear:hover { background: var(--hw-brand); color: #fff; border-color: var(--hw-brand); }
+
+  html.dark .tk-cli-input { background: var(--hw-input-bg); border-color: var(--hw-border); color: var(--hw-text); }
+  html.dark .tk-cli-lupa { color: var(--hw-text3); }
+  html.dark .tk-cli-dropdown { background: var(--hw-surface2); border-color: var(--hw-border); box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+  html.dark .tk-cli-item { color: var(--hw-text); border-bottom-color: var(--hw-border); }
+  html.dark .tk-cli-item:hover, html.dark .tk-cli-item.foc { background: var(--hw-hover); }
+  html.dark .tk-cli-empty { color: var(--hw-text2); }
+  html.dark .tk-cli-selected { background: rgba(0,150,136,.12); border-color: rgba(0,150,136,.3); color: var(--hw-text); }
+  html.dark .tk-cli-selected > i.material-icons { color: #4db6ac; }
+  html.dark .tk-cli-clear { background: var(--hw-surface2); border-color: var(--hw-border); color: var(--hw-text); }
+  html.dark .tk-cli-clear:hover { background: var(--hw-brand); color: #fff; border-color: var(--hw-brand); }
+</style>
+{% endblock %}
+
 {% block content %}
-<form method="post"> {% csrf_token %}
-    {{ form|crispy }}
-    <button class="btn" type="submit">Salvar</button>
-    <a href="/" class="btn right red lighten-1">Cancelar</a>
-</form>
-{% endblock content %}
+<div class="tk-wrap">
+  <div class="tk-head">
+    <a href="javascript:history.back()" class="tk-back" title="Voltar"><i class="material-icons" translate="no">arrow_back</i></a>
+    <div class="tk-head-icon"><i class="material-icons" translate="no">confirmation_number</i></div>
+    <div>
+      <h1>{% if ticket %}Editar Ticket #{{ ticket.pk }}{% else %}Novo Ticket{% endif %}</h1>
+      <p>{% if ticket %}Atualize as informações do chamado{% else %}Preencha os dados para abrir um novo chamado{% endif %}</p>
+    </div>
+  </div>
+
+  <form method="post" class="tk-card" novalidate>
+    {% csrf_token %}
+    <div class="tk-fields">
+      {{ form|crispy }}
+    </div>
+    <div class="tk-actions">
+      <a href="/" class="btn-flat tk-btn-cancel waves-effect">Cancelar</a>
+      <button class="btn tk-btn-save waves-effect waves-light" type="submit">
+        <i class="material-icons left">{% if ticket %}save{% else %}add{% endif %}</i>
+        {% if ticket %}Salvar alterações{% else %}Criar ticket{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
 
 {% block extra_js %}
     {{ form.media }}
+
+<script>
+(function () {
+  document.addEventListener('DOMContentLoaded', function () {
+    var sel = document.querySelector('.tk-card select[name="cliente"]');
+    if (!sel) return;
+    var wrapper = sel.closest('.select-wrapper');
+    if (!wrapper) return;          // edição usa select2 (já pesquisável) — não mexe
+    wrapper.style.display = 'none';
+
+    // monta o widget de busca
+    var box = document.createElement('div');
+    box.className = 'tk-cli';
+    box.innerHTML =
+      '<div class="tk-cli-search">' +
+        '<i class="material-icons tk-cli-lupa" translate="no">search</i>' +
+        '<input type="text" class="tk-cli-input" placeholder="Digite o nome ou CNPJ do cliente..." autocomplete="off">' +
+        '<div class="tk-cli-dropdown"></div>' +
+      '</div>' +
+      '<div class="tk-cli-selected">' +
+        '<i class="material-icons" translate="no">check_circle</i>' +
+        '<span class="tk-cli-nome"></span>' +
+        '<a href="#" class="tk-cli-clear"><i class="material-icons" style="font-size:13px;" translate="no">edit</i> Alterar</a>' +
+      '</div>';
+    wrapper.parentNode.insertBefore(box, wrapper);
+
+    var search   = box.querySelector('.tk-cli-search');
+    var input    = box.querySelector('.tk-cli-input');
+    var dd       = box.querySelector('.tk-cli-dropdown');
+    var selected = box.querySelector('.tk-cli-selected');
+    var nome     = box.querySelector('.tk-cli-nome');
+    var clear    = box.querySelector('.tk-cli-clear');
+    var timer = null, focusIndex = -1;
+
+    function showSelected(text) {
+      nome.textContent = text;
+      selected.style.display = 'flex';
+      search.style.display = 'none';
+    }
+    function showSearch() {
+      selected.style.display = 'none';
+      search.style.display = '';
+      input.value = '';
+      setTimeout(function () { input.focus(); }, 30);
+    }
+    function closeDD() { focusIndex = -1; dd.style.display = 'none'; }
+
+    function setCliente(id, text) {
+      var has = false;
+      for (var i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value == id) { sel.selectedIndex = i; has = true; break; }
+      }
+      if (!has) { sel.add(new Option(text, id, true, true)); }
+      sel.value = id;
+      showSelected(text);
+      closeDD();
+    }
+
+    function paint() {
+      Array.prototype.forEach.call(dd.querySelectorAll('.tk-cli-item'), function (el, i) {
+        el.classList.toggle('foc', i === focusIndex);
+      });
+    }
+
+    function render(items) {
+      focusIndex = -1; dd.innerHTML = '';
+      if (!items.length) {
+        dd.innerHTML = '<div class="tk-cli-empty">Nenhum cliente encontrado</div>';
+        dd.style.display = 'block'; return;
+      }
+      items.forEach(function (it) {
+        var d = document.createElement('div');
+        d.className = 'tk-cli-item';
+        d.innerHTML = '<i class="material-icons" translate="no">business</i>' + it.text;
+        d.addEventListener('mousedown', function (e) { e.preventDefault(); setCliente(it.id, it.text); });
+        d.addEventListener('mouseenter', function () {
+          focusIndex = Array.prototype.indexOf.call(dd.children, d); paint();
+        });
+        dd.appendChild(d);
+      });
+      dd.style.display = 'block';
+    }
+
+    input.addEventListener('input', function () {
+      clearTimeout(timer);
+      var q = this.value.trim();
+      if (q.length < 2) { closeDD(); return; }
+      timer = setTimeout(function () {
+        fetch('/api/clientes/busca/?q=' + encodeURIComponent(q))
+          .then(function (r) { return r.json(); })
+          .then(function (data) { render(data.results || []); })
+          .catch(function () {});
+      }, 280);
+    });
+
+    input.addEventListener('keydown', function (e) {
+      var items = dd.querySelectorAll('.tk-cli-item');
+      if (e.key === 'ArrowDown') { e.preventDefault(); if (items.length) { focusIndex = Math.min(focusIndex + 1, items.length - 1); paint(); } }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); if (items.length) { focusIndex = Math.max(focusIndex - 1, 0); paint(); } }
+      else if (e.key === 'Enter') { if (focusIndex >= 0 && items[focusIndex]) { e.preventDefault(); items[focusIndex].dispatchEvent(new MouseEvent('mousedown')); } }
+      else if (e.key === 'Escape') { closeDD(); }
+    });
+
+    clear.addEventListener('click', function (e) { e.preventDefault(); sel.selectedIndex = -1; sel.value = ''; showSearch(); });
+    document.addEventListener('click', function (e) { if (!box.contains(e.target)) closeDD(); });
+
+    // estado inicial (ex.: ?cliente=, edição ou erro de validação)
+    if (sel.value) {
+      var opt = sel.options[sel.selectedIndex];
+      if (opt && opt.text) showSelected(opt.text); else showSearch();
+    } else {
+      showSearch();
+    }
+  });
+})();
+</script>
 {% endblock %}

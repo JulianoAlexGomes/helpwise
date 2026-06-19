@@ -1,152 +1,447 @@
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
+{% load ticket_extras %}
+
+{% block title %}Ticket #{{ object.id }} · HelpWise{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Fundo levemente acinzentado no modo claro p/ destacar os cards brancos */
+  body { background: #eef1f4; }
+
+  .td-wrap { max-width: 1180px; margin: 0 auto; }
+
+  /* Cabeçalho */
+  .td-head { display: flex; align-items: center; gap: 14px; margin: 2px 0 20px; }
+  .td-back {
+    display: flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px; border-radius: 9px; flex-shrink: 0;
+    color: #6b7280; background: rgba(0,0,0,.04); transition: all .15s;
+  }
+  .td-back:hover { background: rgba(0,0,0,.08); color: #1c1d1f; }
+  .td-head-icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--hw-brand), var(--hw-brand-2)); color: #fff;
+  }
+  .td-head-icon i { font-size: 23px; }
+  .td-head-info { flex: 1; min-width: 0; }
+  .td-head-info h1 { font-size: 20px; font-weight: 700; color: #1c1d1f; margin: 0; letter-spacing: -.3px; line-height: 1.2; }
+  .td-head-info p { font-size: 14px; color: #8a8f98; margin: 2px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Status chip */
+  .td-status {
+    flex-shrink: 0; padding: 6px 14px; border-radius: 20px; font-size: 12.5px; font-weight: 700;
+    letter-spacing: .2px; white-space: nowrap;
+  }
+  .td-status.is-open   { background: rgba(229,57,53,.12);  color: #e53935; }
+  .td-status.is-prog   { background: rgba(245,124,0,.14);  color: #ef6c00; }
+  .td-status.is-done   { background: rgba(0,150,136,.14);  color: #00897b; }
+  .td-status.is-cancel { background: rgba(120,124,130,.16);color: #6b7280; }
+
+  /* Grid principal */
+  .td-grid { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
+  @media only screen and (max-width: 960px) { .td-grid { grid-template-columns: 1fr; } }
+
+  /* Cards */
+  .td-card {
+    background: #fff; border: 1px solid #ececef; border-radius: 14px;
+    padding: 20px 22px; box-shadow: 0 1px 3px rgba(0,0,0,.05); margin-bottom: 18px;
+  }
+  .td-card-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: #1c1d1f; margin-bottom: 16px; }
+  .td-card-title i { font-size: 19px; color: var(--hw-brand); }
+
+  /* Form de comentário */
+  .td-fields .mb-3 { margin-bottom: 14px; }
+  .td-card .form-label, .td-card label {
+    display: block; font-size: 12.5px; font-weight: 600; color: #44474c; margin-bottom: 6px;
+  }
+  .td-card select.form-select, .td-card .select-wrapper > select { display: none !important; }
+  .td-card .form-control,
+  .td-card textarea.form-control,
+  .td-card .select-wrapper input.select-dropdown {
+    border: 1.5px solid #e2e4e8 !important; border-radius: 9px !important; height: 44px !important;
+    padding: 0 13px !important; box-sizing: border-box !important; box-shadow: none !important;
+    background-color: #fff !important; color: #1c1d1f !important; font-size: 14px !important;
+    margin: 0 !important; width: 100% !important; transition: border-color .15s, box-shadow .15s;
+  }
+  .td-card textarea.form-control { height: auto !important; min-height: 92px !important; padding: 11px 13px !important; line-height: 1.5; }
+  .td-card .form-control:focus, .td-card .select-wrapper input.select-dropdown:focus {
+    border-color: var(--hw-brand) !important; box-shadow: 0 0 0 3px rgba(0,121,107,.13) !important;
+  }
+  .td-card .invalid-feedback, .td-card .errorlist, .td-card .text-danger { color: #e53935 !important; font-size: 12px; margin-top: 5px; list-style: none; padding: 0; }
+
+  /* Anexos — zonas de upload */
+  .td-attach { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 8px 0 4px; align-items: start; }
+  @media only screen and (max-width: 560px) { .td-attach { grid-template-columns: 1fr; } }
+  .td-attach-col { min-width: 0; }
+  .td-upload {
+    display: flex; flex-direction: column; padding: 13px 15px; cursor: pointer;
+    border: 1.5px dashed #d6d9de; border-radius: 11px; background: #fafbfc; transition: all .15s;
+  }
+  .td-upload:hover, .td-upload.drag { border-color: var(--hw-brand); background: rgba(0,121,107,.05); }
+  .td-upload-prompt { display: flex; align-items: center; gap: 11px; }
+  .td-upload-prompt > i { font-size: 24px; color: var(--hw-brand); flex-shrink: 0; }
+  .td-upload-txt { display: flex; flex-direction: column; min-width: 0; }
+  .td-upload-title { font-size: 13px; font-weight: 600; color: #1c1d1f; }
+  .td-upload-sub { font-size: 11.5px; color: #8a8f98; }
+
+  .td-preview { display: flex; flex-wrap: wrap; gap: 8px; }
+  .td-preview:empty { display: none; }
+  .td-upload .td-preview:not(:empty) { margin-top: 12px; }
+  .td-pv-img { position: relative; width: 76px; height: 76px; border-radius: 9px; overflow: hidden; border: 1px solid #ececef; }
+  .td-pv-img img { width: 100%; height: 100%; object-fit: cover; }
+  .td-pv-file { display: inline-flex; align-items: center; gap: 7px; max-width: 230px; padding: 7px 10px; border: 1px solid #e2e4e8; border-radius: 9px; background: #fafbfc; font-size: 12.5px; color: #2a2c30; }
+  .td-pv-file > i { font-size: 17px; color: var(--hw-brand); flex-shrink: 0; }
+  .td-pv-file span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .td-pv-x {
+    cursor: pointer; border: none; padding: 0; line-height: 1; display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,.55); color: #fff; border-radius: 6px; width: 20px; height: 20px; font-size: 16px;
+  }
+  .td-pv-img .td-pv-x { position: absolute; top: 4px; right: 4px; }
+  .td-pv-img .td-pv-x:hover { background: rgba(229,57,53,.9); }
+  .td-pv-file .td-pv-x { background: transparent; color: #9ca3af; width: 18px; height: 18px; }
+  .td-pv-file .td-pv-x:hover { color: #e53935; }
+
+  html.dark .td-upload { background: var(--hw-input-bg); border-color: var(--hw-border); }
+  html.dark .td-upload:hover, html.dark .td-upload.drag { border-color: var(--hw-brand); background: rgba(0,150,136,.08); }
+  html.dark .td-upload-title { color: var(--hw-text); }
+  html.dark .td-pv-img, html.dark .td-pv-file { border-color: var(--hw-border); background: var(--hw-surface2); }
+  html.dark .td-pv-file { color: var(--hw-text); }
+  .td-form-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
+  .td-btn-save {
+    background: var(--hw-brand) !important; border-radius: 9px; text-transform: none; font-weight: 600;
+    padding: 0 22px; box-shadow: none !important;
+  }
+  .td-btn-save:hover { background: var(--hw-brand-2) !important; }
+
+  /* Comentários (timeline) */
+  .td-comment { background: #fff; border: 1px solid #ececef; border-radius: 14px; padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,.05); margin-bottom: 14px; }
+  .td-comment-head { display: flex; align-items: center; gap: 11px; }
+  .td-avatar {
+    width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--hw-brand), var(--hw-brand-2));
+    color: #fff; font-weight: 700; font-size: 15px;
+  }
+  .td-comment-meta { flex: 1; min-width: 0; }
+  .td-comment-author { font-size: 13.5px; font-weight: 600; color: #1c1d1f; line-height: 1.2; }
+  .td-comment-date { font-size: 12px; color: #8a8f98; margin-top: 1px; }
+  .td-chip { padding: 4px 11px; border-radius: 14px; background: rgba(0,121,107,.1); color: var(--hw-brand-2); font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+  .td-comment-del {
+    display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px;
+    color: #b0b3b8; transition: all .15s; flex-shrink: 0;
+  }
+  .td-comment-del:hover { background: rgba(229,57,53,.12); color: #e53935; }
+  .td-comment-del i { font-size: 18px; }
+  .td-next { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; padding: 5px 11px; border-radius: 8px; background: rgba(245,124,0,.1); color: #ef6c00; font-size: 12.5px; font-weight: 600; }
+  .td-next i { font-size: 16px; }
+  .td-comment-text { margin-top: 12px; font-size: 14px; color: #2a2c30; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+
+  /* Anexos exibidos */
+  .td-attachments { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  .td-thumb {
+    position: relative; width: 116px; height: 116px; border-radius: 10px; overflow: hidden;
+    border: 1px solid #ececef; background: #f3f4f6; display: block;
+  }
+  .td-thumb img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; display: block; }
+  .td-thumb-dl {
+    position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,.55); color: #fff; opacity: 0; transition: opacity .15s;
+  }
+  .td-thumb:hover .td-thumb-dl { opacity: 1; }
+  .td-thumb-dl i { font-size: 16px; }
+  .td-file {
+    display: inline-flex; align-items: center; gap: 9px; max-width: 260px; padding: 9px 13px;
+    border: 1px solid #e2e4e8; border-radius: 10px; background: #fafbfc; color: #2a2c30;
+    font-size: 13px; font-weight: 500; text-decoration: none; transition: all .15s;
+  }
+  .td-file:hover { border-color: var(--hw-brand); background: rgba(0,121,107,.05); }
+  .td-file > i { font-size: 20px; color: var(--hw-brand); flex-shrink: 0; }
+  .td-file span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .td-file .td-file-dl { font-size: 17px; color: #8a8f98; flex-shrink: 0; }
+
+  .td-empty { text-align: center; color: #9ca3af; font-size: 14px; padding: 30px 0; }
+
+  /* Sidebar de detalhes */
+  .td-side-status { text-align: center; padding: 11px; border-radius: 10px; font-weight: 700; font-size: 14px; margin-bottom: 16px; }
+  .td-rows { display: flex; flex-direction: column; }
+  .td-row { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #f2f3f5; font-size: 13.5px; }
+  .td-row:last-child { border-bottom: none; }
+  .td-row > span { color: #8a8f98; flex-shrink: 0; }
+  .td-row > b { color: #1c1d1f; font-weight: 600; text-align: right; word-break: break-word; }
+  .td-sol { font-size: 13.5px; }
+  .td-sol p { margin: 4px 0; }
+  .td-sol b { color: #1c1d1f; }
+
+  /* ── Dark mode ── */
+  html.dark .td-head-info h1 { color: var(--hw-text); }
+  html.dark .td-back { background: rgba(255,255,255,.06); color: var(--hw-text2); }
+  html.dark .td-back:hover { background: rgba(255,255,255,.12); color: var(--hw-text); }
+  html.dark .td-card, html.dark .td-comment { background: var(--hw-surface) !important; border-color: var(--hw-border) !important; box-shadow: none !important; }
+  html.dark .td-card-title, html.dark .td-comment-author, html.dark .td-row > b, html.dark .td-sol b { color: var(--hw-text) !important; }
+  html.dark .td-card .form-label, html.dark .td-card label, html.dark .td-attach-label { color: var(--hw-text2) !important; }
+  html.dark .td-attach input[type=file] { background: var(--hw-input-bg); border-color: var(--hw-border); color: var(--hw-text2); }
+  html.dark .td-comment-text { color: var(--hw-text); }
+  html.dark .td-thumb, html.dark .td-file { border-color: var(--hw-border); background: var(--hw-surface2); }
+  html.dark .td-file { color: var(--hw-text); }
+  html.dark .td-row { border-bottom-color: var(--hw-border); }
+  /* inputs do form de comentário no dark (textarea, datetime, select) */
+  html.dark .td-card .form-control,
+  html.dark .td-card textarea.form-control,
+  html.dark .td-card .select-wrapper input.select-dropdown {
+    background-color: var(--hw-input-bg) !important; color: var(--hw-text) !important; border-color: var(--hw-border) !important;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-  <div class="row">
-    <div class="col l8 m8">
-      <form method="post" action="{% url 'ticket_detail' object.id %}" enctype="multipart/form-data">
-        {% csrf_token %}
-        {{ form|crispy }}
-        <div class="card-content">
-          <b>Anexar arquivos</b><br>
-          <i class="small material-icons">folder</i>
-          <input type="file" name="arquivos" id="id_arquivos" multiple>
-        </div><br>
-        <div class="card-content">
-          <b>Anexar imagens</b><br>
-          <i class="small material-icons">image</i>
-          <input type="file" name="imagens" id="id_imagens" multiple accept="image/*">
+{% with st=object.get_status_display %}
+<div class="td-wrap">
 
-          <button class="btn blue right" type="submit">Salvar</button>
-        </div>
-      </form>
-      
-      {% for comment in comments %}
-      <div class="card">
-        <div class="card-content">
-          <div class="row">
-            <div class="col l12">
-              <b>Em:</b> {{ comment.criado_em|date:"d/m/y à\s H:i" }}</br>
-              <b>Por:</b> {{ comment.autor.get_full_name|default:" " }}</br>
-              {% if comment.proximo_contato %}
-                <b>Próximo Contato</b> {{ comment.proximo_contato|date:"d/m/y à\s H:i"|default:" " }}</br>
-              {% endif %}
-              {% if comment.tipo %}
-                <b>Ação:</b> {{ comment.tipo|default:" " }}
-              {% endif %}
-            </div>
-          </div>
-          <div class="row">
-            <div class="col l12" style="max-width: 100%;">
-              {{ comment.texto|linebreaksbr }}
-            </div>
-          </div>
-          {% if comment.imagens.all %}
-            <div class="row">
-              <div class="col l12">
-                <p><b>Imagens:</b></p>
-                <div class="row">
-                  {% for imagem in comment.imagens.all %}
-                    <div class="col l4 m6 s12">
-                      <div class="card">
-                        <div class="card-image">
-                          <img src="{{ imagem.imagem.url }}" class="responsive-img materialboxed">
-                          <div class="card">
-                            <a href="{{ imagem.imagem.url }}" download class="btn blue left">📥 Baixar</a>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  {% endfor %}
+  <!-- Cabeçalho -->
+  <div class="td-head">
+    <a href="javascript:history.back()" class="td-back" title="Voltar"><i class="material-icons" translate="no">arrow_back</i></a>
+    <div class="td-head-icon"><i class="material-icons" translate="no">confirmation_number</i></div>
+    <div class="td-head-info">
+      <h1>Ticket #{{ object.id }}</h1>
+      <p>{{ object.titulo|default:"Sem título" }}</p>
+    </div>
+  </div>
+
+  <div class="td-grid">
+    <!-- Coluna principal -->
+    <div class="td-main">
+
+      <!-- Adicionar comentário -->
+      <div class="td-card">
+        <div class="td-card-title"><i class="material-icons" translate="no">add_comment</i> Adicionar comentário</div>
+        <form method="post" action="{% url 'ticket_detail' object.id %}" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="td-fields">{{ form|crispy }}</div>
+          <div class="td-attach">
+            <div class="td-attach-col">
+              <div class="td-upload" data-input="id_arquivos">
+                <div class="td-upload-prompt">
+                  <i class="material-icons" translate="no">attach_file</i>
+                  <span class="td-upload-txt">
+                    <span class="td-upload-title">Anexar arquivos</span>
+                    <span class="td-upload-sub">Clique ou arraste aqui</span>
+                  </span>
                 </div>
+                <div class="td-preview" id="td-pv-arquivos"></div>
               </div>
+              <input type="file" name="arquivos" id="id_arquivos" multiple hidden>
             </div>
-          {% endif %}
-          {% if comment.arquivos.all %}
-            <div class="card-image">
-              <div class="col l12 m4 s12">
-                <p><b>Arquivos:</b></p>
-                <div class="row">
-                  {% for arquivo in comment.arquivos.all %}
-                    <div class="card-content">
-                      {{ arquivo.arquivo.url }}
-                      <div class="card">
-                        <a href="{{ arquivo.arquivo.url }}" download class="btn blue left">📥 Baixar</a>
-                      </div>
-                    </div>
-                  {% endfor %}
+
+            <div class="td-attach-col">
+              <div class="td-upload" data-input="id_imagens">
+                <div class="td-upload-prompt">
+                  <i class="material-icons" translate="no">add_photo_alternate</i>
+                  <span class="td-upload-txt">
+                    <span class="td-upload-title">Anexar imagens</span>
+                    <span class="td-upload-sub">Clique ou arraste aqui</span>
+                  </span>
                 </div>
+                <div class="td-preview" id="td-pv-imagens"></div>
               </div>
-            </div>
-          {% endif %}
-          <div class="row">
-            <div class="col l12">
-              <a href="{% url 'excluir_comentario' comment.id %}" class="btn red right"
-              onclick="return confirm('Tem certeza que deseja excluir este comentário?');">🗑 Excluir</a>
+              <input type="file" name="imagens" id="id_imagens" multiple accept="image/*" hidden>
             </div>
           </div>
-        </div>
+          <div class="td-form-actions">
+            <button class="btn td-btn-save waves-effect waves-light" type="submit">
+              <i class="material-icons left">send</i>Salvar comentário
+            </button>
+          </div>
+        </form>
       </div>
+
+      <!-- Timeline de comentários -->
+      {% for comment in comments %}
+        <div class="td-comment">
+          <div class="td-comment-head">
+            <div class="td-avatar">{{ comment.autor.get_full_name|default:comment.autor.username|first|upper }}</div>
+            <div class="td-comment-meta">
+              <div class="td-comment-author">{{ comment.autor.get_full_name|default:comment.autor.username }}</div>
+              <div class="td-comment-date">{{ comment.criado_em|date:"d/m/Y \à\s H:i" }}</div>
+            </div>
+            {% if comment.tipo %}<span class="td-chip">{{ comment.tipo }}</span>{% endif %}
+            <a href="{% url 'excluir_comentario' comment.id %}" class="td-comment-del" title="Excluir"
+               onclick="return confirm('Tem certeza que deseja excluir este comentário?');"><i class="material-icons" translate="no">delete_outline</i></a>
+          </div>
+
+          {% if comment.proximo_contato %}
+            <div class="td-next"><i class="material-icons" translate="no">event</i> Próximo contato: {{ comment.proximo_contato|date:"d/m/Y \à\s H:i" }}</div>
+          {% endif %}
+
+          {% if comment.texto %}<div class="td-comment-text">{{ comment.texto }}</div>{% endif %}
+
+          {% if comment.imagens.all or comment.arquivos.all %}
+            <div class="td-attachments">
+              {% for imagem in comment.imagens.all %}
+                <div class="td-thumb">
+                  <img class="materialboxed" src="{{ imagem.imagem.url }}" alt="">
+                  <a href="{{ imagem.imagem.url }}" download class="td-thumb-dl" title="Baixar"><i class="material-icons" translate="no">download</i></a>
+                </div>
+              {% endfor %}
+              {% for arquivo in comment.arquivos.all %}
+                {% if arquivo.arquivo|is_image %}
+                  <div class="td-thumb">
+                    <img class="materialboxed" src="{{ arquivo.arquivo.url }}" alt="">
+                    <a href="{{ arquivo.arquivo.url }}" download class="td-thumb-dl" title="Baixar"><i class="material-icons" translate="no">download</i></a>
+                  </div>
+                {% else %}
+                  <a href="{{ arquivo.arquivo.url }}" download class="td-file" title="Baixar {{ arquivo.arquivo|basename }}">
+                    <i class="material-icons" translate="no">description</i>
+                    <span>{{ arquivo.arquivo|basename }}</span>
+                    <i class="material-icons td-file-dl" translate="no">download</i>
+                  </a>
+                {% endif %}
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      {% empty %}
+        <div class="td-comment td-empty">Nenhum comentário ainda. Adicione o primeiro acima.</div>
       {% endfor %}
     </div>
-    <div class="col l4 m4 z-depth-1">
-      <h5 >Detalhes:</h5>
-      
-      <h5 class="center-align" style="font-weight: bold; 
-        {% if object.get_status_display == 'Em atendimento' %} color: orange; 
-        {% elif object.get_status_display == 'Aberto' %} color: red; 
-        {% elif object.get_status_display == 'Encerrado' %} color: green; 
-        {% elif object.get_status_display == 'Cancelado' %} color: gray; 
-        {% endif %}">
-        {{ object.get_status_display }}
-      </h5>
 
-      <p><b>Número: </b>{{ object.id }}</p>
-      <p><b>Título: </b>{{ object.titulo|default_if_none:" "  }}</p>
-      <p><b>Atendente: </b>{{ object.atendente|default_if_none:" "  }}</p>
-      <p><b>Cliente: </b>{{ object.cliente }}</p>
-      <p><b>Uid: </b>{{ client.uid|default_if_none:" "  }}</p>
-      <p><b>Responsável: </b>{{ object.responsavel|default_if_none:" " }}</p>
-      <p><b>Criado em: </b>{{ object.criado_em|date:"d/m/y à\s H:i" }}</p>
-      {% if object.iniciado_em %}
-        <p><b>Iniciado em: </b>{{ object.iniciado_em|date:"d/m/y à\s H:i"|default:" " }}</p>
-      {% endif %}
-      {% if object.encerrado_em %}
-        <p><b>Encerrado em: </b>{{ object.encerrado_em|date:"d/m/y à\s H:i"|default:" " }}</p>
-      {% endif %}
-      <p><b>Idade: </b>{{ object.criado_em|timesince:object.encerrado_em }}</p>
-      <p><b>Situação: </b>{{ object.situacao|default_if_none:" "  }}</p>
-      <p><b>Tipo: </b>{{ object.tipo }}</p>
-      <p><b>Prioridade: </b>{{ object.prioridade }}</p>
-      {% if object.cancelado %}
-        <p><b>Cancelado por: </b>{{ object.cancelado|default_if_none:" " }}</p>
-      {% endif %}
-      {% if object.cancelado_em %}
-        <p><b>Cancelado em: </b>{{ object.cancelado_em|date:"d/m/y à\s H:i"|default:" " }}</p>
-      {% endif %}
+    <!-- Sidebar de detalhes -->
+    <div class="td-side">
+      <div class="td-card">
+        <div class="td-side-status {% if st == 'Em atendimento' %}is-prog{% elif st == 'Aberto' %}is-open{% elif st == 'Encerrado' %}is-done{% elif st == 'Cancelado' %}is-cancel{% endif %} td-status">{{ st }}</div>
+        <div class="td-rows">
+          <div class="td-row"><span>Número</span><b>#{{ object.id }}</b></div>
+          <div class="td-row"><span>Cliente</span><b>{{ object.cliente }}</b></div>
+          <div class="td-row"><span>Atendente</span><b>{{ object.atendente|default_if_none:"—" }}</b></div>
+          <div class="td-row"><span>Responsável</span><b>{{ object.responsavel|default_if_none:"—" }}</b></div>
+          <div class="td-row"><span>Tipo</span><b>{{ object.tipo }}</b></div>
+          <div class="td-row"><span>Prioridade</span><b>{{ object.prioridade }}</b></div>
+          <div class="td-row"><span>Situação</span><b>{{ object.situacao|default_if_none:"—" }}</b></div>
+          <div class="td-row"><span>Criado em</span><b>{{ object.criado_em|date:"d/m/Y H:i" }}</b></div>
+          {% if object.iniciado_em %}<div class="td-row"><span>Iniciado em</span><b>{{ object.iniciado_em|date:"d/m/Y H:i" }}</b></div>{% endif %}
+          {% if object.encerrado_em %}<div class="td-row"><span>Encerrado em</span><b>{{ object.encerrado_em|date:"d/m/Y H:i" }}</b></div>{% endif %}
+          <div class="td-row"><span>Idade</span><b>{{ object.criado_em|timesince:object.encerrado_em }}</b></div>
+          {% if object.cancelado %}<div class="td-row"><span>Cancelado por</span><b>{{ object.cancelado }}</b></div>{% endif %}
+          {% if object.cancelado_em %}<div class="td-row"><span>Cancelado em</span><b>{{ object.cancelado_em|date:"d/m/Y H:i" }}</b></div>{% endif %}
+        </div>
+      </div>
+
       {% if solucoes %}
-        <h5>Solução:</h5>
-        {% for solucao in solucoes %}
-          <p><b>Autor: </b>{{ solucao.autor.get_full_name }}</p>
-          <p><b>Data: </b>{{ solucao.criado_em|date:"d/m/y à\s H:i" }}</p>
-          <p><b>Descrição: </b>{{ solucao.texto }}</p>
-          <div class="divider"></div>
-        {% endfor %}
+        <div class="td-card">
+          <div class="td-card-title"><i class="material-icons" translate="no">check_circle</i> Solução</div>
+          <div class="td-sol">
+            {% for solucao in solucoes %}
+              <p><b>Autor:</b> {{ solucao.autor.get_full_name }}</p>
+              <p><b>Data:</b> {{ solucao.criado_em|date:"d/m/Y \à\s H:i" }}</p>
+              <p>{{ solucao.texto }}</p>
+              {% if not forloop.last %}<hr style="border:none;border-top:1px solid #eee;margin:10px 0;">{% endif %}
+            {% endfor %}
+          </div>
+        </div>
       {% endif %}
     </div>
-    <div class="fixed-action-btn">
-      <a class="btn-floating btn-large red {% if object.encerrado_em or object.cancelado %} disabled {% endif %}" href="{% url 'ticket_update' object.id %}"><i class="material-icons large">edit</i></a>
-      <ul>
-        {% if not object.cancelado and not object.encerrado_em%}
-          <li><a class="btn-floating teal" href="{% url 'ticket_cancel' object.id %}"><i class="material-icons"
-            onclick="return confirm('Tem certeza que deseja cancelar este ticket?');">cancel</i></a></li>
-        {% endif %}
-        {% if not object.cancelado and not object.iniciado_em %}
-          <li><a class="btn-floating teal" href="{% url 'ticket_accept' object.id %}"><i class="material-icons">playlist_add</i></a></li>
-        {% endif %}
-        {% if object.responsavel and not object.encerrado_em and not object.cancelado and object.iniciado_em  %}
-          <li><a class="btn-floating teal" href="{% url 'ticket_close' object.id %}"><i class="material-icons">check</i></a></li>
-        {% endif %}
-      </ul>
-    </div>
+  </div>
+</div>
+
+<!-- Ações flutuantes -->
+<div class="fixed-action-btn">
+  <a class="btn-floating btn-large red {% if object.encerrado_em or object.cancelado %}disabled{% endif %}" href="{% url 'ticket_update' object.id %}"><i class="material-icons large">edit</i></a>
+  <ul>
+    {% if not object.cancelado and not object.encerrado_em %}
+      <li><a class="btn-floating teal" href="{% url 'ticket_cancel' object.id %}" title="Cancelar"
+             onclick="return confirm('Tem certeza que deseja cancelar este ticket?');"><i class="material-icons">cancel</i></a></li>
+    {% endif %}
+    {% if not object.cancelado and not object.iniciado_em %}
+      <li><a class="btn-floating teal" href="{% url 'ticket_accept' object.id %}" title="Iniciar atendimento"><i class="material-icons">playlist_add</i></a></li>
+    {% endif %}
+    {% if object.responsavel and not object.encerrado_em and not object.cancelado and object.iniciado_em %}
+      <li><a class="btn-floating teal" href="{% url 'ticket_close' object.id %}" title="Encerrar"><i class="material-icons">check</i></a></li>
+    {% endif %}
+  </ul>
+</div>
+{% endwith %}
 {% endblock content %}
+
+{% block extra_js %}
+<script>
+(function () {
+  function setupUpload(inputId, previewId, isImage) {
+    var input   = document.getElementById(inputId);
+    var preview = document.getElementById(previewId);
+    var box     = document.querySelector('.td-upload[data-input="' + inputId + '"]');
+    if (!input || !preview || !box) return;
+
+    function render() {
+      preview.innerHTML = '';
+      Array.prototype.forEach.call(input.files, function (file, i) {
+        var wrap = document.createElement('div');
+        var x = '<button type="button" class="td-pv-x" data-i="' + i + '" title="Remover">&times;</button>';
+        if (isImage && /^image\//.test(file.type)) {
+          wrap.className = 'td-pv-img';
+          var url = URL.createObjectURL(file);
+          wrap.innerHTML = '<img src="' + url + '" alt="">' + x;
+        } else {
+          wrap.className = 'td-pv-file';
+          var icon = /^image\//.test(file.type) ? 'image' : 'description';
+          wrap.innerHTML = '<i class="material-icons" translate="no">' + icon + '</i>' +
+                           '<span>' + file.name + '</span>' + x;
+        }
+        preview.appendChild(wrap);
+      });
+    }
+
+    function setFiles(buildFn) {
+      var dt = new DataTransfer();
+      buildFn(dt);
+      input.files = dt.files;
+      render();
+    }
+
+    function removeAt(idx) {
+      setFiles(function (dt) {
+        Array.prototype.forEach.call(input.files, function (f, i) { if (i !== idx) dt.items.add(f); });
+      });
+    }
+
+    function addFiles(list) {
+      setFiles(function (dt) {
+        Array.prototype.forEach.call(input.files, function (f) { dt.items.add(f); });
+        Array.prototype.forEach.call(list, function (f) { dt.items.add(f); });
+      });
+    }
+
+    input.addEventListener('change', render);
+
+    // clicar na caixa abre o seletor, exceto ao clicar numa miniatura/arquivo/✕
+    box.addEventListener('click', function (e) {
+      if (e.target.closest('.td-preview')) return;
+      input.click();
+    });
+    // remover item
+    preview.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var btn = e.target.closest('.td-pv-x');
+      if (btn) removeAt(parseInt(btn.dataset.i, 10));
+    });
+
+    ['dragover', 'dragenter'].forEach(function (ev) {
+      box.addEventListener(ev, function (e) { e.preventDefault(); box.classList.add('drag'); });
+    });
+    ['dragleave', 'dragend', 'drop'].forEach(function (ev) {
+      box.addEventListener(ev, function () { box.classList.remove('drag'); });
+    });
+    box.addEventListener('drop', function (e) {
+      e.preventDefault();
+      if (e.dataTransfer && e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    setupUpload('id_arquivos', 'td-pv-arquivos', false);
+    setupUpload('id_imagens',  'td-pv-imagens',  true);
+  });
+})();
+</script>
+{% endblock %}

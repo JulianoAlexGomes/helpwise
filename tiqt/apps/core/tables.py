@@ -3,22 +3,23 @@ from django.utils.html import format_html
 from .models import Ticket, User
 from django.urls import reverse
 
-STATUS_COLORS = {
-    Ticket.ABERTO:         '#009688',
-    Ticket.EM_ATENDIMENTO: '#ff9800',
-    Ticket.ENCERRADO:      '#4caf50',
-    Ticket.CANCELADO:      '#e53935',
+# (cor do texto, cor de fundo suave) por status
+STATUS_STYLES = {
+    Ticket.ABERTO:         ('#00897b', 'rgba(0,150,136,.14)'),
+    Ticket.EM_ATENDIMENTO: ('#ef6c00', 'rgba(245,124,0,.16)'),
+    Ticket.ENCERRADO:      ('#2e7d32', 'rgba(76,175,80,.18)'),
+    Ticket.CANCELADO:      ('#e53935', 'rgba(229,57,53,.13)'),
 }
 
 class StatusColumn(tables.Column):
     def render(self, value, record):  # noqa: ARG002
-        color = STATUS_COLORS.get(record.status, '#9e9e9e')
+        color, bg = STATUS_STYLES.get(record.status, ('#6b7280', 'rgba(120,124,130,.16)'))
         label = record.get_status_display()
         return format_html(
-            '<span style="background:{};color:#fff;padding:3px 10px;'
-            'border-radius:12px;font-size:11px;font-weight:600;'
+            '<span style="background:{};color:{};padding:4px 11px;'
+            'border-radius:20px;font-size:11.5px;font-weight:700;'
             'white-space:nowrap">{}</span>',
-            color, label
+            bg, color, label
         )
 
 class TicketTable(Table):
@@ -31,5 +32,5 @@ class TicketTable(Table):
         model = Ticket
         template_name = 'django_tables2/table.html'
         fields = ('id', 'atendente', 'titulo', 'tipo', 'prioridade', 'cliente', 'responsavel', 'status')
-        attrs = {'class': 'striped responsive-table'}
+        attrs = {'class': 'hw-table'}
         paginate_by = None

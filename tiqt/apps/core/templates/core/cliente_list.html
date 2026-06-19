@@ -1,137 +1,243 @@
 {% extends 'base.html' %}
-{% load crispy_forms_tags %}
 {% load static %}
+{% load ticket_extras %}
+
+{% block title %}Clientes · HelpWise{% endblock %}
+
+{% block extra_css %}
+<style>
+  body { background: #eef1f4; }
+  .cl-wrap { max-width: 1280px; margin: 0 auto; }
+
+  /* Cabeçalho */
+  .cl-head { display: flex; align-items: center; gap: 14px; margin: 2px 0 18px; }
+  .cl-head-icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--hw-brand), var(--hw-brand-2)); color: #fff;
+  }
+  .cl-head-icon i { font-size: 23px; }
+  .cl-head-info { flex: 1; min-width: 0; }
+  .cl-head-info h1 { font-size: 20px; font-weight: 700; color: #1c1d1f; margin: 0; letter-spacing: -.3px; line-height: 1.2; }
+  .cl-head-info p { font-size: 13px; color: #8a8f98; margin: 2px 0 0; }
+  .cl-new {
+    display: inline-flex; align-items: center; gap: 6px; background: var(--hw-brand) !important;
+    border-radius: 9px; text-transform: none; font-weight: 600; padding: 0 18px; box-shadow: none !important;
+  }
+  .cl-new:hover { background: var(--hw-brand-2) !important; }
+
+  /* Filtros */
+  .cl-filters { background: #fff; border: 1px solid #ececef; border-radius: 14px; padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,.05); margin-bottom: 18px; }
+  .cl-search { margin-bottom: 14px; }
+  .cl-count { font-size: 13px; font-weight: 600; color: #6b7280; margin-bottom: 7px; }
+  .cl-count b { color: var(--hw-brand-2); font-weight: 700; }
+  .cl-search-box { position: relative; }
+  .cl-search-box > i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 19px; pointer-events: none; }
+  .cl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media only screen and (max-width: 720px) { .cl-grid { grid-template-columns: 1fr; } }
+  .cl-field > .cl-lbl { display: block; font-size: 12px; font-weight: 600; color: #44474c; margin-bottom: 5px; }
+
+  .cl-filters input[type=text],
+  .cl-filters .select-wrapper input.select-dropdown {
+    border: 1.5px solid #e2e4e8 !important; border-radius: 9px !important; height: 42px !important;
+    padding: 0 13px !important; box-sizing: border-box !important; box-shadow: none !important;
+    background-color: #fff !important; color: #1c1d1f !important; font-size: 13.5px !important;
+    margin: 0 !important; width: 100% !important; transition: border-color .15s, box-shadow .15s;
+  }
+  .cl-search-box input[type=text] { padding-left: 38px !important; }
+  .cl-filters input[type=text]:focus,
+  .cl-filters .select-wrapper input.select-dropdown:focus { border-color: var(--hw-brand) !important; box-shadow: 0 0 0 3px rgba(0,121,107,.13) !important; }
+  .cl-filters .select-wrapper { margin: 0 !important; }
+  .cl-filters .select-wrapper > select { display: none !important; }
+  .cl-filters .select-wrapper .caret { fill: #8a8f98; }
+
+  .cl-actions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 16px; }
+  .cl-btn-clear { color: #6b7280 !important; font-weight: 600; text-transform: none; border-radius: 8px; }
+  .cl-btn-clear:hover { background: rgba(0,0,0,.05) !important; }
+  .cl-btn { background: var(--hw-brand) !important; border-radius: 9px; text-transform: none; font-weight: 600; padding: 0 22px; box-shadow: none !important; }
+  .cl-btn:hover { background: var(--hw-brand-2) !important; }
+
+  /* Tabela */
+  .hw-table-wrap { background: #fff; border: 1px solid #ececef; border-radius: 14px; overflow-x: auto; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+  table.hw-table { width: 100%; border-collapse: collapse; margin: 0; background: transparent; }
+  table.hw-table thead th {
+    background: #f7f8fa; color: #6b7280; font-size: 11.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .4px; padding: 13px 16px; text-align: left; border-bottom: 1px solid #ececef; white-space: nowrap;
+  }
+  table.hw-table tbody td { padding: 12px 16px; font-size: 13.5px; color: #2a2c30; border-bottom: 1px solid #f2f3f5; vertical-align: middle; }
+  table.hw-table tbody tr:last-child td { border-bottom: none; }
+  table.hw-table tbody tr:hover { background: #f7f9fb; }
+  .cl-fant { font-weight: 600; color: #1c1d1f; }
+
+  .cl-act { display: inline-flex; align-items: center; gap: 4px; }
+  .cl-act a { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; color: #8a8f98; transition: all .15s; }
+  .cl-act a i { font-size: 19px; }
+  .cl-act .cl-edit:hover { background: rgba(0,121,107,.1); color: var(--hw-brand); }
+  .cl-act .cl-ticket:hover { background: rgba(30,136,229,.1); color: #1e88e5; }
+  .cl-act .cl-dl:hover { background: rgba(0,0,0,.06); color: #44474c; }
+
+  .cl-empty { text-align: center; color: #9ca3af; font-size: 14px; padding: 40px 0; }
+
+  /* Paginação */
+  .cl-pagination { display: flex; justify-content: center; gap: 4px; margin: 18px 0 4px; padding: 0; flex-wrap: wrap; }
+  .cl-pagination li { list-style: none; }
+  .cl-pagination li a, .cl-pagination li span {
+    display: flex; align-items: center; justify-content: center; min-width: 34px; height: 34px; padding: 0 9px;
+    border-radius: 8px; color: #44474c; font-size: 13px; background: #fff; border: 1px solid #ececef;
+  }
+  .cl-pagination li a:hover { background: rgba(30,136,229,.08); border-color: #cfd4da; }
+  .cl-pagination li.active span { background: #1e88e5; color: #fff; border-color: #1e88e5; font-weight: 700; }
+  .cl-pagination li.disabled span { color: #c4c8ce; }
+
+  /* ── Dark mode ── */
+  html.dark .cl-head-info h1 { color: var(--hw-text); }
+  html.dark .cl-filters { background: var(--hw-surface) !important; border-color: var(--hw-border) !important; box-shadow: none !important; }
+  html.dark .cl-field > .cl-lbl, html.dark .cl-count { color: var(--hw-text2) !important; }
+  html.dark .cl-filters input[type=text],
+  html.dark .cl-filters .select-wrapper input.select-dropdown { background-color: var(--hw-input-bg) !important; border-color: var(--hw-border) !important; color: var(--hw-text) !important; }
+  html.dark .hw-table-wrap { background: var(--hw-surface) !important; border-color: var(--hw-border) !important; box-shadow: none !important; }
+  html.dark table.hw-table thead th { background: var(--hw-surface2) !important; color: var(--hw-text2) !important; border-bottom-color: var(--hw-border) !important; }
+  html.dark table.hw-table tbody td { color: var(--hw-text) !important; border-bottom-color: var(--hw-border) !important; }
+  html.dark table.hw-table tbody tr:hover { background: var(--hw-hover) !important; }
+  html.dark .cl-fant { color: var(--hw-text) !important; }
+  html.dark .cl-pagination li a, html.dark .cl-pagination li span { background: var(--hw-surface2); border-color: var(--hw-border); color: var(--hw-text2); }
+  html.dark .cl-pagination li.active span { background: #1e88e5; color: #fff; border-color: #1e88e5; }
+</style>
+{% endblock %}
 
 {% block content %}
-<h5>Lista de Clientes</h5>
-{% comment %} <a href="{% url 'cliente_create' %}" class="btn">Novo Cliente</a> {% endcomment %}
-{% comment %} <form method="get" class="row">
-    <div class="input-field col s6">
-        <input
-            type="text"
-            name="q"
-            id="id_q"
-            value="{{ request.GET.q }}"
-            placeholder="Buscar por Fantasia, Razão Social ou CNPJ"
-        >
-        <label for="id_q">Pesquisar Cliente</label>
-    </div>
+<div class="cl-wrap">
 
-    <div class="input-field col s2">
-        <button type="submit" class="btn">
-            Buscar
-        </button>
+  <!-- Cabeçalho -->
+  <div class="cl-head">
+    <div class="cl-head-icon"><i class="material-icons" translate="no">groups</i></div>
+    <div class="cl-head-info">
+      <h1>Clientes</h1>
+      <p>{{ paginator.count }} cliente(s) encontrado(s)</p>
     </div>
-</form> {% endcomment %}
-<form method="get" class="row">
+    <a href="{% url 'cliente_create' %}" class="btn cl-new waves-effect waves-light"><i class="material-icons left">add</i>Novo Cliente</a>
+  </div>
 
-    <!-- Texto -->
-    <div class="input-field col s4">
-        <input type="text" name="q" value="{{ request.GET.q }}">
-        <label class="active">Pesquisar</label>
-    </div>
+  <!-- Filtros -->
+  <form method="get">
+    <div class="cl-filters">
+      <div class="cl-search">
+        <div class="cl-count">Resultados: <b>{{ paginator.count }}</b></div>
+        <div class="cl-search-box">
+          <i class="material-icons" translate="no">search</i>
+          <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Buscar por fantasia, razão social ou CNPJ">
+        </div>
+      </div>
 
-    <!-- Cidade -->
-    <div class="input-field col s3">
-        <select name="cidade">
+      <div class="cl-grid">
+        <div class="cl-field">
+          <span class="cl-lbl">Cidade</span>
+          <select name="cidade">
             <option value="">Todas</option>
             {% for cidade in cidades %}
-                <option value="{{ cidade.id }}"
-                    {% if request.GET.cidade == cidade.id|stringformat:"s" %}selected{% endif %}
-                >
-                    {{ cidade.descricao }}
-                </option>
+              <option value="{{ cidade.id }}" {% if request.GET.cidade == cidade.id|stringformat:"s" %}selected{% endif %}>{{ cidade.descricao }}</option>
             {% endfor %}
-        </select>
-        <label>Cidade</label>
-    </div>
-
-    <!-- UF -->
-    <div class="input-field col s2">
-        <select name="uf">
+          </select>
+        </div>
+        <div class="cl-field">
+          <span class="cl-lbl">UF</span>
+          <select name="uf">
             <option value="">Todos</option>
             {% for uf in ufs %}
-                <option value="{{ uf.id }}"
-                    {% if request.GET.uf == uf.id|stringformat:"s" %}selected{% endif %}
-                >
-                    {{ uf.sigla }}
-                </option>
+              <option value="{{ uf.id }}" {% if request.GET.uf == uf.id|stringformat:"s" %}selected{% endif %}>{{ uf.sigla }}</option>
             {% endfor %}
-        </select>
-        <label>UF</label>
-    </div>
-
-    <!-- Tributação -->
-    <div class="input-field col s2">
-        <select name="tributacao">
+          </select>
+        </div>
+        <div class="cl-field">
+          <span class="cl-lbl">Tributação</span>
+          <select name="tributacao">
             <option value="">Todas</option>
             {% for t in tributacoes %}
-                <option value="{{ t.id }}"
-                    {% if request.GET.tributacao == t.id|stringformat:"s" %}selected{% endif %}
-                >
-                    {{ t.descricao }}
-                </option>
+              <option value="{{ t.id }}" {% if request.GET.tributacao == t.id|stringformat:"s" %}selected{% endif %}>{{ t.descricao }}</option>
             {% endfor %}
-        </select>
-        <label>Tributação</label>
-    </div>
+          </select>
+        </div>
+      </div>
 
-    <div class="input-field col s1">
-        <button class="btn">
-            <i class="material-icons">search</i>
-        </button>
+      <div class="cl-actions">
+        <a href="{% url 'cliente_list' %}" class="btn-flat cl-btn-clear waves-effect">Limpar</a>
+        <button type="submit" class="btn cl-btn waves-effect waves-light"><i class="material-icons left">search</i>Buscar</button>
+      </div>
     </div>
+  </form>
 
-</form>
-<table class="striped">
-    <thead>
+  <!-- Tabela -->
+  <div class="hw-table-wrap">
+    <table class="hw-table">
+      <thead>
         <tr>
-            <th style="font-weight: bold">Uid</th>
-            <th style="font-weight: bold">Nome Fantasia</th>
-            <th style="font-weight: bold">CNPJ</th>
-            <th style="font-weight: bold">Cidade</th>
-            <th style="font-weight: bold">UF</th>
-            <th style="font-weight: bold">Tributação</th>
-            <th style="font-weight: bold">Ações</th>
+          <th>Uid</th>
+          <th>Nome Fantasia</th>
+          <th>CNPJ</th>
+          <th>Cidade</th>
+          <th>UF</th>
+          <th>Tributação</th>
+          <th>Ações</th>
         </tr>
-    </thead>
-    <tbody>
+      </thead>
+      <tbody>
         {% for cliente in clientes %}
         <tr>
-            <td>{{ cliente.uid }}</td>
-            <td>{{ cliente.fantasia }}</td>
-            <td>{{ cliente.cnpj }}</td>
-            <td>{{ cliente.cidade }}</td>
-            <td>{{ cliente.uf }}</td>
-            <td>{{ cliente.tributacao }}</td>
-            <td>
-                <!-- Editar cliente -->
-                <a href="{% url 'cliente_update' cliente.pk %}" title="Editar cliente">
-                    <i class="material-icons">edit</i>
-                </a>
-
-                <!-- Novo ticket -->
-                <a href="{% url 'new_ticket' %}?cliente={{ cliente.id }}"
-                title="Novo ticket"
-                class="blue-text">
-                    <i class="material-icons">add_circle</i>
-                </a>
-
-                {% if cliente.certificados.all %}
-                    {% for certificado in cliente.certificados.all %}
-                         <a href="{{ certificado.arquivo.url }}" title="Baixar certificado" download>
-                            <i class="material-icons">download</i>
-                         </a>
-                    {% endfor %}
-                {% endif %}
-            </td>
+          <td>{{ cliente.uid }}</td>
+          <td class="cl-fant">{{ cliente.fantasia }}</td>
+          <td>{{ cliente.cnpj }}</td>
+          <td>{{ cliente.cidade }}</td>
+          <td>{{ cliente.uf }}</td>
+          <td>{{ cliente.tributacao }}</td>
+          <td>
+            <div class="cl-act">
+              <a href="{% url 'cliente_update' cliente.pk %}" class="cl-edit" title="Editar cliente"><i class="material-icons" translate="no">edit</i></a>
+              <a href="{% url 'new_ticket' %}?cliente={{ cliente.id }}" class="cl-ticket" title="Novo ticket"><i class="material-icons" translate="no">add_circle</i></a>
+              {% for certificado in cliente.certificados.all %}
+                <a href="{{ certificado.arquivo.url }}" class="cl-dl" title="Baixar certificado" download><i class="material-icons" translate="no">download</i></a>
+              {% endfor %}
+            </div>
+          </td>
         </tr>
+        {% empty %}
+        <tr><td colspan="7"><div class="cl-empty">Nenhum cliente encontrado.</div></td></tr>
         {% endfor %}
-    </tbody>
-</table>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Paginação -->
+  {% if is_paginated %}
+  <ul class="cl-pagination">
+    {% if page_obj.has_previous %}
+      <li><a href="?{% url_replace page=page_obj.previous_page_number %}" title="Anterior"><i class="material-icons" translate="no" style="font-size:18px;">chevron_left</i></a></li>
+    {% else %}
+      <li class="disabled"><span><i class="material-icons" translate="no" style="font-size:18px;">chevron_left</i></span></li>
+    {% endif %}
+
+    {% for num in paginator.page_range %}
+      {% if num == page_obj.number %}
+        <li class="active"><span>{{ num }}</span></li>
+      {% elif num >= page_obj.number|add:'-2' and num <= page_obj.number|add:'2' %}
+        <li><a href="?{% url_replace page=num %}">{{ num }}</a></li>
+      {% endif %}
+    {% endfor %}
+
+    {% if page_obj.has_next %}
+      <li><a href="?{% url_replace page=page_obj.next_page_number %}" title="Próxima"><i class="material-icons" translate="no" style="font-size:18px;">chevron_right</i></a></li>
+    {% else %}
+      <li class="disabled"><span><i class="material-icons" translate="no" style="font-size:18px;">chevron_right</i></span></li>
+    {% endif %}
+  </ul>
+  {% endif %}
+
+</div>
+{% endblock content %}
+
+{% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    M.FormSelect.init(document.querySelectorAll('select'));
+  M.FormSelect.init(document.querySelectorAll('.cl-filters select'));
 });
 </script>
-{% endblock content %}
+{% endblock %}

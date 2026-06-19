@@ -2,97 +2,155 @@
 {% load django_tables2 %}
 {% load crispy_forms_tags %}
 
+{% block title %}Tickets · HelpWise{% endblock %}
+
+{% block extra_css %}
+<style>
+  body { background: #eef1f4; }
+  .tkl-wrap { max-width: 1280px; margin: 0 auto; }
+
+  /* ── Filtros ── */
+  .tkl-filters {
+    background: #fff; border: 1px solid #ececef; border-radius: 14px;
+    padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,.05); margin-bottom: 18px;
+  }
+  .tkl-top { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tkl-search { flex: 1; min-width: 240px; }
+  .tkl-count { font-size: 13px; font-weight: 600; color: #6b7280; margin-bottom: 7px; }
+  .tkl-count b { color: var(--hw-brand-2); font-weight: 700; }
+  .tkl-search-box { position: relative; }
+  .tkl-search-box > i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 19px; pointer-events: none; }
+
+  .tkl-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  @media only screen and (max-width: 1000px) { .tkl-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media only screen and (max-width: 720px)  { .tkl-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media only screen and (max-width: 480px)  { .tkl-grid { grid-template-columns: 1fr; } }
+  .tkl-field label, .tkl-field > .tkl-lbl { display: block; font-size: 12px; font-weight: 600; color: #44474c; margin-bottom: 5px; }
+
+  /* Inputs / selects boxed */
+  .tkl-filters input[type=text],
+  .tkl-filters .select-wrapper input.select-dropdown {
+    border: 1.5px solid #e2e4e8 !important; border-radius: 9px !important; height: 42px !important;
+    padding: 0 13px !important; box-sizing: border-box !important; box-shadow: none !important;
+    background-color: #fff !important; color: #1c1d1f !important; font-size: 13.5px !important;
+    margin: 0 !important; width: 100% !important; transition: border-color .15s, box-shadow .15s;
+  }
+  .tkl-search-box input[type=text] { padding-left: 38px !important; }
+  .tkl-filters input[type=text]:focus,
+  .tkl-filters .select-wrapper input.select-dropdown:focus {
+    border-color: var(--hw-brand) !important; box-shadow: 0 0 0 3px rgba(0,121,107,.13) !important;
+  }
+  .tkl-filters .select-wrapper { margin: 0 !important; }
+  .tkl-filters .select-wrapper > select { display: none !important; }
+  .tkl-filters .select-wrapper .caret { fill: #8a8f98; }
+
+  .tkl-actions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 16px; }
+  .tkl-btn-clear { color: #6b7280 !important; font-weight: 600; text-transform: none; border-radius: 8px; }
+  .tkl-btn-clear:hover { background: rgba(0,0,0,.05) !important; }
+  .tkl-btn { background: var(--hw-brand) !important; border-radius: 9px; text-transform: none; font-weight: 600; padding: 0 22px; box-shadow: none !important; }
+  .tkl-btn:hover { background: var(--hw-brand-2) !important; }
+
+  /* ── Tabela ── */
+  .hw-table-wrap {
+    background: #fff; border: 1px solid #ececef; border-radius: 14px; overflow-x: auto;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  }
+  table.hw-table { width: 100%; border-collapse: collapse; margin: 0; background: transparent; }
+  table.hw-table thead th {
+    background: #f7f8fa; color: #6b7280; font-size: 11.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .4px; padding: 13px 16px; text-align: left; border-bottom: 1px solid #ececef; white-space: nowrap;
+  }
+  table.hw-table thead th a { color: #6b7280 !important; }
+  table.hw-table tbody td { padding: 13px 16px; font-size: 13.5px; color: #2a2c30; border-bottom: 1px solid #f2f3f5; vertical-align: middle; }
+  table.hw-table tbody tr:last-child td { border-bottom: none; }
+  table.hw-table tbody tr:hover { background: #f7f9fb; }
+  table.hw-table a { color: var(--hw-brand-2); font-weight: 600; }
+  table.hw-table td:first-child a { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; }
+
+  .tkl-empty { text-align: center; color: #9ca3af; font-size: 14px; padding: 40px 0; }
+
+  /* Paginação */
+  .hw-table-wrap .pagination { display: flex; justify-content: center; gap: 4px; margin: 14px 0; padding: 0; }
+  .hw-table-wrap .pagination li { list-style: none; }
+  .hw-table-wrap .pagination li a, .hw-table-wrap .pagination li span {
+    display: flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; padding: 0 8px;
+    border-radius: 8px; color: #44474c; font-size: 13px;
+  }
+  .hw-table-wrap .pagination li.active a, .hw-table-wrap .pagination li.active span { background: #1e88e5; color: #fff; font-weight: 700; }
+  .hw-table-wrap .pagination li a:hover { background: rgba(30,136,229,.1); }
+
+  /* ── Dark mode ── */
+  .tkl-count, .tkl-count b { }
+  html.dark .tkl-filters { background: var(--hw-surface) !important; border-color: var(--hw-border) !important; box-shadow: none !important; }
+  html.dark .tkl-field label, html.dark .tkl-field > .tkl-lbl, html.dark .tkl-count { color: var(--hw-text2) !important; }
+  html.dark .tkl-filters input[type=text],
+  html.dark .tkl-filters .select-wrapper input.select-dropdown {
+    background-color: var(--hw-input-bg) !important; border-color: var(--hw-border) !important; color: var(--hw-text) !important;
+  }
+  html.dark .hw-table-wrap { background: var(--hw-surface) !important; border-color: var(--hw-border) !important; box-shadow: none !important; }
+  html.dark table.hw-table thead th { background: var(--hw-surface2) !important; color: var(--hw-text2) !important; border-bottom-color: var(--hw-border) !important; }
+  html.dark table.hw-table thead th a { color: var(--hw-text2) !important; }
+  html.dark table.hw-table tbody td { color: var(--hw-text) !important; border-bottom-color: var(--hw-border) !important; }
+  html.dark table.hw-table tbody tr:hover { background: var(--hw-hover) !important; }
+  html.dark table.hw-table a { color: #4db6ac !important; }
+  html.dark .hw-table-wrap .pagination li.active a,
+  html.dark .hw-table-wrap .pagination li.active span { background: #1e88e5 !important; color: #fff !important; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
+<div class="tkl-wrap">
+
+  {% if request.path != '/ticket/my/' %}
   <form method="get">
-
-    <div class="row">
-      {% if request.path != '/ticket/my/' %}
-      <div class="col s12 m5">
-        <h6><strong>Tickets: {{ filtered_count }}</strong></h6>
-        <input type="text" name="q"
-               placeholder="Pesquisar por título ou número do ticket"
-               value="{{ query }}">
+    <div class="tkl-filters">
+      <div class="tkl-top">
+        <div class="tkl-search">
+          <div class="tkl-count">Tickets: <b>{{ filtered_count }}</b></div>
+          <div class="tkl-search-box">
+            <i class="material-icons" translate="no">search</i>
+            <input type="text" name="q" placeholder="Pesquisar por título ou número do ticket" value="{{ query }}">
+          </div>
+        </div>
       </div>
 
-      <div class="col s12 m3">
-        <h6>Responsável</h6>
-        {{ filter_form.responsavel }}
+      <div class="tkl-grid">
+        <div class="tkl-field"><span class="tkl-lbl">Responsável</span>{{ filter_form.responsavel }}</div>
+        <div class="tkl-field"><span class="tkl-lbl">Atendente</span>{{ filter_form.atendente }}</div>
+        <div class="tkl-field"><span class="tkl-lbl">Cliente</span>{{ filter_form.cliente }}</div>
+        <div class="tkl-field"><span class="tkl-lbl">Tipo</span>{{ filter_form.tipo }}</div>
+        <div class="tkl-field"><span class="tkl-lbl">Departamento</span>{{ filter_form.departamento }}</div>
+        <div class="tkl-field"><span class="tkl-lbl">Prioridade</span>{{ filter_form.prioridade }}</div>
+        <div class="tkl-field"><span class="tkl-lbl">Situação</span>{{ filter_form.situacao }}</div>
+        <div class="tkl-field"><span class="tkl-lbl">Status</span>{{ filter_form.status }}</div>
       </div>
 
-      <div class="col s12 m3">
-        <h6>Atendente</h6>
-        {{ filter_form.atendente }}
-      </div>
-      {% endif %}
-    </div>
-
-    {% if request.path != '/ticket/my/' %}
-    <div class="row">
-      <div class="col s12 m2">
-        <h6>Cliente</h6>
-        {{ filter_form.cliente }}
-      </div>
-      <div class="col s12 m2">
-        <h6>Tipo</h6>
-        {{ filter_form.tipo }}
-      </div>
-      <div class="col s12 m2">
-        <h6>Departamento</h6>
-        {{ filter_form.departamento }}
-      </div>
-      <div class="col s12 m2">
-        <h6>Prioridade</h6>
-        {{ filter_form.prioridade }}
-      </div>
-      <div class="col s12 m2">
-        <h6>Situação</h6>
-        {{ filter_form.situacao }}
-      </div>
-      <div class="col s12 m2">
-        <h6>Status</h6>
-        {{ filter_form.status }}
+      <div class="tkl-actions">
+        <a href="{{ request.path }}" class="btn-flat tkl-btn-clear waves-effect">Limpar</a>
+        <button type="submit" class="btn tkl-btn waves-effect waves-light"><i class="material-icons left">filter_list</i>Aplicar filtros</button>
       </div>
     </div>
-
-    <div class="row">
-      <div class="col s12 left-align">
-        <button type="submit" class="btn blue">Aplicar Filtros</button>
-      </div>
-    </div>
-    {% endif %}
-
   </form>
+  {% endif %}
 
-  <div class="row">
-    <div class="col s12 center">
-      {% render_table table %}
-    </div>
+  <div class="hw-table-wrap">
+    {% render_table table %}
   </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-  {{ filter_form.media }}
-  {% endblock %}
-  <script>
+{{ filter_form.media }}
+<script>
 document.addEventListener('DOMContentLoaded', function() {
   const input = document.getElementById('id_cliente');
-
   if (!input) return;
-
-  M.Autocomplete.init(input, {
-    data: {},
-    minLength: 1,
-    onAutocomplete: function() {}
-  });
-
+  M.Autocomplete.init(input, { data: {}, minLength: 1, onAutocomplete: function() {} });
   input.addEventListener('keyup', function () {
     fetch("{% url 'clientes_autocomplete' %}?term=" + input.value)
       .then(response => response.json())
-      .then(data => {
-        M.Autocomplete.getInstance(input).updateData(data);
-      });
+      .then(data => { M.Autocomplete.getInstance(input).updateData(data); });
   });
 });
 </script>
+{% endblock %}

@@ -302,14 +302,14 @@
             <div class="td-attachments">
               {% for imagem in comment.imagens.all %}
                 <div class="td-thumb">
-                  <img class="materialboxed" src="{{ imagem.imagem.url }}" alt="">
+                  <img src="{{ imagem.imagem.url }}" alt="" onclick="hwOpenAvatar(this.src)">
                   <a href="{{ imagem.imagem.url }}" download class="td-thumb-dl" title="Baixar"><i class="material-icons" translate="no">download</i></a>
                 </div>
               {% endfor %}
               {% for arquivo in comment.arquivos.all %}
                 {% if arquivo.arquivo|is_image %}
                   <div class="td-thumb">
-                    <img class="materialboxed" src="{{ arquivo.arquivo.url }}" alt="">
+                    <img src="{{ arquivo.arquivo.url }}" alt="" onclick="hwOpenAvatar(this.src)">
                     <a href="{{ arquivo.arquivo.url }}" download class="td-thumb-dl" title="Baixar"><i class="material-icons" translate="no">download</i></a>
                   </div>
                 {% else %}

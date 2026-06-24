@@ -48,6 +48,15 @@
   .ag-nav a .material-icons, .ag-btn .material-icons { font-size: 19px; }
   .ag-nav a:hover, .ag-btn:hover { background: var(--hw-hover, #f1f3f4); }
   .ag-nav a.ico { width: 38px; padding: 0; }
+  /* Seletor de mês (pular direto para um mês, além das setas) */
+  .ag-month {
+    width: auto !important; height: 38px !important; margin: 0 0 0 4px !important;
+    padding: 0 10px !important; border: 1px solid var(--ag-border) !important; border-radius: 8px !important;
+    background: var(--ag-surface) !important; color: var(--ag-text) !important; font-size: 14px !important;
+    font-weight: 500; box-shadow: none !important; cursor: pointer; line-height: 1;
+  }
+  .ag-month:focus { border-color: var(--hw-brand) !important; box-shadow: 0 0 0 3px rgba(0,121,107,.13) !important; }
+  html.dark .ag-month { color-scheme: dark; }
   .ag-spacer { flex: 1; }
   /* Filtro de responsáveis — dropdown próprio (não usa <select> nativo) */
   .ag-filter { position: relative; }
@@ -95,6 +104,9 @@
   }
   .ag-seg a:hover { color: var(--ag-text); }
   .ag-seg a.active { background: var(--hw-brand); color: #fff; }
+
+  /* Container recarregado pelo auto-refresh — mantém a altura da grade */
+  .ag-refresh { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 
   /* Grade — preenche a altura disponível */
   .ag-grid {
@@ -303,16 +315,17 @@
       <h4>{{ titulo }}</h4>
     </div>
     <div class="ag-nav">
-      <a class="ico" href="?view={{ view }}&ref={{ nav_ant }}{% if resp_id %}&resp={{ resp_id }}{% endif %}" title="Anterior"><i class="material-icons" translate="no">chevron_left</i></a>
-      <a href="?view={{ view }}{% if resp_id %}&resp={{ resp_id }}{% endif %}">Hoje</a>
-      <a class="ico" href="?view={{ view }}&ref={{ nav_prox }}{% if resp_id %}&resp={{ resp_id }}{% endif %}" title="Próximo"><i class="material-icons" translate="no">chevron_right</i></a>
+      <a class="ico" href="?view={{ view }}&ref={{ nav_ant }}{{ filtros_qs }}" title="Anterior"><i class="material-icons" translate="no">chevron_left</i></a>
+      <a href="?view={{ view }}{{ filtros_qs }}">Hoje</a>
+      <a class="ico" href="?view={{ view }}&ref={{ nav_prox }}{{ filtros_qs }}" title="Próximo"><i class="material-icons" translate="no">chevron_right</i></a>
+      <input type="month" id="ag-month" class="ag-input browser-default ag-month" value="{{ ref|slice:':7' }}" title="Ir para o mês">
     </div>
     <div class="ag-spacer"></div>
 
     <div class="ag-seg">
-      <a href="?view=mes&ref={{ ref }}{% if resp_id %}&resp={{ resp_id }}{% endif %}" class="{% if view == 'mes' %}active{% endif %}">Mês</a>
-      <a href="?view=semana&ref={{ ref }}{% if resp_id %}&resp={{ resp_id }}{% endif %}" class="{% if view == 'semana' %}active{% endif %}">Semana</a>
-      <a href="?view=dia&ref={{ ref }}{% if resp_id %}&resp={{ resp_id }}{% endif %}" class="{% if view == 'dia' %}active{% endif %}">Dia</a>
+      <a href="?view=mes&ref={{ ref }}{{ filtros_qs }}" class="{% if view == 'mes' %}active{% endif %}">Mês</a>
+      <a href="?view=semana&ref={{ ref }}{{ filtros_qs }}" class="{% if view == 'semana' %}active{% endif %}">Semana</a>
+      <a href="?view=dia&ref={{ ref }}{{ filtros_qs }}" class="{% if view == 'dia' %}active{% endif %}">Dia</a>
     </div>
 
     <div class="ag-filter" id="ag-filter">
@@ -322,9 +335,23 @@
         <i class="material-icons ag-filter-caret" translate="no">expand_more</i>
       </button>
       <div class="ag-filter-menu" id="ag-filter-menu">
-        <a href="?view={{ view }}&ref={{ ref }}" class="{% if not resp_id %}sel{% endif %}">Todos responsáveis</a>
+        <a href="?view={{ view }}&ref={{ ref }}{{ qs_atend }}" class="{% if not resp_id %}sel{% endif %}">Todos responsáveis</a>
         {% for u in usuarios %}
-          <a href="?view={{ view }}&ref={{ ref }}&resp={{ u.id }}" class="{% if resp_id == u.id|stringformat:'s' %}sel{% endif %}">{{ u.get_full_name|default:u.username }}</a>
+          <a href="?view={{ view }}&ref={{ ref }}&resp={{ u.id }}{{ qs_atend }}" class="{% if resp_id == u.id|stringformat:'s' %}sel{% endif %}">{{ u.get_full_name|default:u.username }}</a>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="ag-filter" id="ag-filter-atend">
+      <button type="button" class="ag-filter-btn" id="ag-filter-atend-btn">
+        <i class="material-icons ag-filter-ico" translate="no">support_agent</i>
+        <span class="ag-filter-label">{% if atend_id %}{% for u in usuarios %}{% if atend_id == u.id|stringformat:'s' %}{{ u.get_full_name|default:u.username }}{% endif %}{% endfor %}{% else %}Todos atendentes{% endif %}</span>
+        <i class="material-icons ag-filter-caret" translate="no">expand_more</i>
+      </button>
+      <div class="ag-filter-menu" id="ag-filter-atend-menu">
+        <a href="?view={{ view }}&ref={{ ref }}{{ qs_resp }}" class="{% if not atend_id %}sel{% endif %}">Todos atendentes</a>
+        {% for u in usuarios %}
+          <a href="?view={{ view }}&ref={{ ref }}&atend={{ u.id }}{{ qs_resp }}" class="{% if atend_id == u.id|stringformat:'s' %}sel{% endif %}">{{ u.get_full_name|default:u.username }}</a>
         {% endfor %}
       </div>
     </div>
@@ -333,6 +360,7 @@
     </button>
   </div>
 
+  <div id="ag-refresh" class="ag-refresh">
   {% if view == 'mes' %}
   {# ───────── Visão Mês ───────── #}
   <div class="ag-grid">
@@ -357,7 +385,7 @@
     <div class="ag-tg-head">
       <div class="ag-tg-corner"></div>
       {% for dia in dias %}
-        <a class="ag-tg-dayhead{% if dia.hoje %} today{% endif %}" href="?view=dia&ref={{ dia.data|date:'Y-m-d' }}{% if resp_id %}&resp={{ resp_id }}{% endif %}" title="Ver dia">
+        <a class="ag-tg-dayhead{% if dia.hoje %} today{% endif %}" href="?view=dia&ref={{ dia.data|date:'Y-m-d' }}{{ filtros_qs }}" title="Ver dia">
           <span class="ag-tg-dow">{{ dia.dow }}</span>
           <span class="ag-tg-num">{{ dia.dia }}</span>
         </a>
@@ -384,6 +412,7 @@
     <span><i style="background:#fff;box-shadow:0 0 0 1.5px rgba(229,57,53,.65) inset"></i> Atrasado</span>
     <span>{{ total }} agendamento(s)</span>
   </div>
+  </div>{# /#ag-refresh #}
 </div>
 
 <!-- Modal: criar / editar -->
@@ -459,6 +488,7 @@
     <div class="ag-modal-body">
       <div class="ag-det-row"><i class="material-icons" translate="no">schedule</i><span id="ag-det-quando"></span></div>
       <div class="ag-det-row"><i class="material-icons" translate="no">person</i><span id="ag-det-resp"></span></div>
+      <div class="ag-det-row" id="ag-det-cli-row" style="display:none"><i class="material-icons" translate="no">business</i><span id="ag-det-cli"></span></div>
       <div class="ag-det-row" id="ag-det-desc-row"><i class="material-icons" translate="no">notes</i><span id="ag-det-desc"></span></div>
       <div class="ag-det-row" id="ag-det-ticket-row" style="display:none"><i class="material-icons" translate="no">confirmation_number</i><a id="ag-det-ticket" href="#">Abrir ticket</a></div>
       <div class="ag-det-row"><i class="material-icons" translate="no">flag</i><span id="ag-det-badge"></span></div>
@@ -486,15 +516,29 @@
   function open(m) { m.classList.add('open'); }
   function close(m) { m.classList.remove('open'); }
 
-  // Dropdown do filtro de responsáveis
-  var filtro = document.getElementById('ag-filter');
-  if (filtro) {
-    document.getElementById('ag-filter-btn').addEventListener('click', function (e) {
+  // Dropdowns dos filtros (responsável e atendente) — mesmo comportamento
+  [['ag-filter', 'ag-filter-btn'], ['ag-filter-atend', 'ag-filter-atend-btn']].forEach(function (par) {
+    var filtro = document.getElementById(par[0]);
+    var btn = document.getElementById(par[1]);
+    if (!filtro || !btn) return;
+    btn.addEventListener('click', function (e) {
       e.stopPropagation();
       filtro.classList.toggle('open');
     });
     document.addEventListener('click', function (e) {
       if (!filtro.contains(e.target)) filtro.classList.remove('open');
+    });
+  });
+
+  // Seletor de mês: pula direto para o mês escolhido, preservando os filtros
+  var monthInput = document.getElementById('ag-month');
+  if (monthInput) {
+    monthInput.addEventListener('change', function () {
+      if (!monthInput.value) return;  // mês inválido/limpo
+      var params = new URLSearchParams(window.location.search);
+      params.set('view', params.get('view') || 'mes');
+      params.set('ref', monthInput.value + '-01');
+      window.location.search = params.toString();
     });
   }
 
@@ -525,24 +569,32 @@
     if (titulo) setTimeout(function () { titulo.focus(); }, 50);
   }
 
-  // Visão Mês: clicar num dia abre o modal já com a data preenchida
-  document.querySelectorAll('.js-day').forEach(function (cell) {
-    cell.addEventListener('click', function () {
-      abrirNovo(cell.dataset.date, '09:00');
-    });
-  });
-
-  // Visão Semana/Dia: clicar na coluna abre o modal na hora clicada
   var HOUR_H = {{ hour_height }};
-  document.querySelectorAll('.js-tgcol').forEach(function (col) {
-    col.addEventListener('click', function (e) {
-      if (e.target.closest('.js-ev')) return;  // clique num evento abre detalhe
-      var rect = col.getBoundingClientRect();
-      var y = e.clientY - rect.top + col.scrollTop;
-      var h = Math.max(0, Math.min(23, Math.floor(y / HOUR_H)));
-      abrirNovo(col.dataset.date, (h < 10 ? '0' + h : h) + ':00');
+  var STATUS = {0: ['Pendente', '#5c6bc0'], 1: ['Concluído', '#00897b'], 2: ['Cancelado', '#9aa0a6']};
+  var curData = null;
+
+  // (Re)liga os cliques da grade — chamado no load e após cada auto-refresh.
+  function bindGrid() {
+    // Visão Mês: clicar num dia abre o modal já com a data preenchida
+    document.querySelectorAll('.js-day').forEach(function (cell) {
+      cell.addEventListener('click', function () {
+        abrirNovo(cell.dataset.date, '09:00');
+      });
     });
-  });
+
+    // Visão Semana/Dia: clicar na coluna abre o modal na hora clicada
+    document.querySelectorAll('.js-tgcol').forEach(function (col) {
+      col.addEventListener('click', function (e) {
+        if (e.target.closest('.js-ev')) return;  // clique num evento abre detalhe
+        var rect = col.getBoundingClientRect();
+        var y = e.clientY - rect.top + col.scrollTop;
+        var h = Math.max(0, Math.min(23, Math.floor(y / HOUR_H)));
+        abrirNovo(col.dataset.date, (h < 10 ? '0' + h : h) + ':00');
+      });
+    });
+
+    bindEventos();
+  }
 
   // Rola a grade de horários para ~7h ao abrir
   var tgBody = document.getElementById('ag-tg-body');
@@ -638,10 +690,8 @@
     }
   });
 
-  // Detalhe
-  var STATUS = {0: ['Pendente', '#5c6bc0'], 1: ['Concluído', '#00897b'], 2: ['Cancelado', '#9aa0a6']};
-  var curData = null;
-
+  // Detalhe — (re)liga os cliques nos chips de evento
+  function bindEventos() {
   document.querySelectorAll('.js-ev').forEach(function (ev) {
     ev.addEventListener('click', function (e) {
       e.stopPropagation();  // não dispara o "novo" do dia
@@ -650,6 +700,13 @@
       document.getElementById('ag-det-titulo').textContent = d.titulo;
       document.getElementById('ag-det-quando').textContent = d.inicioFmt;
       document.getElementById('ag-det-resp').textContent = d.respNome;
+
+      var cliRow = document.getElementById('ag-det-cli-row');
+      if (d.cliente && d.clienteNome) {
+        document.getElementById('ag-det-cli').textContent = d.clienteNome;
+        cliRow.style.display = '';
+      } else { cliRow.style.display = 'none'; }
+
       var descRow = document.getElementById('ag-det-desc-row');
       if (d.desc && d.desc !== 'None') {
         document.getElementById('ag-det-desc').textContent = d.desc;
@@ -687,6 +744,9 @@
       open(detModal);
     });
   });
+  }  // /bindEventos
+
+  bindGrid();  // liga os cliques da grade no carregamento inicial
 
   document.getElementById('ag-det-edit').addEventListener('click', function () {
     if (!curData) return;
@@ -694,6 +754,38 @@
     fillEdit(curData);
     open(formModal);
   });
+
+  // ── Auto-refresh silencioso (sincroniza entre PCs) ──
+  // A cada 20s busca a mesma URL e troca só a grade (#ag-refresh), sem flash
+  // nem perder o scroll. Pausa enquanto há modal aberto ou a aba está oculta.
+  var REFRESH_MS = 20000;
+
+  function modalAberto() {
+    return formModal.classList.contains('open') || detModal.classList.contains('open');
+  }
+
+  function atualizarGrade() {
+    if (document.hidden || modalAberto()) return;  // não atrapalha o uso
+    fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function (r) { return r.ok ? r.text() : null; })
+      .then(function (html) {
+        if (!html || modalAberto()) return;  // checa de novo (chegou tarde)
+        var novo = new DOMParser().parseFromString(html, 'text/html')
+                     .getElementById('ag-refresh');
+        var atual = document.getElementById('ag-refresh');
+        if (!novo || !atual) return;
+        // Preserva o scroll da grade de horários (semana/dia)
+        var velho = document.getElementById('ag-tg-body');
+        var scroll = velho ? velho.scrollTop : null;
+        atual.innerHTML = novo.innerHTML;
+        var novoBody = document.getElementById('ag-tg-body');
+        if (novoBody) novoBody.scrollTop = (scroll != null ? scroll : 7 * HOUR_H - 8);
+        bindGrid();  // re-liga os cliques nos elementos recriados
+      })
+      .catch(function () {});
+  }
+
+  setInterval(atualizarGrade, REFRESH_MS);
 })();
 </script>
 {% endblock extra_js %}

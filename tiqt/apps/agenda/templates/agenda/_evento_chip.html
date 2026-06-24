@@ -10,7 +10,7 @@
   data-resp="{{ ag.responsavel_id }}"
   data-resp-nome="{{ ag.responsavel.get_full_name|default:ag.responsavel.username }}"
   data-cliente="{{ ag.cliente_id|default:'' }}"
-  data-cliente-nome="{{ ag.cliente.fantasia|default:'' }}"
+  data-cliente-nome="{% if ag.cliente_id %}{{ ag.cliente.fantasia|default:ag.cliente }}{% endif %}"
   data-status="{{ ag.status }}"
   data-origem="{{ ag.origem }}"
   data-ticket="{{ ag.ticket_id|default:'' }}">

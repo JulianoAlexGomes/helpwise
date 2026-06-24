@@ -1,0 +1,699 @@
+{% extends 'base.html' %}
+{% load tz %}
+
+{% block title %}Agenda{% endblock title %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --ag-border: #e3e6ea;
+    --ag-surface: #fff;
+    --ag-muted: #9aa0a6;
+    --ag-text: #202124;
+    --ag-today: rgba(0,121,107,.10);
+    --ag-out: #f7f8fa;
+  }
+  html.dark {
+    --ag-border: var(--hw-border);
+    --ag-surface: var(--hw-surface);
+    --ag-muted: var(--hw-text3);
+    --ag-text: var(--hw-text);
+    --ag-today: rgba(0,150,136,.14);
+    --ag-out: rgba(255,255,255,.02);
+  }
+
+  /* Agenda em tela cheia: solta do container central do Materialize */
+  main > .container {
+    max-width: 100% !important; width: 100% !important;
+    margin: 0 !important; padding: 14px 18px 0 !important;
+  }
+
+  .ag-wrap { display: flex; flex-direction: column; height: calc(100vh - 90px); }
+  .ag-top {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    margin-bottom: 14px; flex-shrink: 0;
+  }
+  .ag-title { display: flex; align-items: center; gap: 10px; }
+  .ag-title h4 { margin: 0; font-weight: 700; font-size: 22px; color: var(--ag-text); text-transform: capitalize; }
+  .ag-title .material-icons { font-size: 26px; color: var(--hw-brand); }
+
+  .ag-nav { display: flex; align-items: center; gap: 6px; }
+  .ag-nav a, .ag-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    box-sizing: border-box; height: 38px; padding: 0 14px; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--ag-border); background: var(--ag-surface);
+    color: var(--ag-text); font-size: 14px; font-weight: 500; text-decoration: none;
+    transition: background .12s, border-color .12s; line-height: 1;
+  }
+  .ag-nav a .material-icons, .ag-btn .material-icons { font-size: 19px; }
+  .ag-nav a:hover, .ag-btn:hover { background: var(--hw-hover, #f1f3f4); }
+  .ag-nav a.ico { width: 38px; padding: 0; }
+  .ag-spacer { flex: 1; }
+  /* Filtro de responsáveis — dropdown próprio (não usa <select> nativo) */
+  .ag-filter { position: relative; }
+  .ag-filter-btn {
+    display: inline-flex; align-items: center; gap: 8px; box-sizing: border-box;
+    height: 38px; padding: 0 12px; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--ag-border); background: var(--ag-surface);
+    color: var(--ag-text); font-size: 14px; font-weight: 500;
+    transition: background .12s, border-color .12s;
+  }
+  .ag-filter-btn:hover { background: var(--hw-hover, #f1f3f4); }
+  .ag-filter.open .ag-filter-btn { border-color: var(--hw-brand); box-shadow: 0 0 0 3px rgba(0,121,107,.13); }
+  .ag-filter-ico { color: var(--ag-muted); font-size: 19px; flex-shrink: 0; }
+  .ag-filter-label { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ag-filter-caret { color: var(--ag-muted); font-size: 20px; margin-left: 2px; transition: transform .15s; }
+  .ag-filter.open .ag-filter-caret { transform: rotate(180deg); }
+  .ag-filter-menu {
+    position: absolute; top: calc(100% + 5px); right: 0; min-width: 210px; z-index: 60;
+    background: var(--ag-surface); border: 1px solid var(--ag-border); border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.15); padding: 5px; display: none; max-height: 340px; overflow-y: auto;
+  }
+  html.dark .ag-filter-menu { background: var(--hw-surface2); box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+  .ag-filter.open .ag-filter-menu { display: block; }
+  .ag-filter-menu a {
+    display: block; padding: 9px 12px; border-radius: 7px; font-size: 13.5px;
+    color: var(--ag-text); text-decoration: none; white-space: nowrap;
+  }
+  .ag-filter-menu a:hover { background: var(--hw-hover, #f1f3f4); }
+  .ag-filter-menu a.sel { background: var(--hw-brand); color: #fff; font-weight: 600; }
+  .ag-btn-primary {
+    background: var(--hw-brand) !important; border-color: var(--hw-brand) !important;
+    color: #fff !important; font-weight: 600;
+  }
+  .ag-btn-primary:hover { filter: brightness(1.08); }
+
+  /* Seletor de visão (Mês / Semana / Dia) */
+  .ag-seg {
+    display: inline-flex; box-sizing: border-box; height: 38px; padding: 3px;
+    border: 1px solid var(--ag-border); border-radius: 9px; background: var(--ag-surface); gap: 2px;
+  }
+  .ag-seg a {
+    display: inline-flex; align-items: center; padding: 0 14px; border-radius: 7px;
+    font-size: 13.5px; font-weight: 600; color: var(--ag-muted); text-decoration: none;
+    transition: background .12s, color .12s;
+  }
+  .ag-seg a:hover { color: var(--ag-text); }
+  .ag-seg a.active { background: var(--hw-brand); color: #fff; }
+
+  /* Grade — preenche a altura disponível */
+  .ag-grid {
+    border: 1px solid var(--ag-border); border-radius: 12px; overflow: hidden;
+    background: var(--ag-surface); flex: 1; display: flex; flex-direction: column; min-height: 0;
+  }
+  .ag-head, .ag-week { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .ag-head { flex-shrink: 0; }
+  .ag-head > div {
+    padding: 8px 8px; text-align: center; font-size: 11px; font-weight: 700;
+    letter-spacing: .5px; text-transform: uppercase; color: var(--ag-muted);
+    border-bottom: 1px solid var(--ag-border);
+  }
+  .ag-week { border-bottom: 1px solid var(--ag-border); flex: 1; min-height: 0; }
+  .ag-week:last-child { border-bottom: none; }
+  .ag-day {
+    padding: 5px 6px; border-right: 1px solid var(--ag-border);
+    display: flex; flex-direction: column; gap: 3px; position: relative;
+    overflow-y: auto; cursor: pointer; transition: background .1s;
+  }
+  .ag-day:hover { background: var(--hw-hover, #f1f3f4); }
+  .ag-day:nth-child(7n) { border-right: none; }
+  .ag-day.out { background: var(--ag-out); }
+  .ag-day.out .ag-daynum { color: var(--ag-muted); }
+  .ag-day .ag-add-hint {
+    position: absolute; top: 5px; right: 6px; opacity: 0; transition: opacity .1s;
+    color: var(--hw-brand); font-size: 18px; pointer-events: none;
+  }
+  .ag-day:hover .ag-add-hint { opacity: .8; }
+  .ag-daynum {
+    font-size: 13px; font-weight: 600; color: var(--ag-text);
+    align-self: flex-start; width: 26px; height: 26px; line-height: 26px;
+    text-align: center; border-radius: 50%; flex-shrink: 0;
+  }
+  .ag-day.today .ag-daynum { background: var(--hw-brand); color: #fff; }
+  .ag-day.today { background: var(--ag-today); }
+
+  .ag-ev {
+    display: flex; align-items: center; gap: 5px; width: 100%;
+    border: none; text-align: left; cursor: pointer;
+    padding: 3px 7px; border-radius: 6px; font-size: 12px; line-height: 1.25;
+    color: #fff; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  }
+  .ag-ev .dot-h { font-weight: 700; opacity: .85; font-size: 11px; flex-shrink: 0; }
+  .ag-ev .ag-ev-tit { overflow: hidden; text-overflow: ellipsis; }
+  .ag-ev.done { opacity: .55; text-decoration: line-through; }
+  .ag-ev.late { box-shadow: 0 0 0 1.5px rgba(229,57,53,.65) inset; }
+  .ag-ev .material-icons { font-size: 13px; flex-shrink: 0; }
+
+  /* ───────── Grade de horários (Semana / Dia) ───────── */
+  .ag-tg {
+    flex: 1; display: flex; flex-direction: column; min-height: 0;
+    border: 1px solid var(--ag-border); border-radius: 12px; overflow: hidden; background: var(--ag-surface);
+  }
+  .ag-tg-head {
+    display: grid; grid-template-columns: 58px repeat(var(--cols), 1fr);
+    border-bottom: 1px solid var(--ag-border); flex-shrink: 0;
+  }
+  .ag-tg-corner { border-right: 1px solid var(--ag-border); }
+  .ag-tg-dayhead {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 7px 4px; gap: 1px; border-right: 1px solid var(--ag-border); text-decoration: none;
+    color: var(--ag-text); transition: background .1s;
+  }
+  .ag-tg-dayhead:last-child { border-right: none; }
+  .ag-tg-dayhead:hover { background: var(--hw-hover, #f1f3f4); }
+  .ag-tg-dow { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--ag-muted); }
+  .ag-tg-num { font-size: 17px; font-weight: 700; width: 32px; height: 32px; line-height: 32px; text-align: center; border-radius: 50%; }
+  .ag-tg-dayhead.today .ag-tg-num { background: var(--hw-brand); color: #fff; }
+  .ag-tg-dayhead.today .ag-tg-dow { color: var(--hw-brand); }
+
+  .ag-tg-body {
+    flex: 1; min-height: 0; overflow-y: auto;
+    display: grid; grid-template-columns: 58px repeat(var(--cols), 1fr);
+  }
+  .ag-tg-gutter { position: relative; }
+  .ag-tg-hour { height: 48px; position: relative; }
+  .ag-tg-hour span {
+    position: absolute; top: -8px; right: 8px; font-size: 11px; color: var(--ag-muted); background: var(--ag-surface); padding: 0 2px;
+  }
+  .ag-tg-hour:first-child span { top: 2px; }
+  .ag-tg-col { position: relative; border-left: 1px solid var(--ag-border); cursor: pointer; }
+  .ag-tg-cell { height: 48px; border-top: 1px solid var(--ag-border); }
+  .ag-tg-cell:first-child { border-top: none; }
+  html.dark .ag-tg-cell { border-top-color: rgba(255,255,255,.05); }
+
+  /* Evento posicionado na grade de horários.
+     left/width vêm inline (%) p/ distribuir eventos sobrepostos em colunas. */
+  .ag-ev-grid {
+    position: absolute; box-sizing: border-box;
+    flex-direction: column; align-items: flex-start; gap: 1px;
+    white-space: normal; line-height: 1.2; padding: 3px 6px;
+    border: 1px solid var(--ag-surface);  /* separa colunas adjacentes */
+    box-shadow: 0 1px 2px rgba(0,0,0,.2); min-height: 18px;
+  }
+  .ag-ev-grid .ag-ev-tit { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+  .ag-empty { color: var(--ag-muted); font-size: 12px; padding: 10px; text-align: center; }
+  .ag-legend { display: flex; gap: 16px; margin-top: 12px; font-size: 12px; color: var(--ag-muted); flex-wrap: wrap; }
+  .ag-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .ag-legend i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+
+  /* Modal */
+  .ag-modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1200;
+    display: none; align-items: flex-start; justify-content: center; padding: 60px 16px;
+    overflow-y: auto;
+  }
+  .ag-modal-bg.open { display: flex; }
+  .ag-modal {
+    background: var(--ag-surface); color: var(--ag-text); width: 480px; max-width: 100%;
+    border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.3); overflow: hidden;
+  }
+  .ag-modal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 18px; border-bottom: 1px solid var(--ag-border);
+  }
+  .ag-modal-head h5 { margin: 0; font-size: 17px; font-weight: 700; }
+  .ag-modal-close { background: none; border: none; cursor: pointer; color: var(--ag-muted); display: flex; }
+  .ag-modal-body { padding: 22px 24px 8px; }
+  .ag-field { margin-bottom: 16px; }
+  .ag-field label { display: block; font-size: 12.5px; font-weight: 600; color: #44474c; margin-bottom: 6px; }
+  html.dark .ag-field label { color: var(--hw-text2); }
+
+  /* Inputs no padrão do sistema (cards de cliente/ticket).
+     !important blinda contra as regras globais do Materialize. */
+  .ag-input {
+    width: 100% !important; box-sizing: border-box !important; height: 44px !important;
+    padding: 0 13px !important; margin: 0 !important;
+    border: 1.5px solid #e2e4e8 !important; border-radius: 9px !important; font-size: 14px !important;
+    background-color: #fff !important; color: #1c1d1f !important; outline: none !important;
+    box-shadow: none !important; transition: border-color .15s, box-shadow .15s;
+  }
+  textarea.ag-input { height: auto !important; min-height: 84px !important; padding: 11px 13px !important; line-height: 1.5; resize: vertical; }
+  select.ag-input {
+    -webkit-appearance: none; appearance: none; cursor: pointer; padding-right: 36px !important; display: block !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%238a8f98' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+  }
+  .ag-input:focus { border-color: var(--hw-brand) !important; box-shadow: 0 0 0 3px rgba(0,121,107,.13) !important; }
+  html.dark .ag-input { background-color: var(--hw-input-bg) !important; border-color: var(--hw-border) !important; color: var(--hw-text) !important; color-scheme: dark; }
+  .ag-row { display: flex; gap: 14px; }
+  .ag-row > div { flex: 1; min-width: 0; }
+
+  /* Checkbox "dia inteiro" — o Materialize joga o input pra fora da tela; trazemos de volta */
+  .ag-check-row { display: flex; align-items: center; gap: 8px; }
+  .ag-check-row label { margin: 0; }
+  .ag-check-row input[type=checkbox] {
+    position: static !important; opacity: 1 !important; left: auto !important; pointer-events: auto !important;
+    width: 18px !important; height: 18px !important; margin: 0 !important; accent-color: var(--hw-brand); cursor: pointer;
+  }
+
+  /* ══ Busca de cliente (autocomplete, igual ao form de ticket) ══ */
+  .ag-cli { position: relative; }
+  .ag-cli-search { position: relative; }
+  .ag-cli-lupa { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 19px; pointer-events: none; z-index: 1; }
+  .ag-input.ag-cli-input { padding: 0 13px 0 38px !important; }
+  html.dark .ag-cli-lupa { color: var(--hw-text3); }
+  .ag-cli-drop {
+    position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 40;
+    background: #fff; border: 1.5px solid #e2e4e8; border-radius: 9px; overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,.12); display: none; max-height: 230px; overflow-y: auto;
+  }
+  html.dark .ag-cli-drop { background: var(--hw-surface2); border-color: var(--hw-border); box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+  .ag-cli-drop.open { display: block; }
+  .ag-cli-item { display: flex; align-items: center; gap: 8px; padding: 10px 13px; font-size: 13.5px; color: #1c1d1f; cursor: pointer; border-bottom: 1px solid #f3f4f6; }
+  .ag-cli-item i { font-size: 16px; color: #9ca3af; }
+  html.dark .ag-cli-item { border-bottom-color: var(--hw-border); color: var(--hw-text); }
+  .ag-cli-item:last-child { border-bottom: none; }
+  .ag-cli-item:hover, .ag-cli-item.focus { background: #f3f4f6; }
+  html.dark .ag-cli-item:hover, html.dark .ag-cli-item.focus { background: var(--hw-hover); }
+  .ag-cli-empty { padding: 12px 13px; font-size: 13px; color: var(--ag-muted); text-align: center; }
+  .ag-cli-selected {
+    display: none; align-items: center; gap: 9px; min-height: 44px; padding: 6px 13px; overflow: hidden;
+    background: rgba(0,121,107,.08); border: 1.5px solid rgba(0,121,107,.3); border-radius: 9px;
+    font-size: 13.5px; color: #1c1d1f;
+  }
+  .ag-cli-selected.open { display: flex; }
+  .ag-cli-selected > i.material-icons { color: var(--hw-brand); font-size: 18px; flex-shrink: 0; }
+  .ag-cli-nome { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ag-cli-clear {
+    display: inline-flex; align-items: center; gap: 4px; padding: 5px 11px; border-radius: 7px;
+    border: 1.5px solid #e2e4e8; background: #fff; color: #44474c; font-size: 11.5px; font-weight: 700;
+    text-decoration: none; white-space: nowrap; transition: all .15s; flex-shrink: 0; cursor: pointer;
+  }
+  .ag-cli-clear:hover { background: var(--hw-brand); color: #fff; border-color: var(--hw-brand); }
+  html.dark .ag-cli-selected { background: rgba(0,150,136,.12); border-color: rgba(0,150,136,.3); color: var(--hw-text); }
+  html.dark .ag-cli-selected > i.material-icons { color: #4db6ac; }
+  html.dark .ag-cli-clear { background: var(--hw-surface2); border-color: var(--hw-border); color: var(--hw-text); }
+
+  .ag-modal-foot { display: flex; gap: 8px; justify-content: flex-end; padding: 16px 24px 20px; border-top: 1px solid var(--ag-border); flex-wrap: wrap; }
+  .ag-modal-foot .ag-btn { height: 40px; padding: 0 18px; }
+
+  /* Detalhe */
+  .ag-det-row { display: flex; gap: 10px; margin-bottom: 12px; font-size: 14px; }
+  .ag-det-row .material-icons { font-size: 19px; color: var(--ag-muted); flex-shrink: 0; }
+  .ag-badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="ag-wrap">
+  <div class="ag-top">
+    <div class="ag-title">
+      <i class="material-icons" translate="no">event</i>
+      <h4>{{ titulo }}</h4>
+    </div>
+    <div class="ag-nav">
+      <a class="ico" href="?view={{ view }}&ref={{ nav_ant }}{% if resp_id %}&resp={{ resp_id }}{% endif %}" title="Anterior"><i class="material-icons" translate="no">chevron_left</i></a>
+      <a href="?view={{ view }}{% if resp_id %}&resp={{ resp_id }}{% endif %}">Hoje</a>
+      <a class="ico" href="?view={{ view }}&ref={{ nav_prox }}{% if resp_id %}&resp={{ resp_id }}{% endif %}" title="Próximo"><i class="material-icons" translate="no">chevron_right</i></a>
+    </div>
+    <div class="ag-spacer"></div>
+
+    <div class="ag-seg">
+      <a href="?view=mes&ref={{ ref }}{% if resp_id %}&resp={{ resp_id }}{% endif %}" class="{% if view == 'mes' %}active{% endif %}">Mês</a>
+      <a href="?view=semana&ref={{ ref }}{% if resp_id %}&resp={{ resp_id }}{% endif %}" class="{% if view == 'semana' %}active{% endif %}">Semana</a>
+      <a href="?view=dia&ref={{ ref }}{% if resp_id %}&resp={{ resp_id }}{% endif %}" class="{% if view == 'dia' %}active{% endif %}">Dia</a>
+    </div>
+
+    <div class="ag-filter" id="ag-filter">
+      <button type="button" class="ag-filter-btn" id="ag-filter-btn">
+        <i class="material-icons ag-filter-ico" translate="no">person</i>
+        <span class="ag-filter-label">{% if resp_id %}{% for u in usuarios %}{% if resp_id == u.id|stringformat:'s' %}{{ u.get_full_name|default:u.username }}{% endif %}{% endfor %}{% else %}Todos responsáveis{% endif %}</span>
+        <i class="material-icons ag-filter-caret" translate="no">expand_more</i>
+      </button>
+      <div class="ag-filter-menu" id="ag-filter-menu">
+        <a href="?view={{ view }}&ref={{ ref }}" class="{% if not resp_id %}sel{% endif %}">Todos responsáveis</a>
+        {% for u in usuarios %}
+          <a href="?view={{ view }}&ref={{ ref }}&resp={{ u.id }}" class="{% if resp_id == u.id|stringformat:'s' %}sel{% endif %}">{{ u.get_full_name|default:u.username }}</a>
+        {% endfor %}
+      </div>
+    </div>
+    <button class="ag-btn ag-btn-primary" type="button" id="ag-new-btn">
+      <i class="material-icons" translate="no">add</i> Novo agendamento
+    </button>
+  </div>
+
+  {% if view == 'mes' %}
+  {# ───────── Visão Mês ───────── #}
+  <div class="ag-grid">
+    <div class="ag-head">
+      {% for d in dias_semana %}<div>{{ d }}</div>{% endfor %}
+    </div>
+    {% for semana in semanas %}
+      <div class="ag-week">
+        {% for dia in semana %}
+          <div class="ag-day js-day{% if not dia.no_mes %} out{% endif %}{% if dia.hoje %} today{% endif %}" data-date="{{ dia.data|date:'Y-m-d' }}">
+            <span class="ag-daynum">{{ dia.dia }}</span>
+            <i class="material-icons ag-add-hint" translate="no">add</i>
+            {% for ag in dia.eventos %}{% include 'agenda/_evento_chip.html' with ag=ag modo='mes' %}{% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  {# ───────── Visão Semana / Dia (grade de horários) ───────── #}
+  <div class="ag-tg {% if view == 'dia' %}ag-tg-day{% endif %}" style="--cols: {{ ncols }};">
+    <div class="ag-tg-head">
+      <div class="ag-tg-corner"></div>
+      {% for dia in dias %}
+        <a class="ag-tg-dayhead{% if dia.hoje %} today{% endif %}" href="?view=dia&ref={{ dia.data|date:'Y-m-d' }}{% if resp_id %}&resp={{ resp_id }}{% endif %}" title="Ver dia">
+          <span class="ag-tg-dow">{{ dia.dow }}</span>
+          <span class="ag-tg-num">{{ dia.dia }}</span>
+        </a>
+      {% endfor %}
+    </div>
+    <div class="ag-tg-body" id="ag-tg-body">
+      <div class="ag-tg-gutter">
+        {% for h in horas %}<div class="ag-tg-hour"><span>{{ h }}</span></div>{% endfor %}
+      </div>
+      {% for dia in dias %}
+        <div class="ag-tg-col js-tgcol" data-date="{{ dia.data|date:'Y-m-d' }}">
+          {% for h in horas %}<div class="ag-tg-cell"></div>{% endfor %}
+          {% for ag in dia.eventos %}{% include 'agenda/_evento_chip.html' with ag=ag modo='grid' %}{% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="ag-legend">
+    <span><i style="background:#5c6bc0"></i> Avulso</span>
+    <span><i style="background:#00897b"></i> Ticket</span>
+    <span><i style="background:#9aa0a6"></i> Concluído</span>
+    <span><i style="background:#fff;box-shadow:0 0 0 1.5px rgba(229,57,53,.65) inset"></i> Atrasado</span>
+    <span>{{ total }} agendamento(s)</span>
+  </div>
+</div>
+
+<!-- Modal: criar / editar -->
+<div class="ag-modal-bg" id="ag-form-modal">
+  <div class="ag-modal">
+    <div class="ag-modal-head">
+      <h5 id="ag-form-title">Novo agendamento</h5>
+      <button class="ag-modal-close" type="button" data-close><i class="material-icons" translate="no">close</i></button>
+    </div>
+    <form method="post" id="ag-form" action="{% url 'agendamento_create' %}">
+      {% csrf_token %}
+      <input type="hidden" name="_view" value="{{ view }}">
+      <input type="hidden" name="_ref" value="{{ ref }}">
+      <div class="ag-modal-body">
+        <div class="ag-field">
+          <label>Título</label>
+          {{ form.titulo }}
+        </div>
+        <div class="ag-row">
+          <div class="ag-field">
+            <label>Início</label>
+            {{ form.inicio }}
+          </div>
+          <div class="ag-field">
+            <label>Fim (opcional)</label>
+            {{ form.fim }}
+          </div>
+        </div>
+        <div class="ag-field ag-check-row">
+          {{ form.dia_inteiro }}
+          <label>Dia inteiro</label>
+        </div>
+        <div class="ag-row">
+          <div class="ag-field">
+            <label>Responsável</label>
+            {{ form.responsavel }}
+          </div>
+          <div class="ag-field ag-cli">
+            <label>Cliente (opcional)</label>
+            <div class="ag-cli-search" id="ag-cli-searchbox">
+              <i class="material-icons ag-cli-lupa" translate="no">search</i>
+              <input type="text" id="ag-cli-search" class="ag-input ag-cli-input browser-default" placeholder="Nome ou CNPJ…" autocomplete="off">
+              <div id="ag-cli-drop" class="ag-cli-drop"></div>
+            </div>
+            <div class="ag-cli-selected" id="ag-cli-selected">
+              <i class="material-icons" translate="no">check_circle</i>
+              <span class="ag-cli-nome" id="ag-cli-nome"></span>
+              <a href="#" class="ag-cli-clear" id="ag-cli-clear"><i class="material-icons" style="font-size:13px" translate="no">edit</i> Alterar</a>
+            </div>
+            <input type="hidden" name="cliente" id="ag-cli-id">
+          </div>
+        </div>
+        <div class="ag-field">
+          <label>Descrição</label>
+          {{ form.descricao }}
+        </div>
+      </div>
+      <div class="ag-modal-foot">
+        <button type="button" class="ag-btn" data-close>Cancelar</button>
+        <button type="submit" class="ag-btn ag-btn-primary">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: detalhes -->
+<div class="ag-modal-bg" id="ag-detail-modal">
+  <div class="ag-modal">
+    <div class="ag-modal-head">
+      <h5 id="ag-det-titulo">Agendamento</h5>
+      <button class="ag-modal-close" type="button" data-close><i class="material-icons" translate="no">close</i></button>
+    </div>
+    <div class="ag-modal-body">
+      <div class="ag-det-row"><i class="material-icons" translate="no">schedule</i><span id="ag-det-quando"></span></div>
+      <div class="ag-det-row"><i class="material-icons" translate="no">person</i><span id="ag-det-resp"></span></div>
+      <div class="ag-det-row" id="ag-det-desc-row"><i class="material-icons" translate="no">notes</i><span id="ag-det-desc"></span></div>
+      <div class="ag-det-row" id="ag-det-ticket-row" style="display:none"><i class="material-icons" translate="no">confirmation_number</i><a id="ag-det-ticket" href="#">Abrir ticket</a></div>
+      <div class="ag-det-row"><i class="material-icons" translate="no">flag</i><span id="ag-det-badge"></span></div>
+    </div>
+    <div class="ag-modal-foot">
+      <button type="button" class="ag-btn" id="ag-det-edit"><i class="material-icons" translate="no">edit</i> Editar</button>
+      <form method="post" id="ag-det-concluir" style="display:inline"><input type="hidden" name="_view" value="{{ view }}"><button type="submit" class="ag-btn ag-btn-primary"><i class="material-icons" translate="no">check</i> Concluir</button></form>
+      <form method="post" id="ag-det-cancelar" style="display:inline" onsubmit="return confirm('Cancelar este agendamento?');"><input type="hidden" name="_view" value="{{ view }}"><button type="submit" class="ag-btn">Cancelar</button></form>
+      <form method="post" id="ag-det-excluir" style="display:inline" onsubmit="return confirm('Excluir este agendamento?');"><input type="hidden" name="_view" value="{{ view }}"><button type="submit" class="ag-btn" style="color:#e53935"><i class="material-icons" translate="no">delete</i></button></form>
+    </div>
+  </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var csrf = document.querySelector('#ag-form [name=csrfmiddlewaretoken]').value;
+  var formModal = document.getElementById('ag-form-modal');
+  var detModal  = document.getElementById('ag-detail-modal');
+  var form      = document.getElementById('ag-form');
+  var formTitle = document.getElementById('ag-form-title');
+  var createUrl = "{% url 'agendamento_create' %}";
+
+  function open(m) { m.classList.add('open'); }
+  function close(m) { m.classList.remove('open'); }
+
+  // Dropdown do filtro de responsáveis
+  var filtro = document.getElementById('ag-filter');
+  if (filtro) {
+    document.getElementById('ag-filter-btn').addEventListener('click', function (e) {
+      e.stopPropagation();
+      filtro.classList.toggle('open');
+    });
+    document.addEventListener('click', function (e) {
+      if (!filtro.contains(e.target)) filtro.classList.remove('open');
+    });
+  }
+
+  document.querySelectorAll('[data-close]').forEach(function (b) {
+    b.addEventListener('click', function () { close(formModal); close(detModal); });
+  });
+  [formModal, detModal].forEach(function (m) {
+    m.addEventListener('click', function (e) { if (e.target === m) close(m); });
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { close(formModal); close(detModal); }
+  });
+
+  // Novo (botão do topo)
+  document.getElementById('ag-new-btn').addEventListener('click', function () {
+    abrirNovo(null, '09:00');
+  });
+
+  function abrirNovo(dataYmd, hora) {
+    form.reset();
+    setCliente('', '');
+    form.action = createUrl;
+    formTitle.textContent = 'Novo agendamento';
+    var inicio = form.querySelector('[name=inicio]');
+    if (inicio) inicio.value = dataYmd ? (dataYmd + 'T' + (hora || '09:00')) : '';
+    open(formModal);
+    var titulo = form.querySelector('[name=titulo]');
+    if (titulo) setTimeout(function () { titulo.focus(); }, 50);
+  }
+
+  // Visão Mês: clicar num dia abre o modal já com a data preenchida
+  document.querySelectorAll('.js-day').forEach(function (cell) {
+    cell.addEventListener('click', function () {
+      abrirNovo(cell.dataset.date, '09:00');
+    });
+  });
+
+  // Visão Semana/Dia: clicar na coluna abre o modal na hora clicada
+  var HOUR_H = {{ hour_height }};
+  document.querySelectorAll('.js-tgcol').forEach(function (col) {
+    col.addEventListener('click', function (e) {
+      if (e.target.closest('.js-ev')) return;  // clique num evento abre detalhe
+      var rect = col.getBoundingClientRect();
+      var y = e.clientY - rect.top + col.scrollTop;
+      var h = Math.max(0, Math.min(23, Math.floor(y / HOUR_H)));
+      abrirNovo(col.dataset.date, (h < 10 ? '0' + h : h) + ':00');
+    });
+  });
+
+  // Rola a grade de horários para ~7h ao abrir
+  var tgBody = document.getElementById('ag-tg-body');
+  if (tgBody) tgBody.scrollTop = 7 * HOUR_H - 8;
+
+  // Helpers de formulário
+  function setVal(name, val) {
+    var el = form.querySelector('[name=' + name + ']');
+    if (el) el.value = val || '';
+  }
+
+  function fillEdit(d) {
+    form.reset();
+    form.action = "/agenda/" + d.id + "/editar/";
+    formTitle.textContent = 'Editar agendamento';
+    setVal('titulo', d.titulo);
+    setVal('inicio', d.inicio);
+    setVal('fim', d.fim === 'None' ? '' : d.fim);
+    setVal('responsavel', d.resp);
+    setVal('descricao', d.desc === 'None' ? '' : d.desc);
+    setCliente(d.cliente || '', d.clienteNome || '');
+    var chk = form.querySelector('[name=dia_inteiro]');
+    if (chk) chk.checked = false;
+  }
+
+  // ── Autocomplete de cliente (via /api/clientes/busca/) ──
+  var cliSearchBox = document.getElementById('ag-cli-searchbox');
+  var cliSearch    = document.getElementById('ag-cli-search');
+  var cliId        = document.getElementById('ag-cli-id');
+  var cliDrop      = document.getElementById('ag-cli-drop');
+  var cliSelected  = document.getElementById('ag-cli-selected');
+  var cliNome      = document.getElementById('ag-cli-nome');
+  var cliClear     = document.getElementById('ag-cli-clear');
+  var cliTimer     = null;
+
+  // Define o cliente escolhido -> mostra o "chip" e esconde a busca
+  function setCliente(id, nome) {
+    cliId.value = id || '';
+    cliDrop.classList.remove('open');
+    cliDrop.innerHTML = '';
+    if (id) {
+      cliNome.textContent = nome || '';
+      cliSelected.classList.add('open');
+      cliSearchBox.style.display = 'none';
+    } else {
+      cliSelected.classList.remove('open');
+      cliSearchBox.style.display = '';
+      cliSearch.value = '';
+    }
+  }
+
+  function buscarClientes(q) {
+    fetch('/api/clientes/busca/?q=' + encodeURIComponent(q), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function (r) { return r.ok ? r.json() : { results: [] }; })
+      .then(function (data) {
+        var res = data.results || [];
+        if (!res.length) {
+          cliDrop.innerHTML = '<div class="ag-cli-empty">Nenhum cliente encontrado</div>';
+        } else {
+          cliDrop.innerHTML = res.map(function (c) {
+            return '<div class="ag-cli-item" data-id="' + c.id + '" data-nome="' +
+                   c.text.replace(/"/g, '&quot;') + '"><i class="material-icons" translate="no">business</i>' +
+                   c.text + '</div>';
+          }).join('');
+        }
+        cliDrop.classList.add('open');
+      }).catch(function () {});
+  }
+
+  cliSearch.addEventListener('input', function () {
+    cliId.value = '';  // mudou o texto -> invalida a seleção até reescolher
+    var q = cliSearch.value.trim();
+    clearTimeout(cliTimer);
+    if (q.length < 2) { cliDrop.classList.remove('open'); return; }
+    cliTimer = setTimeout(function () { buscarClientes(q); }, 250);
+  });
+
+  cliDrop.addEventListener('click', function (e) {
+    var item = e.target.closest('.ag-cli-item');
+    if (!item) return;
+    setCliente(item.dataset.id, item.dataset.nome);
+  });
+
+  cliClear.addEventListener('click', function (e) {
+    e.preventDefault();
+    setCliente('', '');
+    setTimeout(function () { cliSearch.focus(); }, 30);
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!cliDrop.contains(e.target) && e.target !== cliSearch) {
+      cliDrop.classList.remove('open');
+    }
+  });
+
+  // Detalhe
+  var STATUS = {0: ['Pendente', '#5c6bc0'], 1: ['Concluído', '#00897b'], 2: ['Cancelado', '#9aa0a6']};
+  var curData = null;
+
+  document.querySelectorAll('.js-ev').forEach(function (ev) {
+    ev.addEventListener('click', function (e) {
+      e.stopPropagation();  // não dispara o "novo" do dia
+      var d = ev.dataset;
+      curData = d;
+      document.getElementById('ag-det-titulo').textContent = d.titulo;
+      document.getElementById('ag-det-quando').textContent = d.inicioFmt;
+      document.getElementById('ag-det-resp').textContent = d.respNome;
+      var descRow = document.getElementById('ag-det-desc-row');
+      if (d.desc && d.desc !== 'None') {
+        document.getElementById('ag-det-desc').textContent = d.desc;
+        descRow.style.display = '';
+      } else { descRow.style.display = 'none'; }
+
+      var tRow = document.getElementById('ag-det-ticket-row');
+      if (d.ticket) {
+        var a = document.getElementById('ag-det-ticket');
+        a.href = '/ticket/' + d.ticket + '/';
+        a.textContent = 'Abrir ticket #' + d.ticket;
+        tRow.style.display = '';
+      } else { tRow.style.display = 'none'; }
+
+      var st = STATUS[d.status] || STATUS[0];
+      var badge = document.getElementById('ag-det-badge');
+      badge.innerHTML = '<span class="ag-badge" style="background:' + st[1] + '20;color:' + st[1] + '">' + st[0] +
+                        (d.origem === 'ticket' ? ' · via ticket' : ' · avulso') + '</span>';
+
+      // Aponta as ações para este id
+      document.getElementById('ag-det-concluir').action = '/agenda/' + d.id + '/concluir/';
+      document.getElementById('ag-det-cancelar').action = '/agenda/' + d.id + '/cancelar/';
+      document.getElementById('ag-det-excluir').action  = '/agenda/' + d.id + '/excluir/';
+
+      // injeta csrf nas mini-forms
+      ['ag-det-concluir', 'ag-det-cancelar', 'ag-det-excluir'].forEach(function (id) {
+        var f = document.getElementById(id);
+        if (!f.querySelector('[name=csrfmiddlewaretoken]')) {
+          var i = document.createElement('input');
+          i.type = 'hidden'; i.name = 'csrfmiddlewaretoken'; i.value = csrf;
+          f.appendChild(i);
+        }
+      });
+
+      open(detModal);
+    });
+  });
+
+  document.getElementById('ag-det-edit').addEventListener('click', function () {
+    if (!curData) return;
+    close(detModal);
+    fillEdit(curData);
+    open(formModal);
+  });
+})();
+</script>
+{% endblock extra_js %}

@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     "tiqt.apps.notifications",
     "rest_framework",
     "tiqt.apps.ia",
+    "tiqt.apps.agenda",
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"

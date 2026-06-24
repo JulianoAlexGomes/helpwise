@@ -1,0 +1,20 @@
+{% load l10n %}{% comment %}Renderiza um botão de evento. Vars: ag, modo ('mes' ou 'grid'){% endcomment %}
+<button type="button" class="ag-ev js-ev{% if modo == 'grid' %} ag-ev-grid{% endif %}{% if ag.status == 1 %} done{% elif ag.atrasado %} late{% endif %}"
+  style="{% if modo == 'grid' %}top:{{ ag.top|unlocalize }}px;height:{{ ag.height|unlocalize }}px;left:{{ ag.left|unlocalize }}%;width:{{ ag.width|unlocalize }}%;{% endif %}background: {{ ag.cor }};"
+  data-id="{{ ag.id }}"
+  data-titulo="{{ ag.titulo }}"
+  data-desc="{{ ag.descricao|default:'' }}"
+  data-inicio="{{ ag.inicio|date:'Y-m-d\TH:i' }}"
+  data-inicio-fmt="{{ ag.inicio|date:'d/m/Y \à\s H:i' }}"
+  data-fim="{{ ag.fim|date:'Y-m-d\TH:i' }}"
+  data-resp="{{ ag.responsavel_id }}"
+  data-resp-nome="{{ ag.responsavel.get_full_name|default:ag.responsavel.username }}"
+  data-cliente="{{ ag.cliente_id|default:'' }}"
+  data-cliente-nome="{{ ag.cliente.fantasia|default:'' }}"
+  data-status="{{ ag.status }}"
+  data-origem="{{ ag.origem }}"
+  data-ticket="{{ ag.ticket_id|default:'' }}">
+  <span class="dot-h">{{ ag.inicio|date:'H:i' }}</span>
+  {% if ag.origem == 'ticket' %}<i class="material-icons" translate="no">confirmation_number</i>{% endif %}
+  <span class="ag-ev-tit">{{ ag.titulo }}</span>
+</button>

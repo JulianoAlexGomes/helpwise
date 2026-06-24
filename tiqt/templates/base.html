@@ -580,11 +580,13 @@
 
       /* Rótulos de seção */
       .hw-nav-label {
-        padding: 5px 16px 2px !important;
+        padding: 0px 16px 0px !important;
+        margin-top: -5px !important;
+        margin-bottom: -6px !important;
         font-size: 11px; font-weight: 600; letter-spacing: .4px;
         text-transform: uppercase; color: #6f747c; line-height: 1;
       }
-      .hw-nav-label:first-of-type { padding-top: 2px !important; }
+      .hw-nav-label:first-of-type { padding-top: 2px !important; margin-top: 0 !important; }
 
       /* Itens de navegação */
       #slide-out li > a {
@@ -766,6 +768,7 @@
       <li><a href="{% url 'ticket_kanban' %}"><i class="material-icons" translate="no">view_kanban</i><span>Kanban</span></a></li>
 
       <li class="hw-nav-label">Ferramentas</li>
+      <li><a href="{% url 'agenda' %}"><i class="material-icons" translate="no">event</i><span>Agenda</span></a></li>
       <li><a href="{% url 'ia_assistente' %}"><i class="material-icons" translate="no">smart_toy</i><span>Assistente IA</span></a></li>
       <li><a href="{% url 'new_ticket' %}"><i class="material-icons" translate="no">add</i><span>Novo Ticket</span></a></li>
 
@@ -1456,6 +1459,109 @@
     // Carga inicial + polling a cada 45s
     fetchNotifs();
     setInterval(fetchNotifs, 45000);
+  })();
+  </script>
+
+  <!-- ── Aviso de agenda (modal "do dia") ──────────────────────── -->
+  <style>
+    #ag-alert-bg {
+      position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1300;
+      display: none; align-items: center; justify-content: center; padding: 20px;
+    }
+    #ag-alert-box {
+      width: 420px; max-width: 100%; background: #fff; color: #202124;
+      border-radius: 16px; box-shadow: 0 16px 50px rgba(0,0,0,.35); overflow: hidden;
+      animation: agPop .18s ease;
+    }
+    @keyframes agPop { from { transform: scale(.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    html.dark #ag-alert-box { background: var(--hw-surface); color: var(--hw-text); }
+    .ag-alert-head {
+      display: flex; align-items: center; gap: 10px; padding: 18px 20px 8px;
+    }
+    .ag-alert-head .material-icons { color: #00897b; font-size: 26px; }
+    .ag-alert-head h5 { margin: 0; font-size: 18px; font-weight: 700; }
+    #ag-alert-list { padding: 6px 20px 4px; max-height: 50vh; overflow-y: auto; }
+    .ag-alert-item { padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,.08); }
+    html.dark .ag-alert-item { border-bottom-color: var(--hw-border); }
+    .ag-alert-item:last-child { border-bottom: none; }
+    .ag-alert-when { font-size: 12px; font-weight: 700; color: #00897b; text-transform: uppercase; letter-spacing: .3px; }
+    .ag-alert-when.late { color: #e53935; }
+    .ag-alert-tit { font-size: 14.5px; margin-top: 2px; }
+    .ag-alert-tit a { color: #00897b !important; font-weight: 600; margin-left: 4px; }
+    .ag-alert-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 20px 18px; }
+    .ag-alert-foot a, .ag-alert-foot button {
+      height: 38px; padding: 0 16px; border-radius: 9px; font-size: 14px; font-weight: 600;
+      display: inline-flex; align-items: center; cursor: pointer; text-decoration: none; border: none;
+    }
+    .ag-alert-foot a { background: transparent; color: #00897b; border: 1px solid #00897b33; }
+    .ag-alert-foot button { background: #00897b; color: #fff; }
+    .ag-alert-foot button:hover { filter: brightness(1.08); }
+  </style>
+  <div id="ag-alert-bg">
+    <div id="ag-alert-box">
+      <div class="ag-alert-head">
+        <i class="material-icons" translate="no">notifications_active</i>
+        <h5>Lembrete de agenda</h5>
+      </div>
+      <div id="ag-alert-list"></div>
+      <div class="ag-alert-foot">
+        <a href="{% url 'agenda' %}">Abrir agenda</a>
+        <button id="ag-alert-ok" type="button">Entendi</button>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    function getCsrf() { var m = document.cookie.match(/csrftoken=([^;]+)/); return m ? m[1] : ''; }
+    function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+    var bg = document.getElementById('ag-alert-bg');
+    var listEl = document.getElementById('ag-alert-list');
+    var shown = false;
+    var currentIds = [];
+
+    function render(alertas) {
+      listEl.innerHTML = alertas.map(function (a) {
+        var when = a.hoje ? ('Hoje às ' + a.hora) : ('Atrasado · ' + a.data + ' ' + a.hora);
+        var cls = a.hoje ? 'ag-alert-when' : 'ag-alert-when late';
+        var link = a.ticket ? ('<a href="' + a.url + '">#' + a.ticket + '</a>') : '';
+        return '<div class="ag-alert-item"><div class="' + cls + '">' + when + '</div>' +
+               '<div class="ag-alert-tit">' + esc(a.titulo) + link + '</div></div>';
+      }).join('');
+    }
+
+    function check() {
+      if (shown) return;
+      fetch('/agenda/alertas/', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          if (!d || !d.alertas || !d.alertas.length) return;
+          currentIds = d.alertas.map(function (a) { return a.id; });
+          render(d.alertas);
+          bg.style.display = 'flex';
+          shown = true;
+        }).catch(function () {});
+    }
+
+    function dismiss() {
+      bg.style.display = 'none';
+      var body = new URLSearchParams();
+      currentIds.forEach(function (id) { body.append('ids', id); });
+      fetch('/agenda/alertas/', {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCsrf(),
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: body.toString(),
+      }).then(function () { shown = false; }).catch(function () { shown = false; });
+    }
+
+    document.getElementById('ag-alert-ok').addEventListener('click', dismiss);
+    bg.addEventListener('click', function (e) { if (e.target === bg) dismiss(); });
+
+    check();
+    setInterval(check, 120000);
   })();
   </script>
   {% endif %}

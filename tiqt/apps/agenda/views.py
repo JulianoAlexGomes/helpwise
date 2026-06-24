@@ -270,6 +270,9 @@ class AgendamentoConcluirView(LoginRequiredMixin, View):
 class AgendamentoCancelarView(LoginRequiredMixin, View):
     def post(self, request, pk):
         ag = get_object_or_404(Agendamento, pk=pk)
+        if not ag.pode_gerenciar(request.user):
+            messages.error(request, 'Apenas quem criou o agendamento pode cancelá-lo.')
+            return _redirect_agenda(ag, view=_view_do_post(request))
         ag.cancelar()
         messages.success(request, 'Agendamento cancelado.')
         return _redirect_agenda(ag, view=_view_do_post(request))
@@ -279,6 +282,9 @@ class AgendamentoDeleteView(LoginRequiredMixin, View):
     def post(self, request, pk):
         ag = get_object_or_404(Agendamento, pk=pk)
         view = _view_do_post(request)
+        if not ag.pode_gerenciar(request.user):
+            messages.error(request, 'Apenas quem criou o agendamento pode excluí-lo.')
+            return _redirect_agenda(ag, view=view)
         destino = _redirect_agenda(ag, view=view)
         ag.delete()
         messages.success(request, 'Agendamento excluído.')

@@ -174,7 +174,7 @@ def HomeView(request):
         "labels_dias": json.dumps(labels_dias),
         "dados_dias": json.dumps(dados_dias),
 
-        "usuarios": User.objects.all(),
+        "usuarios": User.objects.filter(is_active=True),
         "usuarios_selecionados": usuarios_ids,
         "departamentos": Departamento.objects.all(),
         "prioridades": Prioridade.objects.all(),

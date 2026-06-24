@@ -172,13 +172,13 @@ class TicketFilterForm(forms.Form):
     )
 
     responsavel = forms.ModelChoiceField(
-        queryset=User.objects.all(),
+        queryset=User.objects.filter(is_active=True),
         required=False,
         empty_label="Todos"
     )
 
     atendente = forms.ModelChoiceField(
-        queryset=User.objects.all(),
+        queryset=User.objects.filter(is_active=True),
         required=False,
         empty_label="Todos"
     )

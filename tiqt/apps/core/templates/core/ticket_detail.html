@@ -335,6 +335,7 @@
         <div class="td-rows">
           <div class="td-row"><span>Número</span><b>#{{ object.id }}</b></div>
           <div class="td-row"><span>Cliente</span><b>{{ object.cliente }}</b></div>
+          {% if object.cliente.uid %}<div class="td-row"><span>UID empresa</span><b>{{ object.cliente.uid }}</b></div>{% endif %}
           <div class="td-row"><span>Atendente</span><b>{{ object.atendente|default_if_none:"—" }}</b></div>
           <div class="td-row"><span>Responsável</span><b>{{ object.responsavel|default_if_none:"—" }}</b></div>
           <div class="td-row"><span>Tipo</span><b>{{ object.tipo }}</b></div>

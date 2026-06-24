@@ -304,6 +304,80 @@
   .ag-det-row { display: flex; gap: 10px; margin-bottom: 12px; font-size: 14px; }
   .ag-det-row .material-icons { font-size: 19px; color: var(--ag-muted); flex-shrink: 0; }
   .ag-badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+
+  /* Botão que recolhe a barra de ferramentas no mobile (oculto no desktop) */
+  .ag-mtools-toggle { display: none; }
+
+  /* ───────── Mobile ───────── */
+  @media only screen and (max-width: 768px) {
+    main > .container { padding: 10px 10px 0 !important; }
+
+    /* Mês: deixa a grade crescer e a página rolar (em vez de espremer tudo) */
+    .ag-wrap { height: auto; min-height: calc(100vh - 80px); }
+
+    /* Barra compacta: só título + navegação + ícone de opções ficam visíveis,
+       liberando a tela inteira para a agenda. O resto abre no botão "tune". */
+    .ag-top { gap: 8px; row-gap: 8px; }
+    .ag-title { flex: 1; min-width: 0; }
+    .ag-title h4 { font-size: 18px; }
+    .ag-title .material-icons { font-size: 22px; }
+    .ag-spacer { display: none; }
+
+    .ag-mtools-toggle {
+      display: inline-flex; order: 0; width: 40px; padding: 0; flex-shrink: 0;
+    }
+    .ag-top.mtools-open .ag-mtools-toggle { background: var(--hw-brand); border-color: var(--hw-brand); color: #fff; }
+
+    .ag-nav { width: 100%; order: 1; }
+    .ag-nav a { flex: 1; }
+    .ag-nav a.ico { flex: 0 0 38px; }
+    .ag-month { display: none; flex: 1; margin-left: 4px !important; }
+
+    /* Controles recolhidos: escondidos até abrir o painel de opções */
+    .ag-seg,
+    #ag-filter,
+    #ag-filter-atend,
+    #ag-new-btn { display: none; order: 2; }
+
+    .ag-top.mtools-open .ag-month { display: block; }
+    .ag-top.mtools-open .ag-seg { display: flex; }
+    .ag-top.mtools-open #ag-filter,
+    .ag-top.mtools-open #ag-filter-atend { display: block; }
+    .ag-top.mtools-open #ag-new-btn { display: inline-flex; }
+
+    .ag-seg { width: 100%; }
+    .ag-seg a { flex: 1; justify-content: center; padding: 0 6px; }
+
+    .ag-filter { flex: 1 1 100%; width: 100%; }
+    .ag-filter-btn { width: 100%; justify-content: space-between; }
+    .ag-filter-label { max-width: none; flex: 1; text-align: left; }
+    .ag-filter-menu { left: 0; right: auto; min-width: 100%; }
+
+    #ag-new-btn { width: 100%; justify-content: center; }
+
+    /* Visão Mês: rola verticalmente em vez de espremer as semanas */
+    .ag-grid { flex: 0 0 auto; }
+    .ag-week { min-height: 84px; }
+    .ag-head > div { font-size: 9px; padding: 6px 2px; letter-spacing: 0; }
+    .ag-day { padding: 4px 3px; }
+    .ag-daynum { width: 22px; height: 22px; line-height: 22px; font-size: 12px; }
+    .ag-ev { font-size: 11px; padding: 2px 5px; gap: 3px; }
+    .ag-add-hint { display: none; }
+
+    /* Visão Semana/Dia: mantém a grade de horários com altura rolável */
+    .ag-tg { height: calc(100vh - 200px); flex: 0 0 auto; }
+    .ag-tg-head { grid-template-columns: 44px repeat(var(--cols), 1fr); }
+    .ag-tg-body { grid-template-columns: 44px repeat(var(--cols), 1fr); }
+    .ag-tg-num { font-size: 15px; width: 28px; height: 28px; line-height: 28px; }
+
+    .ag-legend { gap: 10px; }
+
+    /* Modais ocupam a tela e os campos empilham */
+    .ag-modal-bg { padding: 24px 10px; align-items: flex-start; }
+    .ag-row { flex-direction: column; gap: 0; }
+    .ag-modal-body { padding: 18px 16px 4px; }
+    .ag-modal-foot { padding: 14px 16px 18px; }
+  }
 </style>
 {% endblock extra_css %}
 
@@ -314,6 +388,9 @@
       <i class="material-icons" translate="no">event</i>
       <h4>{{ titulo }}</h4>
     </div>
+    <button type="button" class="ag-btn ag-mtools-toggle" id="ag-mtools-toggle" title="Opções" aria-label="Opções">
+      <i class="material-icons" translate="no">tune</i>
+    </button>
     <div class="ag-nav">
       <a class="ico" href="?view={{ view }}&ref={{ nav_ant }}{{ filtros_qs }}" title="Anterior"><i class="material-icons" translate="no">chevron_left</i></a>
       <a href="?view={{ view }}{{ filtros_qs }}">Hoje</a>
@@ -530,6 +607,16 @@
     });
   });
 
+  // Mobile: botão "tune" recolhe/expande a barra de ferramentas
+  var mToggle = document.getElementById('ag-mtools-toggle');
+  var agTop = document.querySelector('.ag-top');
+  if (mToggle && agTop) {
+    mToggle.addEventListener('click', function (e) {
+      e.stopPropagation();
+      agTop.classList.toggle('mtools-open');
+    });
+  }
+
   // Seletor de mês: pula direto para o mês escolhido, preservando os filtros
   var monthInput = document.getElementById('ag-month');
   if (monthInput) {
@@ -571,6 +658,7 @@
 
   var HOUR_H = {{ hour_height }};
   var STATUS = {0: ['Pendente', '#5c6bc0'], 1: ['Concluído', '#00897b'], 2: ['Cancelado', '#9aa0a6']};
+  var CURRENT_USER = '{{ request.user.id }}';
   var curData = null;
 
   // (Re)liga os cliques da grade — chamado no load e após cada auto-refresh.
@@ -730,6 +818,11 @@
       document.getElementById('ag-det-concluir').action = '/agenda/' + d.id + '/concluir/';
       document.getElementById('ag-det-cancelar').action = '/agenda/' + d.id + '/cancelar/';
       document.getElementById('ag-det-excluir').action  = '/agenda/' + d.id + '/excluir/';
+
+      // Só o criador pode cancelar/excluir (registros antigos sem criador ficam liberados)
+      var podeGerenciar = !d.criador || d.criador === CURRENT_USER;
+      document.getElementById('ag-det-cancelar').style.display = podeGerenciar ? 'inline' : 'none';
+      document.getElementById('ag-det-excluir').style.display  = podeGerenciar ? 'inline' : 'none';
 
       // injeta csrf nas mini-forms
       ['ag-det-concluir', 'ag-det-cancelar', 'ag-det-excluir'].forEach(function (id) {

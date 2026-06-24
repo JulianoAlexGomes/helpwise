@@ -714,7 +714,7 @@
     </nav>
       </div>
       {% if user.is_authenticated %}
-    <ul id="slide-out" class="sidenav sidenav-fixed z-depth-1" style="height: 100%; transform: translateX(0%);">
+    <ul id="slide-out" class="sidenav sidenav-fixed z-depth-1" style="height: 100%;">
       <li class="hw-brand">
         <span class="hw-brand-icon"><i class="material-icons" translate="no">headset_mic</i></span>
         <span class="hw-brand-text">HelpWise</span>
@@ -805,11 +805,19 @@
     #modal-quick-ticket {
       width: 72% !important;
       max-width: 860px !important;
+      max-height: 90vh !important;
       border-radius: 14px;
       overflow: hidden;
     }
+    /* Só o corpo rola; o cabeçalho e o rodapé (botão "Abrir Ticket") ficam
+       sempre visíveis, mesmo com a tela baixa. ~165px = header + footer. */
+    #modal-quick-ticket .qt-body {
+      max-height: calc(90vh - 165px);
+      overflow-y: auto;
+    }
     @media only screen and (max-width: 992px) {
-      #modal-quick-ticket { width: 94% !important; }
+      #modal-quick-ticket { width: 94% !important; max-height: 92vh !important; }
+      #modal-quick-ticket .qt-body { max-height: calc(92vh - 165px); }
     }
     #modal-quick-ticket .qt-header {
       background: #212121;

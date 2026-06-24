@@ -100,6 +100,13 @@ class Agendamento(models.Model):
             return f"/ticket/{self.ticket_id}/"
         return "/agenda/"
 
+    def pode_gerenciar(self, user):
+        """Só o criador pode cancelar/excluir o agendamento.
+        Registros antigos sem criador (`criado_por` nulo) ficam liberados."""
+        if not user or not user.is_authenticated:
+            return False
+        return self.criado_por_id is None or self.criado_por_id == user.id
+
     def concluir(self):
         self.status = self.CONCLUIDO
         self.save(update_fields=['status', 'atualizado_em'])

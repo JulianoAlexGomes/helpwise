@@ -13,6 +13,7 @@
   data-cliente-nome="{% if ag.cliente_id %}{{ ag.cliente.fantasia|default:ag.cliente }}{% endif %}"
   data-status="{{ ag.status }}"
   data-origem="{{ ag.origem }}"
+  data-criador="{{ ag.criado_por_id|default:'' }}"
   data-ticket="{{ ag.ticket_id|default:'' }}">
   <span class="dot-h">{{ ag.inicio|date:'H:i' }}</span>
   {% if ag.origem == 'ticket' %}<i class="material-icons" translate="no">confirmation_number</i>{% endif %}

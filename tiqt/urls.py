@@ -54,6 +54,7 @@ urlpatterns = [
 
     path('notifications/', include('tiqt.apps.notifications.urls')),
     path('', include('tiqt.apps.ia.urls')),
+    path('', include('tiqt.apps.agenda.urls')),
 
     # API
     path('api/', include('tiqt.apps.core.api_urls')),

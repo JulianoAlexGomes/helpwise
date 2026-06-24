@@ -3,8 +3,16 @@
 {% block content %}
   <h5>Confirmar Exclusão</h5>
   <p>Tem certeza de que deseja excluir o cliente "{{ cliente }}"?</p>
+  {% if tickets_count %}
+    <div class="card-panel red lighten-4 red-text text-darken-4" style="border-radius:8px;">
+      <i class="material-icons left" translate="no">block</i>
+      Este cliente possui <strong>{{ tickets_count }}</strong> ticket(s) vinculado(s) e
+      <strong>não pode ser excluído</strong>. Remova ou transfira os tickets antes de excluir.
+    </div>
+  {% endif %}
   <form method="post">{% csrf_token %}
-    <button type="submit" class="btn red">Excluir</button>
+    <button type="submit" class="btn red" {% if tickets_count %}disabled{% endif %}>Excluir</button>
     <a href="{% url 'cliente_list' %}" class="btn">Cancelar</a>
   </form>
+{% endblock content %}
 {% endblock content %}

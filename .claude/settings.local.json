@@ -22,7 +22,9 @@
       "Read(//c/c/projetos sinos/**)",
       "Bash(grep -nA6 \"\\\\.td-avatar\" tiqt/apps/core/templates/core/ticket_detail.html)",
       "Bash(grep -nB1 -A4 \"\\\\.td-thumb {\" tiqt/apps/core/templates/core/ticket_detail.html)",
-      "Bash(grep -E '\\\\.html$')"
+      "Bash(grep -E '\\\\.html$')",
+      "Bash(node --check scratch_agenda.js)",
+      "Bash(rm -f scratch_agenda.js)"
     ],
     "additionalDirectories": [
       "C:\\Users\\sinos\\Downloads\\favicon_io"

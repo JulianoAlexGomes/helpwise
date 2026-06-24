@@ -21,6 +21,7 @@ from .models import Cliente, Ticket, Solucao, ComentarioArquivo, ComentarioImage
 from datetime import datetime, timedelta, time
 import tiqt.settings as settings
 from django.db.models import Q
+from django.db.models.deletion import ProtectedError
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from rest_framework import viewsets
@@ -835,7 +836,23 @@ class ClienteDeleteView(LoginRequiredMixin, DeleteView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['cliente'] = self.object
+        context['tickets_count'] = self.object.ticket_set.count()
         return context
+
+    def form_valid(self, form):
+        # Cliente com tickets é protegido (Ticket.cliente = PROTECT). Em vez de
+        # estourar ProtectedError (500), bloqueia e avisa o usuário.
+        self.object = self.get_object()
+        try:
+            return super().form_valid(form)
+        except ProtectedError:
+            n = self.object.ticket_set.count()
+            messages.error(
+                self.request,
+                f'Não é possível excluir "{self.object}" porque há {n} '
+                f'ticket(s) vinculado(s) a este cliente.'
+            )
+            return redirect('cliente_update', pk=self.object.pk)
 
 
 class LogoutView(BaseLogoutView):

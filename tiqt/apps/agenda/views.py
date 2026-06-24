@@ -121,6 +121,7 @@ class CalendarioView(LoginRequiredMixin, View):
                 ref = hoje
 
         resp_id = request.GET.get('resp') or ''
+        atend_id = request.GET.get('atend') or ''
 
         def eventos(ini_date, fim_date):
             ini = timezone.make_aware(datetime.combine(ini_date, time.min))
@@ -133,12 +134,19 @@ class CalendarioView(LoginRequiredMixin, View):
             )
             if resp_id:
                 qs = qs.filter(responsavel_id=resp_id)
+            if atend_id:
+                qs = qs.filter(ticket__atendente_id=atend_id)
             return qs
 
         ctx = {
             'view': view,
             'ref': ref.isoformat(),
             'resp_id': str(resp_id),
+            'atend_id': str(atend_id),
+            # Query-strings prontas para preservar filtros nos links de navegação.
+            'filtros_qs': (f'&resp={resp_id}' if resp_id else '') + (f'&atend={atend_id}' if atend_id else ''),
+            'qs_resp': f'&resp={resp_id}' if resp_id else '',     # preserva só o responsável
+            'qs_atend': f'&atend={atend_id}' if atend_id else '',  # preserva só o atendente
             'hoje': hoje,
             'usuarios': User.objects.filter(is_active=True).order_by('first_name', 'username'),
             'form': AgendamentoForm(initial={'responsavel': request.user}),

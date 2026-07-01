@@ -140,11 +140,9 @@
             <div class="cf-cert-item">
               <i class="material-icons" translate="no">description</i>
               <a href="{{ certificado.arquivo.url }}" download>{{ certificado.arquivo.name }}</a>
-              <form method="post" action="{% url 'certificado_delete' certificado.pk %}" style="margin:0; line-height:0;">
-                {% csrf_token %}
-                <button type="submit" class="cf-cert-del" title="Excluir certificado"
-                        onclick="return confirm('Excluir este certificado?');"><i class="material-icons" translate="no">delete_outline</i></button>
-              </form>
+              <button type="submit" formmethod="post" formaction="{% url 'certificado_delete' certificado.pk %}"
+                      class="cf-cert-del" title="Excluir certificado" style="margin:0; line-height:0;"
+                      onclick="return confirm('Excluir este certificado?');"><i class="material-icons" translate="no">delete_outline</i></button>
             </div>
           {% endfor %}
         </div>

@@ -25,7 +25,11 @@
       "Bash(grep -E '\\\\.html$')",
       "Bash(node --check scratch_agenda.js)",
       "Bash(rm -f scratch_agenda.js)",
-      "PowerShell(python manage.py check 2>&1)"
+      "PowerShell(python manage.py check 2>&1)",
+      "Bash(python manage.py makemigrations mural)",
+      "Bash(python manage.py migrate mural)",
+      "Bash(python manage.py check)",
+      "Bash(python -c ' *)"
     ],
     "additionalDirectories": [
       "C:\\Users\\sinos\\Downloads\\favicon_io"

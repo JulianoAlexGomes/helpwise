@@ -77,6 +77,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "tiqt.apps.ia",
     "tiqt.apps.agenda",
+    "tiqt.apps.mural",
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"

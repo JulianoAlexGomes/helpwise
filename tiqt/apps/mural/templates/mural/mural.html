@@ -1,0 +1,850 @@
+{% extends 'base.html' %}
+{% load tz %}
+
+{% block title %}Mural de Notas · HelpWise{% endblock title %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --mr-border: #e7e9ee;
+    --mr-surface: #fff;
+    --mr-surface2: #f7f8fa;
+    --mr-muted: #8a8f98;
+    --mr-text: #1c1d1f;
+    --mr-text2: #656a73;
+    --mr-board: #eceff3;
+    --mr-shadow: 0 1px 2px rgba(16,24,40,.04), 0 4px 14px rgba(16,24,40,.05);
+    --mr-shadow-h: 0 2px 4px rgba(16,24,40,.06), 0 10px 26px rgba(16,24,40,.10);
+  }
+  html.dark {
+    --mr-border: var(--hw-border);
+    --mr-surface: var(--hw-surface);
+    --mr-surface2: var(--hw-surface2);
+    --mr-muted: var(--hw-text3);
+    --mr-text: var(--hw-text);
+    --mr-text2: var(--hw-text2);
+    --mr-board: var(--hw-bg);
+    --mr-shadow: 0 1px 2px rgba(0,0,0,.3);
+    --mr-shadow-h: 0 6px 22px rgba(0,0,0,.45);
+  }
+
+  /* Tela cheia — solta do container central do Materialize */
+  main > .container { max-width: 100% !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+
+  .mr-wrap { min-height: calc(100vh - 64px); background: var(--mr-board); transition: background .25s; }
+
+  /* ═══════════ Cabeçalho ═══════════ */
+  /* NÃO-sticky e opaco: rola junto com a página; nenhuma nota consegue aparecer sobre ele. */
+  .mr-head {
+    position: relative; z-index: 2;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    padding: 16px 26px; background: var(--mr-board);
+    border-bottom: 1px solid var(--mr-border);
+  }
+  .mr-head-l { display: flex; align-items: center; gap: 13px; }
+  .mr-head-icon {
+    display: flex; align-items: center; justify-content: center; width: 44px; height: 44px;
+    border-radius: 13px; flex-shrink: 0; color: #fff;
+    background: linear-gradient(135deg, var(--hw-brand), var(--hw-brand-2));
+    box-shadow: 0 6px 16px rgba(0,121,107,.35);
+  }
+  .mr-head-icon i { font-size: 24px; }
+  .mr-head-info h1 { font-size: 22px; font-weight: 800; color: var(--mr-text); margin: 0; letter-spacing: -.5px; line-height: 1.15; }
+  .mr-head-info p { font-size: 13px; color: var(--mr-muted); margin: 2px 0 0; display: flex; align-items: center; gap: 7px; }
+  .mr-head-info .mr-urg { color: #e5484d; font-weight: 700; display: inline-flex; align-items: center; gap: 3px; }
+  .mr-head-info .mr-urg .material-icons { font-size: 15px; }
+  .mr-spacer { flex: 1; }
+
+  .mr-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px; box-sizing: border-box;
+    height: 40px; padding: 0 16px; border-radius: 10px; cursor: pointer; border: 1px solid var(--mr-border);
+    background: var(--mr-surface); color: var(--mr-text); font-size: 13.5px; font-weight: 600;
+    text-decoration: none; transition: filter .12s, background .12s, box-shadow .12s; line-height: 1; box-shadow: var(--mr-shadow);
+  }
+  .mr-btn .material-icons { font-size: 19px; }
+  .mr-btn:hover { box-shadow: var(--mr-shadow-h); }
+  .mr-btn-primary { background: var(--hw-brand) !important; border-color: transparent !important; color: #fff !important; box-shadow: 0 6px 16px rgba(0,121,107,.32); }
+  .mr-btn-primary:hover { filter: brightness(1.07); }
+
+  /* ═══════════ Barra de filtros ═══════════ */
+  .mr-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 16px 26px 6px; }
+  .mr-chip {
+    display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 8px 0 13px; border-radius: 20px;
+    border: 1px solid var(--mr-border); background: var(--mr-surface); color: var(--mr-text2);
+    font-size: 13px; font-weight: 600; cursor: pointer; transition: all .12s; box-shadow: var(--mr-shadow);
+  }
+  .mr-chip:hover { color: var(--mr-text); transform: translateY(-1px); }
+  .mr-chip.active { background: var(--hw-brand); border-color: var(--hw-brand); color: #fff; box-shadow: 0 4px 12px rgba(0,121,107,.3); }
+  .mr-chip .mr-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 12%, transparent); }
+  .mr-chip .mr-count { font-size: 11px; font-weight: 700; min-width: 20px; text-align: center; background: color-mix(in srgb, var(--mr-text) 8%, transparent); padding: 2px 7px; border-radius: 10px; }
+  .mr-chip.active .mr-count { background: rgba(255,255,255,.24); }
+  .mr-chip.active i.material-icons { color: #fff !important; }
+
+  .mr-fsel {
+    height: 34px !important; border: 1px solid var(--mr-border) !important; border-radius: 9px !important;
+    background: var(--mr-surface) !important; color: var(--mr-text) !important; font-size: 13px !important;
+    padding: 0 30px 0 12px !important; cursor: pointer; -webkit-appearance: none; appearance: none;
+    box-shadow: var(--mr-shadow) !important; margin: 0 !important; display: inline-block !important; width: auto !important;
+    font-weight: 600; line-height: 32px !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%238a8f98' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important; background-position: right 9px center !important;
+  }
+  html.dark .mr-fsel { color-scheme: dark; }
+  .mr-arqtog { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--mr-border); background: var(--mr-surface); font-size: 13px; font-weight: 600; color: var(--mr-text2); cursor: pointer; user-select: none; box-shadow: var(--mr-shadow); }
+  .mr-arqtog input { width: 16px !important; height: 16px !important; margin: 0 !important; accent-color: var(--hw-brand); position: static !important; opacity: 1 !important; pointer-events: auto !important; }
+
+  /* ═══════════ Quadro livre (canvas arrastável) ═══════════ */
+  /* isolation/z-index:0 -> cria um contexto de empilhamento próprio: por mais que
+     o z-index das notas cresça ao arrastar, elas nunca sobem acima do cabeçalho. */
+  .mr-board { position: relative; z-index: 0; isolation: isolate; padding: 22px 26px 60px; min-height: 60vh; }
+  .mr-board.dragging-active { cursor: grabbing; }
+
+  .mr-card {
+    width: 258px; background: color-mix(in srgb, var(--card-status, var(--card-accent, var(--hw-brand))) 13%, var(--mr-surface));
+    border: 1px solid color-mix(in srgb, var(--card-status, var(--card-accent, var(--hw-brand))) 26%, var(--mr-border));
+    border-radius: 4px 12px 12px 12px; padding: 0; position: relative;
+    box-shadow: 0 1px 1px rgba(16,24,40,.10), 0 8px 18px rgba(16,24,40,.13);
+    transition: box-shadow .16s; will-change: transform;
+  }
+  html.dark .mr-card { box-shadow: 0 1px 1px rgba(0,0,0,.4), 0 10px 22px rgba(0,0,0,.5); }
+  /* No quadro (desktop) as notas são posicionadas via JS em position:absolute */
+  .mr-board.board-mode .mr-card { position: absolute; top: 0; left: 0; cursor: grab; }
+  .mr-board.board-mode .mr-card:hover { box-shadow: 0 2px 3px rgba(16,24,40,.12), 0 16px 34px rgba(16,24,40,.22); z-index: 5; }
+  .mr-card.dragging { cursor: grabbing !important; box-shadow: 0 10px 20px rgba(16,24,40,.15), 0 30px 60px rgba(16,24,40,.32) !important; transition: none !important; }
+
+  /* ── Alfinete decorativo (só visual de mural, desenhado em CSS) ── */
+  .mr-pinform { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); z-index: 7; line-height: 0; pointer-events: none; }
+  .mr-pin {
+    position: relative; display: block; width: 22px; height: 24px;
+    transform: rotate(-22deg); filter: drop-shadow(0 3px 3px rgba(0,0,0,.34));
+  }
+  .mr-pin::before { /* cabeça */
+    content: ''; position: absolute; top: 0; left: 3px; width: 16px; height: 16px; border-radius: 50%;
+    background: radial-gradient(circle at 34% 30%, #ffffffd0, transparent 46%), var(--card-accent, var(--hw-brand));
+    box-shadow: inset 0 -2px 3px rgba(0,0,0,.30), inset 0 2px 2px rgba(255,255,255,.35);
+  }
+  .mr-pin::after { /* agulha */
+    content: ''; position: absolute; top: 13px; left: 10px; width: 2px; height: 10px; border-radius: 0 0 2px 2px;
+    background: linear-gradient(180deg, #c2c6cd, #868b93);
+  }
+
+  .mr-card.done { opacity: .62; }
+  .mr-card-in { padding: 20px 16px 14px; }
+
+  .mr-card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; min-width: 0; }
+  .mr-badge { flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 7px; font-size: 10px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; }
+  .mr-badge .material-icons { font-size: 12px; }
+  .mr-badge.urgente { background: rgba(229,72,77,.13); color: #e5484d; }
+  .mr-badge.normal { background: color-mix(in srgb, var(--mr-text) 7%, transparent); color: var(--mr-text2); }
+  .mr-cat { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--mr-text2); min-width: 0; overflow: hidden; }
+  .mr-cat .mr-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .mr-cat .material-icons { flex-shrink: 0; }
+  .mr-cat-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mr-card-tools { flex-shrink: 0; margin-left: auto; display: flex; align-items: center; gap: 1px; opacity: .35; transition: opacity .14s; }
+  .mr-card:hover .mr-card-tools, .mr-card-tools:focus-within { opacity: 1; }
+  .mr-icobtn { border: none; background: none; cursor: pointer; color: var(--mr-muted); padding: 5px; border-radius: 7px; display: inline-flex; line-height: 0; transition: background .12s, color .12s; }
+  .mr-icobtn .material-icons { font-size: 18px; }
+  .mr-icobtn:hover { background: color-mix(in srgb, var(--mr-text) 8%, transparent); color: var(--mr-text); }
+  .mr-icobtn.del:hover { background: rgba(229,72,77,.13); color: #e5484d; }
+
+  .mr-card h3 { font-size: 15.5px; font-weight: 700; color: var(--mr-text); margin: 0 0 6px; line-height: 1.32; letter-spacing: -.2px; }
+  .mr-card.done h3 { text-decoration: line-through; text-decoration-color: var(--mr-muted); }
+  .mr-body { font-size: 13px; color: var(--mr-text2); margin: 0 0 12px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+
+  .mr-attach { display: flex; flex-direction: column; gap: 7px; margin: 0 0 12px; }
+  .mr-file { display: flex; align-items: center; gap: 9px; padding: 8px 11px; border: 1px solid var(--mr-border); border-radius: 10px; background: var(--mr-surface2); font-size: 12.5px; }
+  .mr-file > i { color: #e5484d; font-size: 18px; flex-shrink: 0; }
+  .mr-file a { flex: 1; min-width: 0; color: var(--mr-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; font-weight: 500; }
+  .mr-file a:hover { text-decoration: underline; }
+  .mr-file button { border: none; background: none; cursor: pointer; color: var(--mr-muted); padding: 0; display: flex; font-size: 16px; }
+  .mr-file button:hover { color: #e5484d; }
+
+  .mr-meta { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; font-size: 11.5px; color: var(--mr-muted); border-top: 1px solid var(--mr-border); padding-top: 11px; }
+  .mr-status { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; padding: 3px 9px 3px 8px; border-radius: 20px; font-size: 11px; }
+  .mr-status .mr-dot { width: 7px; height: 7px; border-radius: 50%; }
+  .mr-resp { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--mr-text2); }
+  .mr-avatar { width: 19px; height: 19px; border-radius: 50%; background: linear-gradient(135deg, var(--hw-brand), var(--hw-brand-2)); color: #fff; font-size: 9px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; letter-spacing: .3px; }
+  .mr-due { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }
+  .mr-due.late { color: #e5484d; font-weight: 700; }
+  .mr-due .material-icons { font-size: 14px; }
+  .mr-agend { display: inline-flex; align-items: center; gap: 4px; color: var(--hw-brand); font-weight: 600; }
+  .mr-agend .material-icons { font-size: 14px; }
+  .mr-when { margin-left: auto; }
+
+  .mr-card-actions { display: flex; gap: 7px; margin-top: 12px; }
+  .mr-mini {
+    flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 33px;
+    border: 1px solid var(--mr-border); border-radius: 9px; background: var(--mr-surface); color: var(--mr-text2);
+    font-size: 12px; font-weight: 700; cursor: pointer; text-decoration: none; transition: all .12s;
+  }
+  .mr-mini .material-icons { font-size: 15px; }
+  .mr-mini:hover { border-color: var(--hw-brand); color: var(--hw-brand); background: color-mix(in srgb, var(--hw-brand) 6%, var(--mr-surface)); }
+  .mr-mini.ok:hover { background: rgba(67,160,71,.1); border-color: #43a047; color: #43a047; }
+
+  .mr-empty { text-align: center; padding: 90px 20px; color: var(--mr-muted); }
+  .mr-empty-icon { display: inline-flex; align-items: center; justify-content: center; width: 84px; height: 84px; border-radius: 22px; background: var(--mr-surface); box-shadow: var(--mr-shadow); }
+  .mr-empty-icon .material-icons { font-size: 42px; color: var(--hw-brand); opacity: .85; }
+  .mr-empty h3 { font-size: 17px; font-weight: 700; color: var(--mr-text); margin: 16px 0 4px; }
+  .mr-empty p { font-size: 14px; margin: 0; }
+
+  /* ═══════════ Modais ═══════════ */
+  .mr-modal-bg { position: fixed; inset: 0; background: rgba(15,17,23,.5); z-index: 1200; display: none; align-items: flex-start; justify-content: center; padding: 44px 16px; overflow-y: auto; backdrop-filter: blur(2px); }
+  .mr-modal-bg.open { display: flex; animation: mrfade .16s ease; }
+  @keyframes mrfade { from { opacity: 0; } to { opacity: 1; } }
+  .mr-modal { background: var(--mr-surface); color: var(--mr-text); width: 580px; max-width: 100%; border-radius: 18px; box-shadow: 0 20px 60px rgba(0,0,0,.35); overflow: hidden; animation: mrpop .18s cubic-bezier(.2,.9,.3,1.2); }
+  @keyframes mrpop { from { transform: translateY(8px) scale(.98); } to { transform: none; } }
+  .mr-modal.narrow { width: 470px; }
+  .mr-modal-head { display: flex; align-items: center; gap: 11px; padding: 18px 22px; border-bottom: 1px solid var(--mr-border); }
+  .mr-modal-head .mr-mh-icon { display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 10px; background: color-mix(in srgb, var(--hw-brand) 12%, transparent); color: var(--hw-brand); }
+  .mr-modal-head .mr-mh-icon .material-icons { font-size: 20px; }
+  .mr-modal-head h5 { margin: 0; font-size: 17px; font-weight: 700; flex: 1; }
+  .mr-modal-close { background: none; border: none; cursor: pointer; color: var(--mr-muted); display: flex; padding: 5px; border-radius: 8px; }
+  .mr-modal-close:hover { background: color-mix(in srgb, var(--mr-text) 8%, transparent); color: var(--mr-text); }
+  .mr-modal-body { padding: 20px 22px 6px; }
+  .mr-field { margin-bottom: 15px; }
+  .mr-field > label { display: block; font-size: 12px; font-weight: 700; color: var(--mr-text2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .3px; }
+  .mr-row { display: flex; gap: 14px; }
+  .mr-row > div { flex: 1; min-width: 0; }
+
+  .mr-input {
+    width: 100% !important; box-sizing: border-box !important; height: 44px !important; padding: 0 13px !important; margin: 0 !important;
+    border: 1.5px solid var(--mr-border) !important; border-radius: 10px !important; font-size: 14px !important;
+    background-color: var(--mr-surface2) !important; color: var(--mr-text) !important; outline: none !important; box-shadow: none !important;
+    transition: border-color .15s, box-shadow .15s, background .15s;
+  }
+  textarea.mr-input { height: auto !important; min-height: 92px !important; padding: 11px 13px !important; line-height: 1.5; resize: vertical; }
+  select.mr-input {
+    -webkit-appearance: none; appearance: none; cursor: pointer; padding-right: 36px !important; display: block !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%238a8f98' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+  }
+  .mr-input:focus { border-color: var(--hw-brand) !important; background-color: var(--mr-surface) !important; box-shadow: 0 0 0 3px rgba(0,121,107,.14) !important; }
+  html.dark .mr-input { color-scheme: dark; }
+  .mr-color { width: 54px !important; height: 44px !important; padding: 3px !important; border: 1.5px solid var(--mr-border) !important; border-radius: 10px !important; background: var(--mr-surface2) !important; cursor: pointer; }
+
+  .mr-check-row { display: flex; align-items: center; gap: 9px; padding: 4px 0 8px; }
+  .mr-check-row label { margin: 0; font-size: 13.5px; font-weight: 600; color: var(--mr-text); text-transform: none; letter-spacing: 0; }
+  .mr-check-row input[type=checkbox] { position: static !important; opacity: 1 !important; left: auto !important; pointer-events: auto !important; width: 19px !important; height: 19px !important; margin: 0 !important; accent-color: var(--hw-brand); cursor: pointer; }
+
+  /* Dropzone de anexos */
+  .mr-upload { display: flex; flex-direction: column; padding: 14px 15px; cursor: pointer; border: 1.5px dashed var(--mr-border); border-radius: 12px; background: var(--mr-surface2); transition: all .15s; }
+  .mr-upload:hover, .mr-upload.drag { border-color: var(--hw-brand); background: color-mix(in srgb, var(--hw-brand) 6%, var(--mr-surface2)); }
+  .mr-upload-prompt { display: flex; align-items: center; gap: 11px; }
+  .mr-upload-prompt > i { font-size: 22px; color: var(--hw-brand); }
+  .mr-upload-title { font-size: 13px; font-weight: 700; color: var(--mr-text); }
+  .mr-upload-sub { font-size: 11.5px; color: var(--mr-muted); }
+  .mr-preview { display: flex; flex-wrap: wrap; gap: 8px; }
+  .mr-preview:not(:empty) { margin-top: 11px; }
+  .mr-pchip { display: inline-flex; align-items: center; gap: 6px; max-width: 240px; padding: 6px 10px; border: 1px solid var(--mr-border); border-radius: 9px; background: var(--mr-surface); font-size: 12.5px; color: var(--mr-text); }
+  .mr-pchip > i { font-size: 16px; color: var(--hw-brand); flex-shrink: 0; }
+  .mr-pchip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mr-pchip .mr-x { cursor: pointer; border: none; background: transparent; color: var(--mr-muted); padding: 0; display: flex; font-size: 15px; }
+  .mr-pchip .mr-x:hover { color: #e5484d; }
+
+  .mr-modal-foot { display: flex; gap: 8px; justify-content: flex-end; padding: 15px 22px 20px; border-top: 1px solid var(--mr-border); flex-wrap: wrap; }
+  .mr-modal-foot .mr-btn { height: 42px; }
+
+  /* Lista de categorias */
+  .mr-catlist { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .mr-catrow { display: flex; align-items: center; gap: 11px; padding: 10px 13px; border: 1px solid var(--mr-border); border-radius: 11px; background: var(--mr-surface2); }
+  .mr-catrow .mr-dot { width: 15px; height: 15px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 14%, transparent); }
+  .mr-catrow .mr-catname { flex: 1; font-size: 14px; font-weight: 700; color: var(--mr-text); }
+  .mr-catrow .mr-catn { font-size: 11px; font-weight: 600; color: var(--mr-muted); background: color-mix(in srgb, var(--mr-text) 7%, transparent); padding: 2px 9px; border-radius: 10px; }
+  .mr-catrow .mr-cicon { width: 15px; height: 15px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .mr-catrow .mr-cicon .material-icons { font-size: 17px; }
+  /* Edição inline da categoria */
+  .mr-catrow.editing { flex-direction: column; align-items: stretch; gap: 9px; background: var(--mr-surface); border-color: var(--hw-brand); box-shadow: 0 0 0 3px rgba(0,121,107,.12); }
+  .mr-catview { display: flex; align-items: center; gap: 11px; width: 100%; }
+  .mr-catrow.editing .mr-catview { display: none; }
+  .mr-catedit { display: none; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; }
+  .mr-catrow.editing .mr-catedit { display: flex; }
+  .mr-cinput {
+    height: 38px !important; box-sizing: border-box !important; border: 1.5px solid var(--mr-border) !important; border-radius: 9px !important;
+    background: var(--mr-surface2) !important; color: var(--mr-text) !important; font-size: 13.5px !important; padding: 0 11px !important;
+    margin: 0 !important; box-shadow: none !important; outline: none !important;
+  }
+  .mr-cinput:focus { border-color: var(--hw-brand) !important; box-shadow: 0 0 0 3px rgba(0,121,107,.13) !important; }
+  html.dark .mr-cinput { color-scheme: dark; }
+  .mr-cinput.nome { flex: 1 1 130px; }
+  .mr-cinput.icone { flex: 1 1 92px; }
+  .mr-cinput.ordem { width: 60px !important; flex: 0 0 auto; }
+  .mr-ccolor { width: 40px !important; height: 38px !important; padding: 3px !important; border: 1.5px solid var(--mr-border) !important; border-radius: 9px !important; background: var(--mr-surface2) !important; cursor: pointer; flex-shrink: 0; }
+  .mr-cbtn { width: 38px; height: 38px; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; border-radius: 9px; border: 1px solid var(--mr-border); background: var(--mr-surface); cursor: pointer; color: var(--mr-text2); }
+  .mr-cbtn.save { background: var(--hw-brand); border-color: var(--hw-brand); color: #fff; }
+  .mr-cbtn:hover { filter: brightness(1.05); }
+  .mr-cbtn .material-icons { font-size: 18px; }
+
+  .mr-catadd { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; padding-top: 15px; border-top: 1px dashed var(--mr-border); }
+  .mr-catadd > div.grow { flex: 1 1 130px; }
+  .mr-catadd label { display: block; font-size: 11px; font-weight: 700; color: var(--mr-text2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .3px; }
+
+  /* Fallback mobile/tablet estreito: vira lista em coluna, sem arrastar */
+  @media (max-width: 760px) {
+    .mr-board { display: flex; flex-direction: column; align-items: center; gap: 20px; min-height: 0; padding: 24px 14px 40px; }
+    .mr-board .mr-card { position: relative !important; width: 100%; max-width: 360px; transform: none !important; left: auto !important; top: auto !important; }
+    .mr-organizar { display: none; }
+  }
+  @media (max-width: 640px) {
+    .mr-head { padding: 13px 14px; }
+    .mr-head-l { flex: 1; }
+    .mr-filters { padding: 12px 14px 4px; }
+    .mr-row { flex-direction: column; gap: 0; }
+    .mr-modal-body { padding: 16px 16px 4px; }
+  }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="mr-wrap" id="mr-wrap">
+  <div class="mr-head">
+    <div class="mr-head-l">
+      <span class="mr-head-icon"><i class="material-icons" translate="no">dashboard_customize</i></span>
+      <div class="mr-head-info">
+        <h1>Mural de Notas</h1>
+        <p>
+          {{ total }} nota{{ total|pluralize }}
+          {% if n_urgentes %}· <span class="mr-urg"><i class="material-icons" translate="no">priority_high</i>{{ n_urgentes }} urgente{{ n_urgentes|pluralize }}</span>{% endif %}
+          {% if ver_arquivadas %}· incluindo arquivadas{% endif %}
+        </p>
+      </div>
+    </div>
+    <div class="mr-spacer"></div>
+    <form method="post" action="{% url 'nota_organizar' %}" style="display:inline;" id="mr-organizar-form" onsubmit="return confirm('Reorganizar todas as notas em grade? As posições atuais serão perdidas.');">{% csrf_token %}
+      <button type="submit" class="mr-btn mr-organizar" title="Reorganizar em grade"><i class="material-icons" translate="no">grid_on</i><span>Organizar</span></button>
+    </form>
+    <button type="button" class="mr-btn" id="mr-manage-cat"><i class="material-icons" translate="no">label</i>Categorias</button>
+    <button type="button" class="mr-btn mr-btn-primary" id="mr-new-btn"><i class="material-icons" translate="no">add</i>Nova nota</button>
+  </div>
+
+  <form method="get" id="mr-filters" class="mr-filters">
+    <button type="submit" name="categoria" value="" class="mr-chip {% if not f_categoria %}active{% endif %}">
+      Todas <span class="mr-count">{{ total_geral }}</span>
+    </button>
+    {% for c in categorias %}
+      <button type="submit" name="categoria" value="{{ c.id }}" class="mr-chip {% if f_categoria == c.id|stringformat:'s' %}active{% endif %}">
+        {% if c.icone %}<i class="material-icons" translate="no" style="font-size:15px; color:{{ c.cor }}">{{ c.icone }}</i>{% else %}<span class="mr-dot" style="background:{{ c.cor }}; color:{{ c.cor }}"></span>{% endif %}{{ c.nome }} <span class="mr-count">{{ c.n_notas }}</span>
+      </button>
+    {% endfor %}
+
+    <span class="mr-spacer" style="flex:1; min-width:20px;"></span>
+
+    <select name="status" class="mr-fsel browser-default" onchange="document.getElementById('mr-filters').submit()">
+      <option value="">Todos os status</option>
+      {% for val, lbl in status_choices %}
+        <option value="{{ val }}" {% if f_status == val|stringformat:'s' %}selected{% endif %}>{{ lbl }}</option>
+      {% endfor %}
+    </select>
+    <select name="resp" class="mr-fsel browser-default" onchange="document.getElementById('mr-filters').submit()">
+      <option value="">Todos responsáveis</option>
+      {% for u in usuarios %}
+        <option value="{{ u.id }}" {% if f_resp == u.id|stringformat:'s' %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+      {% endfor %}
+    </select>
+    <label class="mr-arqtog">
+      <input type="checkbox" name="arquivadas" value="1" {% if ver_arquivadas %}checked{% endif %} onchange="document.getElementById('mr-filters').submit()">
+      Arquivadas
+    </label>
+  </form>
+
+  <div class="mr-board">
+    {% for nota in notas %}
+      <div class="mr-card {% if nota.concluida %}done{% endif %} {% if nota.atrasado %}late{% endif %} {% if nota.prioridade == 1 %}urg{% endif %}"
+           data-id="{{ nota.pk }}"
+           data-x="{% if nota.pos_x is not None %}{{ nota.pos_x }}{% endif %}"
+           data-y="{% if nota.pos_y is not None %}{{ nota.pos_y }}{% endif %}"
+           data-z="{{ nota.z }}"
+           style="--card-accent: {% if nota.categoria %}{{ nota.categoria.cor }}{% else %}var(--hw-brand){% endif %}; --card-status: {{ nota.cor_status }}">
+        <span class="mr-pinform" aria-hidden="true"><span class="mr-pin"></span></span>
+        <div class="mr-card-in">
+          <div class="mr-card-top">
+            <span class="mr-badge {% if nota.prioridade == 1 %}urgente{% else %}normal{% endif %}">{% if nota.prioridade == 1 %}<i class="material-icons" translate="no">priority_high</i>{% endif %}{{ nota.get_prioridade_display }}</span>
+            {% if nota.categoria %}
+              <span class="mr-cat">{% if nota.categoria.icone %}<i class="material-icons" translate="no" style="font-size:15px; color:{{ nota.categoria.cor }}">{{ nota.categoria.icone }}</i>{% else %}<span class="mr-dot" style="background:{{ nota.categoria.cor }}"></span>{% endif %}<span class="mr-cat-txt">{{ nota.categoria.nome }}</span></span>
+            {% endif %}
+            <div class="mr-card-tools">
+              <button type="button" class="mr-icobtn js-edit" title="Editar"
+                data-id="{{ nota.pk }}"
+                data-titulo="{{ nota.titulo }}"
+                data-conteudo="{{ nota.conteudo|default:'' }}"
+                data-categoria="{{ nota.categoria_id|default:'' }}"
+                data-status="{{ nota.status }}"
+                data-prioridade="{{ nota.prioridade }}"
+                data-responsavel="{{ nota.responsavel_id|default:'' }}"
+                data-vencimento="{% if nota.vencimento %}{{ nota.vencimento|date:'Y-m-d\TH:i' }}{% endif %}"
+                data-agendar="{% if nota.agendamento %}{{ nota.agendamento.inicio|date:'Y-m-d\TH:i' }}{% endif %}">
+                <i class="material-icons" translate="no">edit</i>
+              </button>
+              <form method="post" action="{% url 'nota_delete' nota.pk %}" style="display:inline; line-height:0;" onsubmit="return confirm('Excluir esta nota?');">{% csrf_token %}
+                <button type="submit" class="mr-icobtn del" title="Excluir"><i class="material-icons" translate="no">delete_outline</i></button>
+              </form>
+            </div>
+          </div>
+
+          <h3>{{ nota.titulo }}</h3>
+          {% if nota.conteudo %}<div class="mr-body">{{ nota.conteudo }}</div>{% endif %}
+
+          {% if nota.arquivos.all %}
+            <div class="mr-attach">
+              {% for arq in nota.arquivos.all %}
+                <div class="mr-file">
+                  <i class="material-icons" translate="no">description</i>
+                  <a href="{{ arq.arquivo.url }}" download>{{ arq.arquivo.name|cut:'mural_arquivos/' }}</a>
+                  <form method="post" action="{% url 'nota_arquivo_delete' arq.pk %}" style="line-height:0;" onsubmit="return confirm('Remover anexo?');">{% csrf_token %}
+                    <button type="submit" title="Remover">&times;</button>
+                  </form>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <div class="mr-meta">
+            <span class="mr-status" style="background: color-mix(in srgb, {{ nota.cor_status }} 14%, transparent); color: {{ nota.cor_status }};"><span class="mr-dot" style="background:{{ nota.cor_status }}"></span>{{ nota.get_status_display }}</span>
+            {% if nota.responsavel %}<span class="mr-resp"><span class="mr-avatar">{{ nota.responsavel.get_full_name|default:nota.responsavel.username|slice:':2'|upper }}</span>{{ nota.responsavel.get_full_name|default:nota.responsavel.username }}</span>{% endif %}
+            {% if nota.vencimento %}<span class="mr-due {% if nota.atrasado %}late{% endif %}"><i class="material-icons" translate="no">event</i>{{ nota.vencimento|date:'d/m H:i' }}</span>{% endif %}
+            {% if nota.agendamento %}<span class="mr-agend"><i class="material-icons" translate="no">event_available</i>Agendada</span>{% endif %}
+            <span class="mr-when">{{ nota.criado_em|date:'d/m' }}</span>
+          </div>
+
+          <div class="mr-card-actions">
+            {% if nota.status != STATUS_CONCLUIDA %}
+              <form method="post" action="{% url 'nota_status' nota.pk %}" style="flex:1; display:flex;">{% csrf_token %}
+                <input type="hidden" name="status" value="{{ STATUS_CONCLUIDA }}">
+                <button type="submit" class="mr-mini ok"><i class="material-icons" translate="no">check_circle</i>Concluir</button>
+              </form>
+            {% else %}
+              <form method="post" action="{% url 'nota_status' nota.pk %}" style="flex:1; display:flex;">{% csrf_token %}
+                <input type="hidden" name="status" value="0">
+                <button type="submit" class="mr-mini"><i class="material-icons" translate="no">replay</i>Reabrir</button>
+              </form>
+            {% endif %}
+            {% if nota.status != STATUS_ARQUIVADA %}
+              <form method="post" action="{% url 'nota_status' nota.pk %}" style="flex:1; display:flex;">{% csrf_token %}
+                <input type="hidden" name="status" value="{{ STATUS_ARQUIVADA }}">
+                <button type="submit" class="mr-mini"><i class="material-icons" translate="no">archive</i>Arquivar</button>
+              </form>
+            {% else %}
+              <form method="post" action="{% url 'nota_status' nota.pk %}" style="flex:1; display:flex;">{% csrf_token %}
+                <input type="hidden" name="status" value="0">
+                <button type="submit" class="mr-mini"><i class="material-icons" translate="no">unarchive</i>Desarquivar</button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <div class="mr-empty" style="column-span: all;">
+        <span class="mr-empty-icon"><i class="material-icons" translate="no">sticky_note_2</i></span>
+        <h3>Mural vazio</h3>
+        <p>Crie a primeira nota clicando em "Nova nota".</p>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Modal: Nova / Editar nota -->
+<div class="mr-modal-bg" id="mr-note-modal">
+  <div class="mr-modal">
+    <div class="mr-modal-head">
+      <span class="mr-mh-icon"><i class="material-icons" translate="no">edit_note</i></span>
+      <h5 id="mr-note-title">Nova nota</h5>
+      <button class="mr-modal-close" type="button" data-close><i class="material-icons" translate="no">close</i></button>
+    </div>
+    <form method="post" id="mr-note-form" action="{% url 'nota_create' %}" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="mr-modal-body">
+        <div class="mr-field">
+          <label>Título</label>
+          {{ form.titulo }}
+        </div>
+        <div class="mr-field">
+          <label>Conteúdo</label>
+          {{ form.conteudo }}
+        </div>
+        <div class="mr-row">
+          <div class="mr-field"><label>Categoria</label>{{ form.categoria }}</div>
+          <div class="mr-field"><label>Prioridade</label>{{ form.prioridade }}</div>
+        </div>
+        <div class="mr-row">
+          <div class="mr-field"><label>Status</label>{{ form.status }}</div>
+          <div class="mr-field"><label>Responsável</label>{{ form.responsavel }}</div>
+        </div>
+        <div class="mr-row">
+          <div class="mr-field"><label>Vencimento</label>{{ form.vencimento }}</div>
+          <div class="mr-field"><label>Agendar na agenda</label>{{ form.agendar_em }}</div>
+        </div>
+        <div class="mr-field">
+          <label>Anexos</label>
+          <div class="mr-upload" id="mr-upload">
+            <div class="mr-upload-prompt">
+              <i class="material-icons" translate="no">upload_file</i>
+              <span>
+                <span class="mr-upload-title">Anexar arquivos</span><br>
+                <span class="mr-upload-sub">Clique ou arraste um ou mais arquivos</span>
+              </span>
+            </div>
+            <div class="mr-preview" id="mr-preview"></div>
+          </div>
+          <input type="file" name="arquivos" id="mr-files" multiple hidden>
+        </div>
+      </div>
+      <div class="mr-modal-foot">
+        <button type="button" class="mr-btn" data-close>Cancelar</button>
+        <button type="submit" class="mr-btn mr-btn-primary"><i class="material-icons" translate="no">check</i>Salvar nota</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Gerenciar categorias -->
+<div class="mr-modal-bg" id="mr-cat-modal">
+  <div class="mr-modal narrow">
+    <div class="mr-modal-head">
+      <span class="mr-mh-icon"><i class="material-icons" translate="no">label</i></span>
+      <h5>Categorias</h5>
+      <button class="mr-modal-close" type="button" data-close><i class="material-icons" translate="no">close</i></button>
+    </div>
+    <div class="mr-modal-body">
+      <div class="mr-catlist">
+        {% for c in categorias %}
+          <div class="mr-catrow" data-cat="{{ c.pk }}">
+            <div class="mr-catview">
+              <span class="mr-cicon">
+                {% if c.icone %}<i class="material-icons" translate="no" style="color:{{ c.cor }}">{{ c.icone }}</i>{% else %}<span class="mr-dot" style="background:{{ c.cor }}; color:{{ c.cor }}"></span>{% endif %}
+              </span>
+              <span class="mr-catname">{{ c.nome }}</span>
+              <span class="mr-catn">{{ c.n_notas }} nota{{ c.n_notas|pluralize }}</span>
+              <button type="button" class="mr-icobtn js-catedit" title="Editar"><i class="material-icons" translate="no">edit</i></button>
+              <form method="post" action="{% url 'categoria_delete' c.pk %}" style="line-height:0;" onsubmit="return confirm('Excluir a categoria \'{{ c.nome|escapejs }}\'? As notas ficarão sem categoria.');">{% csrf_token %}<input type="hidden" name="catmodal" value="1">
+                <button type="submit" class="mr-icobtn del" title="Excluir"><i class="material-icons" translate="no">delete_outline</i></button>
+              </form>
+            </div>
+            <form method="post" action="{% url 'categoria_update' c.pk %}" class="mr-catedit">
+              {% csrf_token %}<input type="hidden" name="catmodal" value="1">
+              <input type="color" name="cor" value="{{ c.cor }}" class="mr-ccolor" title="Cor">
+              <input type="text" name="nome" value="{{ c.nome }}" maxlength="60" class="mr-cinput nome" placeholder="Nome" required>
+              <input type="text" name="icone" value="{{ c.icone|default:'' }}" maxlength="40" class="mr-cinput icone" placeholder="ícone (ex: school)">
+              <input type="number" name="ordem" value="{{ c.ordem }}" min="0" class="mr-cinput ordem" title="Ordem">
+              <button type="submit" class="mr-cbtn save" title="Salvar"><i class="material-icons" translate="no">check</i></button>
+              <button type="button" class="mr-cbtn js-catcancel" title="Cancelar"><i class="material-icons" translate="no">close</i></button>
+            </form>
+          </div>
+        {% empty %}
+          <p style="color:var(--mr-muted); font-size:13px; text-align:center; padding:10px;">Nenhuma categoria ainda.</p>
+        {% endfor %}
+      </div>
+      <form method="post" action="{% url 'categoria_create' %}" class="mr-catadd">
+        {% csrf_token %}<input type="hidden" name="catmodal" value="1">
+        <div class="grow">
+          <label>Nova categoria</label>
+          {{ categoria_form.nome }}
+        </div>
+        <div class="grow">
+          <label>Ícone (opcional)</label>
+          {{ categoria_form.icone }}
+        </div>
+        <div style="flex:0 0 auto;">
+          <label>Cor</label>
+          {{ categoria_form.cor }}
+        </div>
+        <button type="submit" class="mr-btn mr-btn-primary" style="flex:0 0 auto; height:44px;"><i class="material-icons" translate="no">add</i>Criar</button>
+      </form>
+      <p style="font-size:11.5px; color:var(--mr-muted); margin:12px 2px 0; line-height:1.5;">
+        Dica: o campo <b>ícone</b> aceita nomes de ícones do Material Icons (ex.: <code>school</code>, <code>receipt_long</code>, <code>shield</code>). Veja a lista em fonts.google.com/icons.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+(function () {
+  // ── Modais ──
+  var noteModal = document.getElementById('mr-note-modal');
+  var catModal = document.getElementById('mr-cat-modal');
+  var form = document.getElementById('mr-note-form');
+  var noteTitle = document.getElementById('mr-note-title');
+  var createUrl = "{% url 'nota_create' %}";
+
+  function open(m) { m.classList.add('open'); }
+  function close(m) { m.classList.remove('open'); }
+
+  document.querySelectorAll('[data-close]').forEach(function (b) {
+    b.addEventListener('click', function () { close(noteModal); close(catModal); });
+  });
+  [noteModal, catModal].forEach(function (m) {
+    m.addEventListener('click', function (e) { if (e.target === m) close(m); });
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { close(noteModal); close(catModal); } });
+
+  document.getElementById('mr-manage-cat').addEventListener('click', function () { open(catModal); });
+  // Reabre o modal de categorias após salvar/excluir (redirect com ?catmodal=1)
+  if (new URLSearchParams(window.location.search).get('catmodal')) { open(catModal); }
+
+  // ── CRUD de categorias: edição inline ──
+  document.querySelectorAll('.js-catedit').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var row = btn.closest('.mr-catrow');
+      // fecha qualquer outra em edição
+      document.querySelectorAll('.mr-catrow.editing').forEach(function (r) { if (r !== row) r.classList.remove('editing'); });
+      row.classList.add('editing');
+      var inp = row.querySelector('.mr-cinput.nome');
+      if (inp) setTimeout(function () { inp.focus(); inp.select(); }, 30);
+    });
+  });
+  document.querySelectorAll('.js-catcancel').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      btn.closest('.mr-catrow').classList.remove('editing');
+    });
+  });
+
+  function setVal(name, val) {
+    var el = form.querySelector('[name=' + name + ']');
+    if (el) el.value = val == null ? '' : val;
+  }
+
+  var filesInput = document.getElementById('mr-files');
+  function limparPreview() {
+    var dt = new DataTransfer();
+    filesInput.files = dt.files;
+    renderPreview();
+  }
+
+  document.getElementById('mr-new-btn').addEventListener('click', function () {
+    form.reset();
+    form.action = createUrl;
+    form.enctype = 'multipart/form-data';
+    noteTitle.textContent = 'Nova nota';
+    limparPreview();
+    open(noteModal);
+    setTimeout(function () { var t = form.querySelector('[name=titulo]'); if (t) t.focus(); }, 50);
+  });
+
+  // Delegação (sobrevive à troca de conteúdo do quadro no auto-refresh)
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.js-edit');
+    if (!btn) return;
+    var d = btn.dataset;
+    form.reset();
+    form.action = '/mural/nota/' + d.id + '/editar/';
+    noteTitle.textContent = 'Editar nota';
+    limparPreview();
+    setVal('titulo', d.titulo);
+    setVal('conteudo', d.conteudo);
+    setVal('categoria', d.categoria);
+    setVal('status', d.status);
+    setVal('prioridade', d.prioridade);
+    setVal('responsavel', d.responsavel);
+    setVal('vencimento', d.vencimento);
+    setVal('agendar_em', d.agendar);
+    open(noteModal);
+  });
+
+  // ── Dropzone de anexos ──
+  var box = document.getElementById('mr-upload');
+  var preview = document.getElementById('mr-preview');
+
+  function renderPreview() {
+    preview.innerHTML = '';
+    Array.prototype.forEach.call(filesInput.files, function (file, i) {
+      var chip = document.createElement('div');
+      chip.className = 'mr-pchip';
+      chip.innerHTML = '<i class="material-icons" translate="no">description</i><span>' + file.name + '</span>' +
+                       '<button type="button" class="mr-x" data-i="' + i + '" title="Remover">&times;</button>';
+      preview.appendChild(chip);
+    });
+  }
+  function removeAt(skip) {
+    var dt = new DataTransfer();
+    Array.prototype.forEach.call(filesInput.files, function (f, i) { if (i !== skip) dt.items.add(f); });
+    filesInput.files = dt.files; renderPreview();
+  }
+  function addFiles(list) {
+    var dt = new DataTransfer();
+    Array.prototype.forEach.call(filesInput.files, function (f) { dt.items.add(f); });
+    Array.prototype.forEach.call(list, function (f) { dt.items.add(f); });
+    filesInput.files = dt.files; renderPreview();
+  }
+  filesInput.addEventListener('change', renderPreview);
+  box.addEventListener('click', function (e) { if (e.target.closest('.mr-preview')) return; filesInput.click(); });
+  preview.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var b = e.target.closest('.mr-x');
+    if (b) removeAt(parseInt(b.dataset.i, 10));
+  });
+  ['dragover', 'dragenter'].forEach(function (ev) { box.addEventListener(ev, function (e) { e.preventDefault(); box.classList.add('drag'); }); });
+  ['dragleave', 'dragend', 'drop'].forEach(function (ev) { box.addEventListener(ev, function () { box.classList.remove('drag'); }); });
+  box.addEventListener('drop', function (e) { e.preventDefault(); if (e.dataTransfer && e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
+
+  // ══════════ Quadro livre: layout + arrastar ══════════
+  var board = document.querySelector('.mr-board');
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.mr-card'));
+  var CARDW = 258, GAP = 20;
+  var csrf = (document.querySelector('[name=csrfmiddlewaretoken]') || {}).value;
+  var maxZ = 1;
+
+  function boardMode() { return window.matchMedia('(min-width: 761px)').matches; }
+  function baseRot(id) { return ((id * 137) % 700) / 100 - 3.5; }
+
+  cards.forEach(function (c) {
+    c._rot = baseRot(parseInt(c.dataset.id, 10) || 0);
+    var z = parseInt(c.dataset.z, 10) || 1;
+    if (z > maxZ) maxZ = z;
+  });
+
+  function layout() {
+    if (!board) return;
+    if (!boardMode()) {
+      board.classList.remove('board-mode');
+      cards.forEach(function (c) { c.style.left = c.style.top = c.style.transform = c.style.zIndex = ''; });
+      board.style.minHeight = '';
+      return;
+    }
+    board.classList.add('board-mode');
+    var cs = getComputedStyle(board);
+    var padL = parseFloat(cs.paddingLeft), padT = parseFloat(cs.paddingTop), padR = parseFloat(cs.paddingRight);
+    var contentW = board.clientWidth - padL - padR;
+    var cols = Math.max(1, Math.floor((contentW + GAP) / (CARDW + GAP)));
+    var colH = [];
+    for (var i = 0; i < cols; i++) colH.push(0);
+    var maxBottom = 0;
+
+    cards.forEach(function (c) {
+      c.style.zIndex = Math.min(parseInt(c.dataset.z, 10) || 1, 50);  // nunca acima do header
+      c.style.transform = 'rotate(' + c._rot + 'deg)';
+      var hasPos = c.dataset.x !== '' && c.dataset.y !== '';
+      if (hasPos) {
+        c.style.left = c.dataset.x + 'px';
+        c.style.top = c.dataset.y + 'px';
+        maxBottom = Math.max(maxBottom, parseInt(c.dataset.y, 10) + c.offsetHeight);
+      }
+    });
+    // Notas sem posição -> grade automática (masonry), em ordem ESTÁVEL por id
+    // (assim fixar/reordenar nunca faz a nota "pular" pro topo).
+    var semPos = cards.filter(function (c) { return c.dataset.x === '' || c.dataset.y === ''; })
+                      .sort(function (a, b) { return (parseInt(a.dataset.id, 10) || 0) - (parseInt(b.dataset.id, 10) || 0); });
+    semPos.forEach(function (c) {
+      var ci = 0;
+      for (var k = 1; k < cols; k++) if (colH[k] < colH[ci]) ci = k;
+      var x = padL + ci * (CARDW + GAP);
+      var y = padT + colH[ci];
+      c.style.left = x + 'px';
+      c.style.top = y + 'px';
+      colH[ci] += c.offsetHeight + GAP;
+      maxBottom = Math.max(maxBottom, y + c.offsetHeight);
+    });
+    board.style.minHeight = (maxBottom + 48) + 'px';
+  }
+
+  function expandBoard() {
+    if (!boardMode()) return;
+    var maxBottom = 0;
+    cards.forEach(function (c) { maxBottom = Math.max(maxBottom, c.offsetTop + c.offsetHeight); });
+    board.style.minHeight = (maxBottom + 48) + 'px';
+  }
+
+  function savePos(card) {
+    if (!csrf) return;
+    var x = parseInt(card.style.left, 10) || 0;
+    var y = parseInt(card.style.top, 10) || 0;
+    card.dataset.x = x; card.dataset.y = y;
+    var body = new URLSearchParams(); body.set('x', x); body.set('y', y);
+    fetch('/mural/nota/' + card.dataset.id + '/posicao/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString()
+    }).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { if (d && d.z) { card.dataset.z = d.z; if (d.z > maxZ) maxZ = d.z; } })
+      .catch(function () {});
+  }
+
+  // Arrastar (pointer events) — delegação no board
+  var drag = null;
+  board && board.addEventListener('pointerdown', function (e) {
+    if (!boardMode() || e.button !== 0) return;
+    var card = e.target.closest('.mr-card');
+    if (!card) return;
+    if (e.target.closest('button, a, input, textarea, select, label, .mr-x')) return;
+    e.preventDefault();
+    maxZ++; card.style.zIndex = Math.min(maxZ, 50);  // teto abaixo do header
+    drag = { card: card, sx: e.clientX, sy: e.clientY, ox: card.offsetLeft, oy: card.offsetTop, moved: false };
+    try { card.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  board && board.addEventListener('pointermove', function (e) {
+    if (!drag) return;
+    var dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+    if (!drag.moved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+    if (!drag.moved) { drag.moved = true; drag.card.classList.add('dragging'); drag.card.style.transform = 'rotate(0deg)'; board.classList.add('dragging-active'); }
+    drag.card.style.left = Math.max(0, drag.ox + dx) + 'px';
+    drag.card.style.top = Math.max(0, drag.oy + dy) + 'px';
+  });
+  function endDrag(e) {
+    if (!drag) return;
+    var card = drag.card;
+    try { card.releasePointerCapture(e.pointerId); } catch (err) {}
+    board.classList.remove('dragging-active');
+    if (drag.moved) {
+      card.classList.remove('dragging');
+      card.style.transform = 'rotate(' + card._rot + 'deg)';
+      savePos(card);
+      expandBoard();
+    }
+    drag = null;
+  }
+  board && board.addEventListener('pointerup', endDrag);
+  board && board.addEventListener('pointercancel', endDrag);
+
+  // Re-layout ao redimensionar (debounce) — só re-grida as sem posição
+  var rt = null;
+  window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(layout, 150); });
+
+  // ══════════ Auto-refresh silencioso (sincroniza entre usuários) ══════════
+  // A cada 5s recarrega só o conteúdo do quadro, sem piscar. Pausa enquanto você
+  // arrasta uma nota, com um modal aberto, ou com a aba em segundo plano.
+  var REFRESH_MS = 5000;
+
+  function ocupado() {
+    return document.hidden || drag ||
+      noteModal.classList.contains('open') || catModal.classList.contains('open');
+  }
+
+  function atualizarQuadro() {
+    if (ocupado()) return;
+    fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function (r) { return r.ok ? r.text() : null; })
+      .then(function (html) {
+        if (!html || ocupado()) return;  // checa de novo (resposta pode ter demorado)
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        var novoBoard = doc.querySelector('.mr-board');
+        if (!novoBoard || !board) return;
+
+        board.innerHTML = novoBoard.innerHTML;
+
+        // Recaptura as notas e reposiciona
+        cards = Array.prototype.slice.call(board.querySelectorAll('.mr-card'));
+        cards.forEach(function (c) {
+          c._rot = baseRot(parseInt(c.dataset.id, 10) || 0);
+          var z = parseInt(c.dataset.z, 10) || 1;
+          if (z > maxZ) maxZ = z;
+        });
+        layout();
+
+        // Atualiza o subtítulo e as contagens dos chips (sem mexer nos filtros)
+        var oldSub = document.querySelector('.mr-head-info p');
+        var newSub = doc.querySelector('.mr-head-info p');
+        if (oldSub && newSub) oldSub.innerHTML = newSub.innerHTML;
+        var oldC = document.querySelectorAll('#mr-filters .mr-count');
+        var newC = doc.querySelectorAll('#mr-filters .mr-count');
+        if (oldC.length === newC.length) {
+          for (var i = 0; i < oldC.length; i++) oldC[i].textContent = newC[i].textContent;
+        }
+      })
+      .catch(function () {});
+  }
+
+  setInterval(atualizarQuadro, REFRESH_MS);
+
+  layout();
+})();
+</script>
+{% endblock extra_js %}

@@ -79,6 +79,12 @@ class Nota(models.Model):
         related_name='nota',
     )
 
+    # Ticket vinculado (opcional) — atalho pra abrir o ticket a partir da nota.
+    ticket = models.ForeignKey(
+        'core.Ticket', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='notas_mural',
+    )
+
     autor = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='notas_criadas',

@@ -20,6 +20,11 @@ class NotaForm(forms.ModelForm):
             format='%Y-%m-%dT%H:%M',
         ),
     )
+    # Campo extra: número do ticket a vincular (opcional).
+    ticket_num = forms.IntegerField(
+        required=False, min_value=1,
+        widget=forms.NumberInput(attrs={'class': 'mr-input browser-default', 'placeholder': 'Nº do ticket'}),
+    )
 
     class Meta:
         model = Nota
@@ -60,6 +65,29 @@ class NotaForm(forms.ModelForm):
         # Pré-preenche agendar_em ao editar uma nota já agendada.
         if self.instance and self.instance.pk and self.instance.agendamento_id:
             self.fields['agendar_em'].initial = self.instance.agendamento.inicio
+        # Pré-preenche o nº do ticket ao editar.
+        if self.instance and self.instance.pk and self.instance.ticket_id:
+            self.fields['ticket_num'].initial = self.instance.ticket_id
+
+    def clean_ticket_num(self):
+        num = self.cleaned_data.get('ticket_num')
+        if num:
+            from tiqt.apps.core.models import Ticket
+            if not Ticket.objects.filter(pk=num).exists():
+                raise forms.ValidationError('Ticket #%d não encontrado.' % num)
+        return num
+
+    def save(self, commit=True):
+        nota = super().save(commit=False)
+        num = self.cleaned_data.get('ticket_num')
+        if num:
+            from tiqt.apps.core.models import Ticket
+            nota.ticket = Ticket.objects.filter(pk=num).first()
+        else:
+            nota.ticket = None
+        if commit:
+            nota.save()
+        return nota
 
 
 class CategoriaNotaForm(forms.ModelForm):

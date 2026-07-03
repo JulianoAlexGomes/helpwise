@@ -169,6 +169,9 @@
   .mr-due .material-icons { font-size: 14px; }
   .mr-agend { display: inline-flex; align-items: center; gap: 4px; color: var(--hw-brand); font-weight: 600; }
   .mr-agend .material-icons { font-size: 14px; }
+  .mr-ticket { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; color: var(--hw-brand); text-decoration: none; padding: 2px 8px; border-radius: 20px; background: color-mix(in srgb, var(--hw-brand) 12%, transparent); }
+  .mr-ticket:hover { background: color-mix(in srgb, var(--hw-brand) 22%, transparent); }
+  .mr-ticket .material-icons { font-size: 14px; }
   .mr-when { margin-left: auto; }
 
   .mr-card-actions { display: flex; gap: 7px; margin-top: 12px; }
@@ -371,6 +374,7 @@
                 data-status="{{ nota.status }}"
                 data-prioridade="{{ nota.prioridade }}"
                 data-responsavel="{{ nota.responsavel_id|default:'' }}"
+                data-ticket="{{ nota.ticket_id|default:'' }}"
                 data-vencimento="{% if nota.vencimento %}{{ nota.vencimento|date:'Y-m-d\TH:i' }}{% endif %}"
                 data-agendar="{% if nota.agendamento %}{{ nota.agendamento.inicio|date:'Y-m-d\TH:i' }}{% endif %}">
                 <i class="material-icons" translate="no">edit</i>
@@ -403,6 +407,7 @@
             {% if nota.responsavel %}<span class="mr-resp"><span class="mr-avatar">{{ nota.responsavel.get_full_name|default:nota.responsavel.username|slice:':2'|upper }}</span>{{ nota.responsavel.get_full_name|default:nota.responsavel.username }}</span>{% endif %}
             {% if nota.vencimento %}<span class="mr-due {% if nota.atrasado %}late{% endif %}"><i class="material-icons" translate="no">event</i>{{ nota.vencimento|date:'d/m H:i' }}</span>{% endif %}
             {% if nota.agendamento %}<span class="mr-agend"><i class="material-icons" translate="no">event_available</i>Agendada</span>{% endif %}
+            {% if nota.ticket_id %}<a class="mr-ticket" href="/ticket/{{ nota.ticket_id }}/" title="Abrir ticket #{{ nota.ticket_id }}"><i class="material-icons" translate="no">confirmation_number</i>#{{ nota.ticket_id }}</a>{% endif %}
             <span class="mr-when">{{ nota.criado_em|date:'d/m' }}</span>
           </div>
 
@@ -472,6 +477,10 @@
         <div class="mr-row">
           <div class="mr-field"><label>Vencimento</label>{{ form.vencimento }}</div>
           <div class="mr-field"><label>Agendar na agenda</label>{{ form.agendar_em }}</div>
+        </div>
+        <div class="mr-row">
+          <div class="mr-field"><label>Vincular ticket</label>{{ form.ticket_num }}</div>
+          <div class="mr-field"></div>
         </div>
         <div class="mr-field">
           <label>Anexos</label>
@@ -638,6 +647,7 @@
     setVal('responsavel', d.responsavel);
     setVal('vencimento', d.vencimento);
     setVal('agendar_em', d.agendar);
+    setVal('ticket_num', d.ticket);
     open(noteModal);
   });
 

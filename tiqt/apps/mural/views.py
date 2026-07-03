@@ -1,4 +1,4 @@
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode, urlparse
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model
@@ -19,12 +19,21 @@ User = get_user_model()
 
 
 def _redirect_mural(request):
-    """Volta ao mural preservando os filtros ativos (categoria/status/resp/arquivadas)."""
+    """Volta ao mural preservando os filtros ativos.
+
+    Os filtros vêm da URL de ORIGEM (Referer), não do corpo do POST — assim não
+    colidem com campos do formulário com o mesmo nome (ex.: 'status' da nota).
+    """
     params = {}
-    for chave in ('categoria', 'status', 'resp', 'arquivadas', 'catmodal'):
-        valor = request.POST.get(chave) or request.GET.get(chave)
-        if valor:
-            params[chave] = valor
+    ref = request.META.get('HTTP_REFERER', '')
+    if ref:
+        qs = parse_qs(urlparse(ref).query)
+        for chave in ('categoria', 'status', 'resp', 'arquivadas'):
+            if qs.get(chave) and qs[chave][0]:
+                params[chave] = qs[chave][0]
+    # Flag de reabrir o modal de categorias (vem do form, não é filtro).
+    if request.POST.get('catmodal') or request.GET.get('catmodal'):
+        params['catmodal'] = '1'
     url = reverse('mural')
     if params:
         url += '?' + urlencode(params)

@@ -309,7 +309,8 @@
       </div>
     </div>
     <div class="mr-spacer"></div>
-    <form method="post" action="{% url 'nota_organizar' %}" style="display:inline;" id="mr-organizar-form" onsubmit="return confirm('Reorganizar todas as notas em grade? As posições atuais serão perdidas.');">{% csrf_token %}
+    <form method="post" action="{% url 'nota_organizar' %}" style="display:inline;" id="mr-organizar-form" onsubmit="return confirm('Reorganizar as notas desta visão em grade? As posições atuais desta categoria serão perdidas.');">{% csrf_token %}
+      <input type="hidden" name="view" value="{{ view_key }}">
       <button type="submit" class="mr-btn mr-organizar" title="Reorganizar em grade"><i class="material-icons" translate="no">grid_on</i><span>Organizar</span></button>
     </form>
     <button type="button" class="mr-btn" id="mr-manage-cat"><i class="material-icons" translate="no">label</i>Categorias</button>
@@ -350,9 +351,9 @@
     {% for nota in notas %}
       <div class="mr-card {% if nota.concluida %}done{% endif %} {% if nota.atrasado %}late{% endif %} {% if nota.prioridade == 1 %}urg{% endif %}"
            data-id="{{ nota.pk }}"
-           data-x="{% if nota.pos_x is not None %}{{ nota.pos_x }}{% endif %}"
-           data-y="{% if nota.pos_y is not None %}{{ nota.pos_y }}{% endif %}"
-           data-z="{{ nota.z }}"
+           data-x="{% if nota.vx is not None %}{{ nota.vx }}{% endif %}"
+           data-y="{% if nota.vy is not None %}{{ nota.vy }}{% endif %}"
+           data-z="{{ nota.vz }}"
            style="--card-accent: {% if nota.categoria %}{{ nota.categoria.cor }}{% else %}var(--hw-brand){% endif %}; --card-status: {{ nota.cor_status }}">
         <span class="mr-pinform" aria-hidden="true"><span class="mr-pin"></span></span>
         <div class="mr-card-in">
@@ -681,6 +682,7 @@
   var cards = Array.prototype.slice.call(document.querySelectorAll('.mr-card'));
   var CARDW = 258, GAP = 20;
   var csrf = (document.querySelector('[name=csrfmiddlewaretoken]') || {}).value;
+  var VIEW = "{{ view_key|escapejs }}";  // visão atual (categoria filtrada) — posições são por visão
   var maxZ = 1;
 
   function boardMode() { return window.matchMedia('(min-width: 761px)').matches; }
@@ -748,7 +750,7 @@
     var x = parseInt(card.style.left, 10) || 0;
     var y = parseInt(card.style.top, 10) || 0;
     card.dataset.x = x; card.dataset.y = y;
-    var body = new URLSearchParams(); body.set('x', x); body.set('y', y);
+    var body = new URLSearchParams(); body.set('x', x); body.set('y', y); body.set('view', VIEW);
     fetch('/mural/nota/' + card.dataset.id + '/posicao/', {
       method: 'POST',
       headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded' },

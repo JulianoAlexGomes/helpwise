@@ -67,11 +67,11 @@ class Nota(models.Model):
     fixado = models.BooleanField(default=False)
     vencimento = models.DateTimeField(null=True, blank=True)
 
-    # Posição livre no quadro (px). Nulo = ainda não posicionada (entra na
-    # grade automática). `z` controla o empilhamento ao arrastar (maior = frente).
-    pos_x = models.IntegerField(null=True, blank=True)
-    pos_y = models.IntegerField(null=True, blank=True)
-    z = models.PositiveIntegerField(default=0)
+    # Posições livres no quadro, uma por "visão" (categoria filtrada):
+    #   { "todas": {"x":.., "y":.., "z":..}, "<cat_id>": {...}, ... }
+    # A chave "todas" é a visão sem filtro de categoria. Assim a mesma nota pode
+    # ficar num lugar em "Todas" e em outro dentro da sua categoria.
+    posicoes = models.JSONField(default=dict, blank=True)
 
     # Evento gerado na agenda a partir desta nota (quando agendada).
     agendamento = models.OneToOneField(

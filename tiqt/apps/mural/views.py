@@ -3,7 +3,7 @@ from urllib.parse import urlencode
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count, Max
+from django.db.models import Count
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
@@ -72,8 +72,17 @@ class MuralView(LoginRequiredMixin, TemplateView):
         notas = list(notas)
         n_urgentes = sum(1 for n in notas if n.prioridade == Nota.URGENTE and not n.arquivada)
 
+        # Posição da VISÃO atual (categoria filtrada) em cada nota.
+        view_key = str(cat_id) if cat_id else 'todas'
+        for n in notas:
+            p = (n.posicoes or {}).get(view_key) or {}
+            n.vx = p.get('x')
+            n.vy = p.get('y')
+            n.vz = p.get('z', 0)
+
         ctx.update({
             'notas': notas,
+            'view_key': view_key,
             'categorias': categorias,
             'total': len(notas),
             'n_urgentes': n_urgentes,
@@ -203,8 +212,23 @@ class NotaArquivoDeleteView(LoginRequiredMixin, View):
         return _redirect_mural(request)
 
 
+def _view_key(request):
+    v = request.POST.get('view') or request.GET.get('view') or 'todas'
+    return str(v)[:40]
+
+
+def _topo_z(view):
+    """Maior z entre todas as notas naquela visão (para trazer à frente)."""
+    topo = 0
+    for n in Nota.objects.all():
+        p = (n.posicoes or {}).get(view)
+        if isinstance(p, dict):
+            topo = max(topo, p.get('z', 0) or 0)
+    return topo
+
+
 class NotaPosicaoView(LoginRequiredMixin, View):
-    """Salva a posição (x, y) da nota no quadro e traz para a frente (z)."""
+    """Salva a posição (x, y) da nota NA VISÃO atual e traz para a frente (z)."""
 
     def post(self, request, pk):
         nota = get_object_or_404(Nota, pk=pk)
@@ -215,19 +239,26 @@ class NotaPosicaoView(LoginRequiredMixin, View):
             return JsonResponse({'ok': False}, status=400)
         x = max(0, min(x, 20000))
         y = max(0, min(y, 20000))
-        topo = (Nota.objects.aggregate(m=Max('z'))['m'] or 0) + 1
-        nota.pos_x = x
-        nota.pos_y = y
-        nota.z = topo
-        nota.save(update_fields=['pos_x', 'pos_y', 'z', 'atualizado_em'])
-        return JsonResponse({'ok': True, 'z': nota.z})
+        view = _view_key(request)
+        z = _topo_z(view) + 1
+        pos = dict(nota.posicoes or {})
+        pos[view] = {'x': x, 'y': y, 'z': z}
+        nota.posicoes = pos
+        nota.save(update_fields=['posicoes', 'atualizado_em'])
+        return JsonResponse({'ok': True, 'z': z})
 
 
 class NotaOrganizarView(LoginRequiredMixin, View):
-    """Limpa as posições -> as notas voltam para a grade automática."""
+    """Limpa as posições DA VISÃO atual -> as notas voltam para a grade automática."""
 
     def post(self, request):
-        Nota.objects.exclude(pos_x__isnull=True).update(pos_x=None, pos_y=None, z=0)
+        view = _view_key(request)
+        for n in Nota.objects.all():
+            pos = n.posicoes or {}
+            if view in pos:
+                del pos[view]
+                n.posicoes = pos
+                n.save(update_fields=['posicoes'])
         messages.success(request, 'Quadro reorganizado.')
         return _redirect_mural(request)
 

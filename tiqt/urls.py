@@ -35,6 +35,8 @@ urlpatterns = [
 
     path('certificado/<int:pk>/delete/', CertificadoDeleteView.as_view(), name='certificado_delete'),
     path('cliente/<int:pk>/delete/', views.ClienteDeleteView.as_view(), name='cliente_delete'),
+    path('cliente/<int:pk>/inativar/', views.ClienteInativarView.as_view(), name='cliente_inativar'),
+    path('cliente/<int:pk>/reativar/', views.ClienteReativarView.as_view(), name='cliente_reativar'),
     path('login/', auth_views.LoginView.as_view(redirect_authenticated_user=True),name='login'), 
     path('logout', auth_views.LogoutView.as_view(), name='logout'),
     path('admin/', admin.site.urls),

@@ -1,4 +1,5 @@
 from django import forms
+from django.db.models import Q
 from django_select2.forms import ModelSelect2Widget
 from .models import Ticket, Cliente, Uf, Cidade, Tributacao, Comentario, TipoAcao, Departamento, Prioridade, Situacao, Tipo
 from django.contrib.auth import get_user_model
@@ -190,7 +191,9 @@ from .models import Ticket, Cliente
 class NewTicketForm(forms.ModelForm):
 
     cliente = forms.ModelChoiceField(
-        queryset=Cliente.objects.all().order_by('fantasia'),
+        queryset=Cliente.objects.filter(
+            Q(ativo=True) | Q(ativo__isnull=True)
+        ).order_by('fantasia'),
         required=True,
         label='Cliente'
     )

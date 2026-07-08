@@ -767,6 +767,16 @@ class ClienteListView(ListView):
         cidade = self.request.GET.get('cidade')
         uf = self.request.GET.get('uf')
         tributacao = self.request.GET.get('tributacao')
+        situacao = self.request.GET.get('situacao') or 'ativos'
+
+        # Por padrão, mostra apenas clientes ativos (esconde os inativados).
+        # Trata `ativo=NULL` (registros antigos) como ativo.
+        if situacao == 'inativos':
+            queryset = queryset.filter(ativo=False)
+        elif situacao == 'todos':
+            pass
+        else:  # ativos (padrão)
+            queryset = queryset.filter(Q(ativo=True) | Q(ativo__isnull=True))
 
         if q:
             queryset = queryset.filter(
@@ -791,6 +801,7 @@ class ClienteListView(ListView):
         context['cidades'] = Cidade.objects.all().order_by('descricao')
         context['ufs'] = Uf.objects.all().order_by('sigla')
         context['tributacoes'] = Tributacao.objects.all().order_by('descricao')
+        context['situacao'] = self.request.GET.get('situacao') or 'ativos'
         return context
 
 class ClienteCreateView(CreateView):
@@ -855,6 +866,33 @@ class ClienteDeleteView(LoginRequiredMixin, DeleteView):
             return redirect('cliente_update', pk=self.object.pk)
 
 
+class ClienteInativarView(LoginRequiredMixin, View):
+    """Inativa um cliente (não exclui): ele deixa de aparecer nas listagens e
+    buscas, mas os tickets vinculados são preservados."""
+
+    def post(self, request, pk):
+        cliente = get_object_or_404(Cliente, pk=pk)
+        cliente.ativo = False
+        cliente.motivo_inativacao = (request.POST.get('motivo') or '').strip()
+        cliente.data_inativacao = timezone.now()
+        cliente.save(update_fields=['ativo', 'motivo_inativacao', 'data_inativacao'])
+        messages.success(request, f'Cliente "{cliente}" inativado com sucesso.')
+        return redirect('cliente_list')
+
+
+class ClienteReativarView(LoginRequiredMixin, View):
+    """Reativa um cliente previamente inativado."""
+
+    def post(self, request, pk):
+        cliente = get_object_or_404(Cliente, pk=pk)
+        cliente.ativo = True
+        cliente.motivo_inativacao = None
+        cliente.data_inativacao = None
+        cliente.save(update_fields=['ativo', 'motivo_inativacao', 'data_inativacao'])
+        messages.success(request, f'Cliente "{cliente}" reativado com sucesso.')
+        return redirect(f"{reverse('cliente_list')}?situacao=inativos")
+
+
 class LogoutView(BaseLogoutView):
     http_method_names = ["post", "options"]
     template_name = "registration/logged_out.html"
@@ -888,6 +926,7 @@ def clientes_autocomplete(request):
     if term:
         clientes = (
             Cliente.objects
+            .filter(Q(ativo=True) | Q(ativo__isnull=True))
             .filter(
                 Q(fantasia__icontains=term) |
                 Q(razao_social__icontains=term) |
@@ -914,6 +953,7 @@ def clientes_busca_api(request):
     if q:
         clientes = (
             Cliente.objects
+            .filter(Q(ativo=True) | Q(ativo__isnull=True))
             .filter(
                 Q(fantasia__icontains=q) |
                 Q(razao_social__icontains=q) |

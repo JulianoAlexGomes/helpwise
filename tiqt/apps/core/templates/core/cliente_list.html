@@ -75,8 +75,40 @@
   .cl-act .cl-edit:hover { background: rgba(0,121,107,.1); color: var(--hw-brand); }
   .cl-act .cl-ticket:hover { background: rgba(30,136,229,.1); color: #1e88e5; }
   .cl-act .cl-dl:hover { background: rgba(0,0,0,.06); color: #44474c; }
+  .cl-act .cl-inativar-btn:hover { background: rgba(229,57,53,.1); color: #e53935; }
+  .cl-act .cl-reativar { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; color: #8a8f98; background: none; border: none; cursor: pointer; padding: 0; transition: all .15s; }
+  .cl-act .cl-reativar i { font-size: 19px; }
+  .cl-act .cl-reativar:hover { background: rgba(0,121,107,.1); color: var(--hw-brand); }
+
+  /* Linha / badge de cliente inativo */
+  tr.cl-inativo td { opacity: .62; }
+  tr.cl-inativo td:last-child { opacity: 1; }
+  .cl-badge {
+    display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px;
+    background: rgba(229,57,53,.12); color: #c62828; font-size: 10.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .3px; vertical-align: middle;
+  }
+  html.dark .cl-badge { background: rgba(229,57,53,.2); color: #ef9a9a; }
 
   .cl-empty { text-align: center; color: #9ca3af; font-size: 14px; padding: 40px 0; }
+
+  /* Modal inativar */
+  #modal-inativar { border-radius: 14px; max-width: 520px; }
+  #modal-inativar .modal-content { padding: 24px 26px 8px; }
+  #modal-inativar .modal-footer { padding: 12px 20px; height: auto; }
+  #modal-inativar h5 { color: #1c1d1f; }
+  #modal-inativar .input-field textarea.materialize-textarea { border-bottom: 1.5px solid #d3d6db; color: #1c1d1f; }
+  #modal-inativar .input-field textarea.materialize-textarea:focus { border-bottom: 1.5px solid var(--hw-brand); box-shadow: 0 1px 0 0 var(--hw-brand); }
+  #modal-inativar .input-field label { color: #8a8f98; }
+
+  html.dark #modal-inativar { background: var(--hw-surface) !important; }
+  html.dark #modal-inativar .modal-footer { background: var(--hw-surface) !important; border-top: 1px solid var(--hw-border); }
+  html.dark #modal-inativar h5 { color: var(--hw-text) !important; }
+  html.dark #modal-inativar .modal-content p { color: var(--hw-text2) !important; }
+  html.dark #modal-inativar .modal-content b { color: var(--hw-text) !important; }
+  html.dark #modal-inativar .input-field textarea.materialize-textarea { color: var(--hw-text) !important; border-bottom-color: var(--hw-border) !important; }
+  html.dark #modal-inativar .input-field label { color: var(--hw-text3) !important; }
+  html.dark #modal-inativar .modal-close.btn-flat { color: var(--hw-text2) !important; }
 
   /* Paginação */
   .cl-pagination { display: flex; justify-content: center; gap: 4px; margin: 18px 0 4px; padding: 0; flex-wrap: wrap; }
@@ -157,6 +189,14 @@
             {% endfor %}
           </select>
         </div>
+        <div class="cl-field">
+          <span class="cl-lbl">Situação</span>
+          <select name="situacao">
+            <option value="ativos" {% if situacao == 'ativos' %}selected{% endif %}>Ativos</option>
+            <option value="inativos" {% if situacao == 'inativos' %}selected{% endif %}>Inativos</option>
+            <option value="todos" {% if situacao == 'todos' %}selected{% endif %}>Todos</option>
+          </select>
+        </div>
       </div>
 
       <div class="cl-actions">
@@ -182,9 +222,12 @@
       </thead>
       <tbody>
         {% for cliente in clientes %}
-        <tr>
+        <tr{% if cliente.ativo is False %} class="cl-inativo"{% endif %}>
           <td>{{ cliente.uid }}</td>
-          <td class="cl-fant">{{ cliente.fantasia }}</td>
+          <td class="cl-fant">
+            {{ cliente.fantasia }}
+            {% if cliente.ativo is False %}<span class="cl-badge" title="{{ cliente.motivo_inativacao|default:'' }}">Inativo</span>{% endif %}
+          </td>
           <td>{{ cliente.cnpj }}</td>
           <td>{{ cliente.cidade }}</td>
           <td>{{ cliente.uf }}</td>
@@ -192,10 +235,23 @@
           <td>
             <div class="cl-act">
               <a href="{% url 'cliente_update' cliente.pk %}" class="cl-edit" title="Editar cliente"><i class="material-icons" translate="no">edit</i></a>
-              <a href="{% url 'new_ticket' %}?cliente={{ cliente.id }}" class="cl-ticket" title="Novo ticket"><i class="material-icons" translate="no">add_circle</i></a>
+              {% if cliente.ativo is not False %}
+                <a href="{% url 'new_ticket' %}?cliente={{ cliente.id }}" class="cl-ticket" title="Novo ticket"><i class="material-icons" translate="no">add_circle</i></a>
+              {% endif %}
               {% for certificado in cliente.certificados.all %}
                 <a href="{{ certificado.arquivo.url }}" class="cl-dl" title="Baixar certificado" download><i class="material-icons" translate="no">download</i></a>
               {% endfor %}
+              {% if cliente.ativo is False %}
+                <form method="post" action="{% url 'cliente_reativar' cliente.pk %}" style="display:inline;">
+                  {% csrf_token %}
+                  <button type="submit" class="cl-reativar" title="Reativar cliente"><i class="material-icons" translate="no">restore</i></button>
+                </form>
+              {% else %}
+                <a href="#" class="cl-inativar-btn"
+                   data-url="{% url 'cliente_inativar' cliente.pk %}"
+                   data-nome="{{ cliente.fantasia|default:cliente.razao_social }}"
+                   title="Inativar cliente"><i class="material-icons" translate="no">person_off</i></a>
+              {% endif %}
             </div>
           </td>
         </tr>
@@ -232,12 +288,53 @@
   {% endif %}
 
 </div>
+
+<!-- Modal: inativar cliente -->
+<div id="modal-inativar" class="modal">
+  <form method="post" id="form-inativar">
+    {% csrf_token %}
+    <div class="modal-content">
+      <h5 style="font-size:19px;font-weight:700;margin:0 0 6px;">Inativar cliente</h5>
+      <p style="color:#6b7280;font-size:14px;margin:0 0 18px;">
+        Deseja inativar <b id="inativar-nome"></b>? Ele deixará de aparecer nas listagens e
+        buscas de clientes. Os tickets já vinculados serão mantidos e você poderá reativá-lo depois.
+      </p>
+      <div class="input-field">
+        <textarea name="motivo" id="inativar-motivo" class="materialize-textarea"></textarea>
+        <label for="inativar-motivo">Motivo da inativação (opcional)</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <a href="#!" class="modal-close btn-flat" style="text-transform:none;font-weight:600;">Cancelar</a>
+      <button type="submit" class="btn red waves-effect waves-light" style="text-transform:none;font-weight:600;border-radius:9px;">
+        <i class="material-icons left" translate="no">person_off</i>Inativar
+      </button>
+    </div>
+  </form>
+</div>
 {% endblock content %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   M.FormSelect.init(document.querySelectorAll('.cl-filters select'));
+
+  var modalEl = document.getElementById('modal-inativar');
+  var modalInst = M.Modal.init(modalEl);
+  var form = document.getElementById('form-inativar');
+  var nomeEl = document.getElementById('inativar-nome');
+  var motivoEl = document.getElementById('inativar-motivo');
+
+  document.querySelectorAll('.cl-inativar-btn').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      form.action = this.dataset.url;
+      nomeEl.textContent = this.dataset.nome || 'este cliente';
+      motivoEl.value = '';
+      M.textareaAutoResize(motivoEl);
+      modalInst.open();
+    });
+  });
 });
 </script>
 {% endblock %}

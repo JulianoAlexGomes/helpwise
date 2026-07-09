@@ -1,8 +1,14 @@
 {% with prio=ticket.prioridade.descricao|default:"" %}
-<div class="card ticket-card z-depth-1 {% if ticket.status == 2 %}ticket-card-closed{% endif %}"
+<div class="card ticket-card z-depth-1 {% if ticket.status == 2 %}ticket-card-closed{% endif %} {% if done %}card-done{% endif %}"
      {% if draggable %}draggable="true"{% endif %}
      data-pk="{{ ticket.pk }}"
+     {% if card_id %}data-card-id="{{ card_id }}"{% endif %}
      data-status="{{ ticket.status }}">
+  {% if card_id %}
+  <button class="card-remove-btn" type="button" title="Remover do quadro" data-card-id="{{ card_id }}">
+    <i class="material-icons" translate="no">close</i>
+  </button>
+  {% endif %}
   <div class="card-content">
 
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
@@ -29,6 +35,7 @@
     </div>
 
     <p class="card-date">{{ ticket.criado_em|date:"d/m/Y H:i" }}</p>
+    {% if done %}<div class="card-done-check"><i class="material-icons" translate="no">check_circle</i> Concluído</div>{% endif %}
   </div>
 </div>
 {% endwith %}

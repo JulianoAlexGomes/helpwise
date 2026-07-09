@@ -50,11 +50,17 @@
   }
 
   .kanban-drop-zone {
-    min-height: 120px;
+    height: calc(100vh - 300px);
+    min-height: 320px;
+    overflow-y: auto;
     border-radius: 8px;
     transition: background 0.2s;
     padding: 4px;
   }
+  /* Scrollbar discreta nas colunas */
+  .kanban-drop-zone::-webkit-scrollbar { width: 8px; }
+  .kanban-drop-zone::-webkit-scrollbar-thumb { background: rgba(0,0,0,.14); border-radius: 8px; }
+  html.dark .kanban-drop-zone::-webkit-scrollbar-thumb { background: rgba(255,255,255,.16); }
 
   .kanban-drop-zone.dragover {
     background: rgba(0, 150, 136, 0.12);
@@ -67,6 +73,7 @@
   }
 
   .ticket-card {
+    position: relative;
     border-radius: 8px !important;
     margin-bottom: 10px !important;
     cursor: default;
@@ -96,6 +103,16 @@
   .ticket-card[draggable="true"] { cursor: grab; }
   .ticket-card[draggable="true"]:active { cursor: grabbing; }
   .ticket-card.dragging { opacity: 0.45; }
+
+  /* Card em coluna Encerrado: levemente apagado + selo verde de concluído (estilo Trello) */
+  .ticket-card.card-done { opacity: 0.62; }
+  .ticket-card.card-done:hover { opacity: 0.9; }
+  .card-done-check {
+    display: inline-flex; align-items: center; gap: 4px; margin-top: 10px;
+    font-size: 0.7rem; font-weight: 700; color: #43a047; letter-spacing: .02em;
+  }
+  .card-done-check i { font-size: 16px; }
+  html.dark .card-done-check { color: #66bb6a; }
 
   .ticket-card .card-content { padding: 12px 14px !important; }
 
@@ -207,6 +224,169 @@
   html.dark .kanban-filter { background: var(--hw-surface) !important; border-color: var(--hw-border) !important; box-shadow: none !important; }
   html.dark .kanban-filter label { color: var(--hw-text2) !important; }
   html.dark .kanban-filter .select-wrapper input.select-dropdown { background-color: var(--hw-input-bg) !important; border-color: var(--hw-border) !important; color: var(--hw-text) !important; }
+
+  /* ── Abas de quadros ─────────────────────────────── */
+  .kanban-tabs {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .kanban-tab {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 8px 16px; border-radius: 999px; font-size: 0.85rem; font-weight: 600;
+    color: #55595f; background: #eef0f2; text-decoration: none; transition: all .15s;
+    border: 1.5px solid transparent; cursor: pointer;
+  }
+  .kanban-tab:hover { background: #e2e5e8; }
+  .kanban-tab.active { background: var(--hw-brand, #00796b); color: #fff; }
+  .kanban-tab i { font-size: 16px; }
+  .kanban-tab-add { border: 1.5px dashed #cfd3d8; background: transparent; color: #6b7078; }
+  .kanban-tab-add:hover { border-color: var(--hw-brand, #00796b); color: var(--hw-brand, #00796b); background: rgba(0,121,107,.06); }
+  .kanban-tab-actions { display: inline-flex; align-items: center; gap: 2px; margin-left: 4px; }
+  .kanban-tab-actions a { display: inline-flex; color: #8a8f98; }
+  .kanban-tab-actions a i { font-size: 19px; }
+  .kanban-tab-actions a:hover { color: #e53935; }
+  #btn-editar-quadro:hover i { color: var(--hw-brand, #00796b) !important; }
+  html.dark .kanban-tab { background: var(--hw-surface); color: var(--hw-text2); }
+  html.dark .kanban-tab.active { background: var(--hw-brand, #00796b); color: #fff; }
+  html.dark .kanban-tab-add { background: transparent; border-color: var(--hw-border); }
+
+  /* Adicionar card (quadros personalizados) */
+  .add-card-btn {
+    display: flex; align-items: center; gap: 4px; width: 100%; margin-top: 4px;
+    padding: 8px 10px; border: none; background: transparent; color: #6b7078;
+    border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background .15s;
+  }
+  .add-card-btn:hover { background: rgba(0,0,0,.05); }
+  .add-card-btn i { font-size: 16px; }
+  html.dark .add-card-btn { color: var(--hw-text2); }
+  html.dark .add-card-btn:hover { background: rgba(255,255,255,.06); }
+
+  /* Botão remover card do quadro */
+  .card-remove-btn {
+    position: absolute; top: 6px; right: 6px; display: none;
+    background: rgba(0,0,0,.04); border: none; border-radius: 50%;
+    width: 22px; height: 22px; line-height: 0; cursor: pointer; color: #9099a1;
+  }
+  .card-remove-btn i { font-size: 16px; }
+  .card-remove-btn:hover { background: rgba(229,57,53,.12); color: #e53935; }
+  .ticket-card:hover .card-remove-btn { display: inline-flex; align-items: center; justify-content: center; }
+
+  /* Card avulso */
+  .free-card .free-card-content { cursor: pointer; }
+  .free-card .free-card-title { color: #333; font-weight: 600; margin: 0; }
+  .free-card .free-card-text { font-size: 0.78rem; color: #777; margin: 6px 0 0; line-height: 1.35; }
+  .free-card { border-left: 3px solid #b0bec5 !important; }
+  html.dark .free-card .free-card-title { color: var(--hw-text) !important; }
+  html.dark .free-card .free-card-text { color: var(--hw-text3) !important; }
+
+  /* Contador de comentários no card avulso */
+  .free-card-badge {
+    display: inline-flex; align-items: center; gap: 3px; margin-top: 8px;
+    font-size: 0.7rem; color: #90a4ae; font-weight: 600;
+  }
+  .free-card-badge i { font-size: 14px; }
+
+  /* Seletor de cliente no card avulso */
+  .fc-cliente-sel {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 8px 12px; border: 1px solid #e0e0e0; border-radius: 8px; margin-top: 6px;
+    background: rgba(0,121,107,.06); font-size: 0.85rem; color: #333;
+  }
+  .fc-cliente-sel a { display: inline-flex; color: #9099a1; }
+  .fc-cliente-sel a i { font-size: 18px; }
+  .fc-cliente-sel a:hover { color: #e53935; }
+  html.dark .fc-cliente-sel { background: var(--hw-input-bg); border-color: var(--hw-border); color: var(--hw-text); }
+
+  #modal-add-card .modal-content { max-height: 65vh; overflow-y: auto; }
+
+  /* Toggle ticket/avulso */
+  .add-card-toggle { display: inline-flex; background: #eef0f2; border-radius: 8px; padding: 3px; margin-bottom: 14px; gap: 2px; }
+  .add-card-toggle .act-btn {
+    border: none; background: transparent; padding: 7px 16px; border-radius: 6px;
+    font-size: 0.82rem; font-weight: 600; color: #6b7078; cursor: pointer;
+  }
+  .add-card-toggle .act-btn.active { background: #fff; color: var(--hw-brand, #00796b); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  html.dark .add-card-toggle { background: var(--hw-input-bg); }
+  html.dark .add-card-toggle .act-btn.active { background: var(--hw-surface); }
+
+  /* Busca de tickets no modal add-card */
+  #modal-add-card { border-radius: 12px; max-width: 560px; }
+  .add-card-resultados { margin-top: 12px; max-height: 320px; overflow-y: auto; }
+  .add-card-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 10px 12px; border: 1px solid #eceef0; border-radius: 8px; margin-bottom: 6px; cursor: pointer;
+  }
+  .add-card-item:hover { border-color: var(--hw-brand, #00796b); background: rgba(0,121,107,.05); }
+  .add-card-item .aci-main { min-width: 0; }
+  .add-card-item .aci-id { font-weight: 700; color: #00796b; font-size: 0.82rem; }
+  .add-card-item .aci-titulo { font-size: 0.85rem; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .add-card-item .aci-cliente { font-size: 0.74rem; color: #888; }
+  .add-card-item .aci-status { font-size: 0.7rem; color: #aaa; white-space: nowrap; }
+  html.dark #modal-add-card { background-color: var(--hw-surface) !important; color: var(--hw-text) !important; }
+  html.dark .add-card-item { border-color: var(--hw-border); }
+  html.dark .add-card-item .aci-titulo { color: var(--hw-text); }
+  html.dark #modal-add-card .modal-footer { background-color: var(--hw-surface) !important; }
+  html.dark #modal-quadro { background-color: var(--hw-surface) !important; color: var(--hw-text) !important; }
+  html.dark #modal-quadro label { color: var(--hw-text2) !important; }
+  html.dark #modal-quadro .coluna-input,
+  html.dark #modal-add-card .coluna-input { background-color: var(--hw-input-bg) !important; color: var(--hw-text) !important; border-color: var(--hw-border) !important; }
+  html.dark #modal-quadro .modal-footer { background-color: var(--hw-surface) !important; border-top-color: var(--hw-border) !important; }
+
+  /* ── Header de coluna personalizável ─────────────── */
+  .kanban-col-header[draggable="true"] { cursor: grab; }
+  .kanban-col-header[draggable="true"]:active { cursor: grabbing; }
+  .kanban-col.col-dragging { opacity: 0.5; }
+  .kanban-col.col-drop-target { outline: 2px dashed rgba(0,121,107,.5); outline-offset: 4px; border-radius: 8px; }
+
+  .col-title {
+    display: flex; align-items: center; gap: 4px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .col-header-right { display: flex; align-items: center; gap: 6px; }
+  .col-menu-btn { display: inline-flex; line-height: 0; }
+  .col-menu-btn i { color: #fff; font-size: 20px; opacity: .85; }
+  .col-menu-btn:hover i { opacity: 1; }
+
+  /* Adicionar coluna */
+  .kanban-add-col { flex: 0 0 200px; min-width: 200px; padding-top: 0; }
+  .add-col-btn {
+    display: inline-flex; align-items: center; gap: 6px; width: 100%;
+    padding: 10px 14px; border: 1.5px dashed #cfd3d8; background: transparent;
+    color: #6b7078; border-radius: 8px; font-size: 0.85rem; font-weight: 600;
+    cursor: pointer; transition: all .15s;
+  }
+  .add-col-btn:hover { border-color: var(--hw-brand, #00796b); color: var(--hw-brand, #00796b); background: rgba(0,121,107,.06); }
+  .add-col-btn i { font-size: 18px; }
+  html.dark .add-col-btn { border-color: var(--hw-border); color: var(--hw-text2); }
+
+  /* Modal coluna */
+  #modal-coluna { border-radius: 12px; max-width: 460px; }
+  #modal-coluna .modal-content { padding: 26px 30px 10px; }
+  .coluna-input {
+    width: 100%; height: 42px; margin-top: 6px; padding: 0 12px;
+    border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem;
+  }
+  .coluna-input:focus { border-color: #00796b; outline: none; }
+  .coluna-cor-row { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+  #coluna-cor { width: 46px; height: 38px; padding: 0; border: 1px solid #ccc; border-radius: 6px; background: none; cursor: pointer; }
+  .coluna-cor-presets { display: flex; gap: 6px; flex-wrap: wrap; }
+  .cor-preset { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform .1s; }
+  .cor-preset:hover { transform: scale(1.15); }
+  #modal-coluna .modal-footer { border-top: 1px solid #eee; display: flex; align-items: center; }
+  html.dark #modal-coluna { background-color: var(--hw-surface) !important; color: var(--hw-text) !important; }
+  html.dark #modal-coluna label { color: var(--hw-text2) !important; }
+  html.dark #modal-coluna .coluna-input { background-color: var(--hw-input-bg) !important; color: var(--hw-text) !important; border-color: var(--hw-border) !important; }
+  html.dark #modal-coluna .modal-footer { background-color: var(--hw-surface) !important; border-top-color: var(--hw-border) !important; }
+
+  /* Form de comentário no modal de preview */
+  .tp-comment-form { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .tp-comment-form textarea {
+    min-height: 64px; border: 1px solid #ccc !important; border-radius: 6px;
+    padding: 10px 12px; font-size: 0.86rem; resize: vertical; box-sizing: border-box;
+  }
+  .tp-comment-form textarea:focus { border-color: #00796b !important; box-shadow: none !important; }
+  .tp-comment-form .tp-comment-actions { display: flex; justify-content: flex-end; }
+  html.dark .tp-comment-form textarea { background-color: var(--hw-input-bg) !important; color: var(--hw-text) !important; border-color: var(--hw-border) !important; }
 
   /* Modal de encerramento */
   #modal-close-ticket {
@@ -381,8 +561,31 @@
 <div class="kanban-wrapper">
 <div class="container-fluid" style="padding:0;">
 
+  <!-- Abas de quadros -->
+  <div class="kanban-tabs">
+    {% for q in quadros %}
+      <a href="?quadro={{ q.id }}"
+         class="kanban-tab {% if quadro_atual and q.id == quadro_atual.id %}active{% endif %}">
+        {% if q.is_padrao %}<i class="material-icons tiny" translate="no">view_column</i>{% endif %}
+        {{ q.nome }}
+      </a>
+    {% endfor %}
+    <button id="btn-novo-quadro" class="kanban-tab kanban-tab-add" type="button">
+      <i class="material-icons tiny" translate="no">add</i> Novo quadro
+    </button>
+    {% if quadro_atual and not quadro_atual.is_padrao %}
+      <span class="kanban-tab-actions">
+        <a href="#!" id="btn-editar-quadro" title="Renomear quadro"
+           data-id="{{ quadro_atual.id }}" data-nome="{{ quadro_atual.nome }}"><i class="material-icons" translate="no">edit</i></a>
+        <a href="#!" id="btn-excluir-quadro" title="Excluir quadro"
+           data-id="{{ quadro_atual.id }}"><i class="material-icons" translate="no">delete</i></a>
+      </span>
+    {% endif %}
+  </div>
+
   <!-- Filtro -->
   <form method="get" class="kanban-filter">
+    <input type="hidden" name="quadro" value="{{ quadro_atual.id }}">
     <div class="filter-group">
       <label for="sel-responsavel">Responsável:</label>
       <select id="sel-responsavel" name="responsavel" onchange="this.form.submit()">
@@ -420,61 +623,181 @@
     </div>
 
     {% if responsavel_selecionado or atendente_selecionado or tipo_selecionado %}
-      <a href="{% url 'ticket_kanban' %}" class="kanban-clear">
+      <a href="?quadro={{ quadro_atual.id }}" class="kanban-clear">
         <i class="material-icons" translate="no">close</i> Limpar filtros
       </a>
     {% endif %}
   </form>
 
   <!-- Board -->
-  <div class="kanban-board">
+  <div class="kanban-board" id="kanban-board"
+       data-quadro-id="{{ quadro_atual.id }}"
+       data-padrao="{% if quadro_atual.is_padrao %}1{% else %}0{% endif %}">
 
-    <!-- ── Aberto ─────────────────────────────────── -->
-    <div class="kanban-col">
-      <div class="kanban-col-header teal darken-1">
-        <span><i class="material-icons tiny" style="vertical-align:middle">inbox</i> Aberto</span>
-        <span class="badge-count" id="count-0">{{ tickets_aberto.count }}</span>
+    {% for coluna in colunas %}
+    <div class="kanban-col" data-coluna-id="{{ coluna.id }}">
+      <div class="kanban-col-header" draggable="true" style="background: {{ coluna.cor }};">
+        <span class="col-title">{{ coluna.nome }}</span>
+        <span class="col-header-right">
+          <span class="badge-count" id="count-{{ coluna.id }}">{{ coluna.qtd }}{% if coluna.status_associado == 2 and coluna.qtd == 30 %}+{% endif %}</span>
+          <a href="#!" class="col-menu-btn"
+             data-coluna-id="{{ coluna.id }}"
+             data-nome="{{ coluna.nome }}"
+             data-cor="{{ coluna.cor }}"
+             data-status="{{ coluna.status_associado|default_if_none:'' }}"
+             data-fixa="{% if quadro_atual.is_padrao %}1{% else %}0{% endif %}">
+            <i class="material-icons" translate="no">more_vert</i>
+          </a>
+        </span>
       </div>
-      <div class="kanban-drop-zone" id="drop-0" data-status="0">
-        {% for ticket in tickets_aberto %}
-          {% include "core/_kanban_card.html" with ticket=ticket draggable=True %}
-        {% empty %}
-          <div class="kanban-empty">Nenhum ticket em aberto</div>
-        {% endfor %}
+      <div class="kanban-drop-zone" id="drop-{{ coluna.id }}"
+           data-coluna-id="{{ coluna.id }}"
+           data-status="{{ coluna.status_associado|default_if_none:'' }}">
+        {% if quadro_atual.is_padrao %}
+          {% for ticket in coluna.lista %}
+            {% include "core/_kanban_card.html" with ticket=ticket draggable=coluna.arrastavel done=coluna.encerrada %}
+          {% empty %}
+            <div class="kanban-empty">Nenhum ticket</div>
+          {% endfor %}
+        {% else %}
+          {% for card in coluna.lista %}
+            {% if card.ticket %}
+              {% include "core/_kanban_card.html" with ticket=card.ticket draggable=True card_id=card.id done=coluna.encerrada %}
+            {% else %}
+              {% include "core/_kanban_free_card.html" with card=card done=coluna.encerrada %}
+            {% endif %}
+          {% endfor %}
+          <button class="add-card-btn" type="button" data-coluna-id="{{ coluna.id }}">
+            <i class="material-icons" translate="no">add</i> Adicionar card
+          </button>
+        {% endif %}
       </div>
     </div>
+    {% endfor %}
 
-    <!-- ── Em Atendimento ─────────────────────────── -->
-    <div class="kanban-col">
-      <div class="kanban-col-header orange darken-2">
-        <span><i class="material-icons tiny" style="vertical-align:middle">assignment_ind</i> Em Atendimento</span>
-        <span class="badge-count" id="count-1">{{ tickets_em_atendimento.count }}</span>
-      </div>
-      <div class="kanban-drop-zone" id="drop-1" data-status="1">
-        {% for ticket in tickets_em_atendimento %}
-          {% include "core/_kanban_card.html" with ticket=ticket draggable=True %}
-        {% empty %}
-          <div class="kanban-empty">Nenhum ticket em atendimento</div>
-        {% endfor %}
-      </div>
-    </div>
-
-    <!-- ── Encerrado ───────────────────────────────── -->
-    <div class="kanban-col">
-      <div class="kanban-col-header green darken-2">
-        <span><i class="material-icons tiny" style="vertical-align:middle">assignment_turned_in</i> Encerrado</span>
-        <span class="badge-count" id="count-2">{{ tickets_encerrado.count }}{% if tickets_encerrado.count == 30 %}+{% endif %}</span>
-      </div>
-      <div class="kanban-drop-zone" id="drop-2" data-status="2">
-        {% for ticket in tickets_encerrado %}
-          {% include "core/_kanban_card.html" with ticket=ticket draggable=False %}
-        {% empty %}
-          <div class="kanban-empty">Nenhum ticket encerrado</div>
-        {% endfor %}
-      </div>
+    <!-- Adicionar coluna -->
+    <div class="kanban-add-col">
+      <button id="btn-add-col" class="add-col-btn" type="button" data-quadro-id="{{ quadro_atual.id }}">
+        <i class="material-icons" translate="no">add</i> Adicionar coluna
+      </button>
     </div>
 
   </div><!-- /kanban-board -->
+
+  <!-- ── Modal: Criar / editar coluna ────────────────── -->
+  <div id="modal-coluna" class="modal">
+    <div class="modal-content">
+      <h5 id="modal-coluna-titulo" style="margin:0 0 16px; font-size:1.05rem; font-weight:700;">Nova coluna</h5>
+      <input type="hidden" id="coluna-id" value="">
+      <label for="coluna-nome" style="font-size:0.82rem; font-weight:600; color:#444;">Nome</label>
+      <input type="text" id="coluna-nome" class="browser-default coluna-input" placeholder="Ex.: Aguardando cliente" maxlength="40">
+      <label for="coluna-cor" style="font-size:0.82rem; font-weight:600; color:#444; margin-top:14px; display:block;">Cor</label>
+      <div class="coluna-cor-row">
+        <input type="color" id="coluna-cor" value="#607d8b">
+        <div class="coluna-cor-presets">
+          <span class="cor-preset" style="background:#00897b" data-cor="#00897b"></span>
+          <span class="cor-preset" style="background:#fb8c00" data-cor="#fb8c00"></span>
+          <span class="cor-preset" style="background:#388e3c" data-cor="#388e3c"></span>
+          <span class="cor-preset" style="background:#e53935" data-cor="#e53935"></span>
+          <span class="cor-preset" style="background:#8e24aa" data-cor="#8e24aa"></span>
+          <span class="cor-preset" style="background:#3949ab" data-cor="#3949ab"></span>
+          <span class="cor-preset" style="background:#00acc1" data-cor="#00acc1"></span>
+          <span class="cor-preset" style="background:#607d8b" data-cor="#607d8b"></span>
+        </div>
+      </div>
+
+      <div id="coluna-status-wrap" style="margin-top:16px; display:none;">
+        <label for="coluna-status" style="font-size:0.82rem; font-weight:600; color:#444;">Ligar a um status (opcional)</label>
+        <select id="coluna-status" class="browser-default coluna-input">
+          <option value="">Nenhum (só organiza)</option>
+          <option value="0">Aberto</option>
+          <option value="1">Em atendimento</option>
+          <option value="2">Encerrado</option>
+          <option value="3">Cancelado</option>
+        </select>
+        <p style="font-size:0.72rem; color:#999; margin:6px 0 0;">Ao mover um card para esta coluna, o ticket assume o status escolhido.</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <a href="#!" id="btn-excluir-coluna" class="btn-flat red-text" style="margin-right:auto; float:left; display:none;">
+        <i class="material-icons left">delete</i>Excluir
+      </a>
+      <a href="#!" class="modal-close btn-flat grey-text" style="margin-right:8px;">Cancelar</a>
+      <button id="btn-salvar-coluna" class="btn teal darken-1" type="button" style="border-radius:6px;">
+        <i class="material-icons left">save</i>Salvar
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Modal: Criar / renomear quadro ──────────────── -->
+  <div id="modal-quadro" class="modal">
+    <div class="modal-content">
+      <h5 id="modal-quadro-titulo" style="margin:0 0 16px; font-size:1.05rem; font-weight:700;">Novo quadro</h5>
+      <input type="hidden" id="quadro-id" value="">
+      <label for="quadro-nome" style="font-size:0.82rem; font-weight:600; color:#444;">Nome do quadro</label>
+      <input type="text" id="quadro-nome" class="browser-default coluna-input" placeholder="Ex.: Por setor, Projeto X..." maxlength="60">
+    </div>
+    <div class="modal-footer">
+      <a href="#!" class="modal-close btn-flat grey-text" style="margin-right:8px;">Cancelar</a>
+      <button id="btn-salvar-quadro" class="btn teal darken-1" type="button" style="border-radius:6px;">
+        <i class="material-icons left">save</i>Salvar
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Modal: Adicionar card (ticket ou avulso) ────── -->
+  <div id="modal-add-card" class="modal">
+    <div class="modal-content">
+      <h5 id="modal-add-card-titulo" style="margin:0 0 14px; font-size:1.05rem; font-weight:700;">Adicionar card</h5>
+      <input type="hidden" id="add-card-coluna-id" value="">
+      <input type="hidden" id="free-card-id" value="">
+
+      <div class="add-card-toggle" id="add-card-toggle">
+        <button type="button" class="act-btn active" data-mode="ticket">Ticket existente</button>
+        <button type="button" class="act-btn" data-mode="avulso">Card avulso</button>
+      </div>
+
+      <div id="add-card-ticket-mode">
+        <input type="text" id="add-card-busca" class="browser-default coluna-input" placeholder="Buscar por #número, título ou cliente...">
+        <div id="add-card-resultados" class="add-card-resultados"></div>
+      </div>
+
+      <div id="add-card-avulso-mode" style="display:none;">
+        <input type="text" id="free-card-titulo" class="browser-default coluna-input" placeholder="Título do card" maxlength="120">
+
+        <div class="fc-cliente" style="margin-top:10px;">
+          <input type="hidden" id="free-card-cliente-id" value="">
+          <input type="text" id="free-card-cliente-busca" class="browser-default coluna-input" placeholder="Cliente (opcional) — buscar por nome/CNPJ...">
+          <div id="free-card-cliente-res" class="add-card-resultados"></div>
+          <div id="free-card-cliente-sel" class="fc-cliente-sel" style="display:none;">
+            <span id="free-card-cliente-nome"></span>
+            <a href="#!" id="free-card-cliente-clear" title="Remover cliente"><i class="material-icons" translate="no">close</i></a>
+          </div>
+        </div>
+
+        <textarea id="free-card-texto" class="browser-default coluna-input" style="height:auto; min-height:90px; padding:10px 12px; margin-top:10px;" placeholder="Descrição (opcional)"></textarea>
+
+        <div id="free-card-comments" class="tp-section" style="display:none; margin-top:18px;">
+          <h6 class="tp-section-title"><i class="material-icons tiny">forum</i> Comentários</h6>
+          <form class="tp-comment-form" id="fc-comment-form">
+            <textarea id="fc-comment-text" placeholder="Escreva um comentário..." maxlength="2000"></textarea>
+            <div class="tp-comment-actions">
+              <button type="submit" class="btn teal darken-1" style="border-radius:6px;">
+                <i class="material-icons left">send</i>Comentar
+              </button>
+            </div>
+          </form>
+          <div id="fc-comment-list"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <a href="#!" class="modal-close btn-flat grey-text" style="margin-right:8px;">Fechar</a>
+      <button id="btn-salvar-avulso" class="btn teal darken-1" type="button" style="border-radius:6px; display:none;">
+        <i class="material-icons left">save</i>Salvar
+      </button>
+    </div>
+  </div>
 
   <!-- ── Modal: Encerrar ticket ─────────────────────── -->
   <div id="modal-close-ticket" class="modal">
@@ -529,8 +852,25 @@
 {% block extra_js %}
 <script>
 (function () {
-  const ACCEPT_URL = (pk) => `/ticket/${pk}/accept-ajax/`;
-  const CLOSE_URL  = (pk) => `/ticket/${pk}/close-ajax/`;
+  const ACCEPT_URL  = (pk) => `/ticket/${pk}/accept-ajax/`;
+  const CLOSE_URL   = (pk) => `/ticket/${pk}/close-ajax/`;
+  const MOVER_URL   = (pk) => `/ticket/${pk}/mover-coluna/`;
+  const COMENTAR_URL = (pk) => `/ticket/${pk}/comentar-ajax/`;
+  const COL_CRIAR_URL     = '/kanban/coluna/criar/';
+  const COL_EDITAR_URL    = (id) => `/kanban/coluna/${id}/editar/`;
+  const COL_EXCLUIR_URL   = (id) => `/kanban/coluna/${id}/excluir/`;
+  const COL_REORDENAR_URL = '/kanban/colunas/reordenar/';
+  const QUADRO_CRIAR_URL   = '/kanban/quadro/criar/';
+  const QUADRO_EDITAR_URL  = (id) => `/kanban/quadro/${id}/editar/`;
+  const QUADRO_EXCLUIR_URL = (id) => `/kanban/quadro/${id}/excluir/`;
+  const ADD_CARD_URL    = '/kanban/card/adicionar/';
+  const AVULSO_URL      = '/kanban/card/avulso/';
+  const CARD_DETALHE_URL = '/kanban/card/detalhe/';
+  const CARD_COMENTAR_URL = '/kanban/card/comentar/';
+  const CARD_MOVER_URL  = '/kanban/card/mover/';
+  const REMOVE_CARD_URL = '/kanban/card/remover/';
+  const BUSCA_URL       = '/ticket/busca-ajax/';
+  const CLIENTE_BUSCA_URL = '/api/clientes/busca/';
 
   function getCsrf() {
     const m = document.cookie.match(/csrftoken=([^;]+)/);
@@ -543,7 +883,10 @@
 
   let pendingPk   = null;   // pk do ticket sendo encerrado
   let pendingCard = null;   // referência ao card DOM
-  let pendingFromStatus = null;
+  let pendingCardId = null;     // id do KanbanCard (quadro personalizado)
+  let pendingColunaId = null;   // coluna destino do encerramento
+  let pendingZone = null;       // drop-zone destino
+  let pendingSourceZone = null; // drop-zone origem
 
   // ── Pré-visualização do ticket ──────────────────────
   const PREVIEW_URL = (pk) => `/ticket/${pk}/preview-ajax/`;
@@ -578,11 +921,12 @@
     }
   }
 
-  document.querySelectorAll('.js-ticket-preview').forEach(link => {
-    link.addEventListener('click', e => {
-      e.preventDefault();
-      openPreview(link.dataset.pk);
-    });
+  // Delegação: cobre também cards adicionados dinamicamente
+  document.addEventListener('click', e => {
+    const link = e.target.closest('.js-ticket-preview');
+    if (!link) return;
+    e.preventDefault();
+    openPreview(link.dataset.pk);
   });
 
   // ── Salvar alterações do preview ────────────────────
@@ -644,7 +988,7 @@
     }
   });
 
-  // ── Drag & Drop ─────────────────────────────────────
+  // ── Drag & Drop de cards ────────────────────────────
   let draggingCard = null;
 
   function bindDraggable(card) {
@@ -664,6 +1008,7 @@
 
   document.querySelectorAll('.kanban-drop-zone').forEach(zone => {
     zone.addEventListener('dragover', e => {
+      if (!draggingCard) return;               // ignora quando arrastando coluna
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
       zone.classList.add(zone.dataset.status === '2' ? 'dragover-close' : 'dragover');
@@ -674,35 +1019,82 @@
       }
     });
     zone.addEventListener('drop', async e => {
-      e.preventDefault();
       zone.classList.remove('dragover', 'dragover-close');
       if (!draggingCard) return;
+      e.preventDefault();
 
-      const pk         = draggingCard.dataset.pk;
-      const fromStatus = parseInt(draggingCard.dataset.status);
-      const toStatus   = parseInt(zone.dataset.status);
+      const pk        = draggingCard.dataset.pk;          // undefined em card avulso
+      const cardId    = draggingCard.dataset.cardId;      // definido em quadros personalizados
+      const colStatus = zone.dataset.status;              // '' (livre) ou '0'/'1'/'2'/'3'
+      const colunaId  = zone.dataset.colunaId;
+      const card      = draggingCard;
+      const sourceZone = card.parentElement;
 
-      if (fromStatus === toStatus) return;
+      if (sourceZone === zone) return;                    // mesma coluna
 
-      if (fromStatus === 0 && toStatus === 1) {
-        // Aberto → Em Atendimento
-        await acceptTicket(pk, zone, draggingCard);
-
-      } else if ((fromStatus === 0 || fromStatus === 1) && toStatus === 2) {
-        // Aberto/Em Atendimento → Encerrado: abrir modal
+      // Encerrar exige solução — só para cards de ticket
+      if (colStatus === '2' && pk) {
         pendingPk         = pk;
-        pendingCard       = draggingCard;
-        pendingFromStatus = fromStatus;
+        pendingCard       = card;
+        pendingCardId     = cardId || null;
+        pendingColunaId   = colunaId;
+        pendingZone       = zone;
+        pendingSourceZone = sourceZone;
         document.getElementById('modal-ticket-id').textContent = `#${pk}`;
         document.getElementById('modal-solucao-text').value = '';
         document.getElementById('modal-solucao-error').style.display = 'none';
         modalInst.open();
+        return;
+      }
 
+      // Quadro personalizado move por card_id; quadro padrão move por ticket
+      if (cardId) {
+        await moverCardServer(CARD_MOVER_URL, { card_id: cardId, coluna_id: colunaId }, zone, card, sourceZone, pk);
       } else {
-        M.toast({ html: 'Transição não permitida via Kanban.', classes: 'orange darken-2' });
+        await moverCardServer(MOVER_URL(pk), { coluna_id: colunaId }, zone, card, sourceZone, pk);
       }
     });
   });
+
+  // Move um card para a coluna destino e persiste no servidor
+  async function moverCardServer(url, params, zone, card, sourceZone, pk) {
+    try {
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCsrf(),
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams(params),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        M.toast({ html: data.error === 'needs_solution' ? 'Encerre pelo fluxo (arraste para uma coluna Encerrado).' : (data.error || 'Erro ao mover card'), classes: 'red' });
+        return;
+      }
+
+      zone.insertBefore(card, zone.firstChild);
+      removeEmpty(zone);
+      addEmptyIfNeeded(sourceZone);
+      refreshCount(zone);
+      refreshCount(sourceZone);
+      aplicarDone(card, zone.dataset.status === '2');
+
+      if (data.status !== null && typeof data.status !== 'undefined') {
+        card.dataset.status = data.status;
+        if (data.status === 1 && data.responsavel) {
+          const respEl = card.querySelector('.responsavel-name');
+          if (respEl) respEl.textContent = data.responsavel;
+          const respRow = card.querySelector('.responsavel-row');
+          if (respRow) respRow.style.display = 'flex';
+        }
+      }
+      M.toast({ html: pk ? `Ticket #${pk} movido!` : 'Card movido!', classes: 'teal darken-1' });
+    } catch {
+      M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
+    }
+  }
 
   // ── Confirmar encerramento ───────────────────────────
   document.getElementById('btn-confirm-close').addEventListener('click', async () => {
@@ -737,17 +1129,34 @@
         return;
       }
 
-      // Move card para coluna Encerrado
-      const zone2 = document.getElementById('drop-2');
-      pendingCard.dataset.status = '2';
-      pendingCard.removeAttribute('draggable');
-      pendingCard.style.cursor = 'default';
-      pendingCard.classList.add('ticket-card-closed');
-      zone2.insertBefore(pendingCard, zone2.firstChild);
+      // Fixa o card na coluna de destino (status já é 2 após close-ajax)
+      const fixUrl = pendingCardId ? CARD_MOVER_URL : MOVER_URL(pendingPk);
+      const fixParams = pendingCardId
+        ? { card_id: pendingCardId, coluna_id: pendingColunaId }
+        : { coluna_id: pendingColunaId };
+      await fetch(fixUrl, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCsrf(),
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams(fixParams),
+      }).catch(() => {});
 
-      removeEmpty(zone2);
-      updateCount(pendingFromStatus, -1);
-      updateCount(2, +1);
+      pendingCard.dataset.status = '2';
+      pendingCard.classList.add('ticket-card-closed');
+      aplicarDone(pendingCard, true);
+      if (!pendingCardId) {   // quadro padrão: não arrasta para fora do Encerrado
+        pendingCard.removeAttribute('draggable');
+        pendingCard.style.cursor = 'default';
+      }
+      pendingZone.insertBefore(pendingCard, pendingZone.firstChild);
+
+      removeEmpty(pendingZone);
+      addEmptyIfNeeded(pendingSourceZone);
+      refreshCount(pendingZone);
+      refreshCount(pendingSourceZone);
 
       modalInst.close();
       M.toast({ html: `Ticket #${pendingPk} encerrado!`, classes: 'green darken-2' });
@@ -757,56 +1166,605 @@
     } finally {
       btn.disabled = false;
       btn.innerHTML = '<i class="material-icons left">check</i>Encerrar';
-      pendingPk = pendingCard = pendingFromStatus = null;
+      pendingPk = pendingCard = pendingCardId = pendingColunaId = pendingZone = pendingSourceZone = null;
     }
   });
 
-  // ── Accept ticket ────────────────────────────────────
-  async function acceptTicket(pk, targetZone, card) {
+  // ── Reordenar colunas (arrastar o header) ────────────
+  const board = document.getElementById('kanban-board');
+  let draggingCol = null;
+
+  document.querySelectorAll('.kanban-col-header[draggable="true"]').forEach(header => {
+    const col = header.closest('.kanban-col');
+    header.addEventListener('dragstart', e => {
+      draggingCol = col;
+      col.classList.add('col-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    header.addEventListener('dragend', async () => {
+      if (!draggingCol) return;
+      draggingCol.classList.remove('col-dragging');
+      document.querySelectorAll('.col-drop-target').forEach(c => c.classList.remove('col-drop-target'));
+      draggingCol = null;
+      // Persiste nova ordem
+      const ids = [...board.querySelectorAll('.kanban-col')].map(c => c.dataset.colunaId);
+      await fetch(COL_REORDENAR_URL, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCsrf(),
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({ ordem: ids.join(',') }),
+      }).catch(() => {});
+    });
+  });
+
+  board.addEventListener('dragover', e => {
+    if (!draggingCol) return;
+    e.preventDefault();
+    const alvo = getColAfter(e.clientX);
+    document.querySelectorAll('.col-drop-target').forEach(c => c.classList.remove('col-drop-target'));
+    if (alvo && alvo !== draggingCol) alvo.classList.add('col-drop-target');
+    const addCol = document.querySelector('.kanban-add-col');
+    if (alvo == null) {
+      board.insertBefore(draggingCol, addCol);
+    } else if (alvo !== draggingCol) {
+      board.insertBefore(draggingCol, alvo);
+    }
+  });
+
+  function getColAfter(x) {
+    const cols = [...board.querySelectorAll('.kanban-col:not(.col-dragging)')];
+    for (const col of cols) {
+      const box = col.getBoundingClientRect();
+      if (x < box.left + box.width / 2) return col;
+    }
+    return null;
+  }
+
+  // ── Modal de coluna (criar / editar / excluir) ───────
+  const isPadraoBoard = board.dataset.padrao === '1';
+  const quadroAtualId = board.dataset.quadroId;
+  const colModalEl   = document.getElementById('modal-coluna');
+  const colModalInst = M.Modal.init(colModalEl, {});
+  const colId    = document.getElementById('coluna-id');
+  const colNome  = document.getElementById('coluna-nome');
+  const colCor   = document.getElementById('coluna-cor');
+  const colStatus = document.getElementById('coluna-status');
+  const colStatusWrap = document.getElementById('coluna-status-wrap');
+  const colTitulo = document.getElementById('modal-coluna-titulo');
+  const btnExcluirCol = document.getElementById('btn-excluir-coluna');
+  const btnSalvarCol  = document.getElementById('btn-salvar-coluna');
+
+  document.getElementById('btn-add-col').addEventListener('click', () => {
+    colId.value = '';
+    colNome.value = '';
+    colCor.value = '#607d8b';
+    colStatus.value = '';
+    colTitulo.textContent = 'Nova coluna';
+    btnExcluirCol.style.display = 'none';
+    colStatusWrap.style.display = isPadraoBoard ? 'none' : 'block';
+    colModalInst.open();
+    setTimeout(() => colNome.focus(), 120);
+  });
+
+  document.querySelectorAll('.col-menu-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      colId.value   = btn.dataset.colunaId;
+      colNome.value = btn.dataset.nome;
+      colCor.value  = btn.dataset.cor || '#607d8b';
+      colStatus.value = btn.dataset.status || '';
+      colTitulo.textContent = 'Editar coluna';
+      btnExcluirCol.style.display = btn.dataset.fixa === '1' ? 'none' : '';
+      colStatusWrap.style.display = isPadraoBoard ? 'none' : 'block';
+      colModalInst.open();
+    });
+  });
+
+  document.querySelectorAll('.cor-preset').forEach(p => {
+    p.addEventListener('click', () => { colCor.value = p.dataset.cor; });
+  });
+
+  btnSalvarCol.addEventListener('click', async () => {
+    const nome = colNome.value.trim();
+    if (!nome) { M.toast({ html: 'Informe o nome da coluna', classes: 'orange darken-2' }); return; }
+    const editando = !!colId.value;
+    const url = editando ? COL_EDITAR_URL(colId.value) : COL_CRIAR_URL;
+    const params = { nome, cor: colCor.value };
+    if (!editando) params.quadro_id = quadroAtualId;
+    if (!isPadraoBoard) params.status_associado = colStatus.value;
+    btnSalvarCol.disabled = true;
     try {
-      const resp = await fetch(ACCEPT_URL(pk), {
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCsrf(),
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams(params),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) { M.toast({ html: data.error || 'Erro ao salvar coluna', classes: 'red' }); return; }
+      colModalInst.close();
+      location.reload();   // recarrega para refletir a nova estrutura de colunas
+    } catch {
+      M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
+    } finally {
+      btnSalvarCol.disabled = false;
+    }
+  });
+
+  btnExcluirCol.addEventListener('click', async () => {
+    if (!colId.value) return;
+    if (!confirm('Excluir esta coluna? Os cards nela serão removidos do quadro (os tickets não são apagados).')) return;
+    try {
+      const resp = await fetch(COL_EXCLUIR_URL(colId.value), {
         method: 'POST',
         headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
       });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) { M.toast({ html: data.error || 'Erro ao excluir coluna', classes: 'red' }); return; }
+      colModalInst.close();
+      location.reload();
+    } catch {
+      M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
+    }
+  });
 
-      if (!resp.ok) {
-        const data = await resp.json().catch(() => ({}));
-        M.toast({ html: data.error || 'Erro ao aceitar ticket', classes: 'red' });
+  // ── Quadros (criar / renomear / excluir) ─────────────
+  const quadroModalInst = M.Modal.init(document.getElementById('modal-quadro'), {});
+  const quadroId     = document.getElementById('quadro-id');
+  const quadroNome   = document.getElementById('quadro-nome');
+  const quadroTitulo = document.getElementById('modal-quadro-titulo');
+
+  document.getElementById('btn-novo-quadro').addEventListener('click', () => {
+    quadroId.value = '';
+    quadroNome.value = '';
+    quadroTitulo.textContent = 'Novo quadro';
+    quadroModalInst.open();
+    setTimeout(() => quadroNome.focus(), 120);
+  });
+
+  const btnEditarQuadro = document.getElementById('btn-editar-quadro');
+  if (btnEditarQuadro) btnEditarQuadro.addEventListener('click', e => {
+    e.preventDefault();
+    quadroId.value = btnEditarQuadro.dataset.id;
+    quadroNome.value = btnEditarQuadro.dataset.nome;
+    quadroTitulo.textContent = 'Renomear quadro';
+    quadroModalInst.open();
+    setTimeout(() => quadroNome.focus(), 120);
+  });
+
+  document.getElementById('btn-salvar-quadro').addEventListener('click', async () => {
+    const nome = quadroNome.value.trim();
+    if (!nome) { M.toast({ html: 'Informe o nome do quadro', classes: 'orange darken-2' }); return; }
+    const editando = !!quadroId.value;
+    const url = editando ? QUADRO_EDITAR_URL(quadroId.value) : QUADRO_CRIAR_URL;
+    try {
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCsrf(),
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({ nome }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) { M.toast({ html: data.error || 'Erro ao salvar quadro', classes: 'red' }); return; }
+      // Ao criar, já abre o quadro novo; ao renomear, recarrega
+      location.href = editando ? window.location.href : `?quadro=${data.id}`;
+    } catch {
+      M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
+    }
+  });
+
+  const btnExcluirQuadro = document.getElementById('btn-excluir-quadro');
+  if (btnExcluirQuadro) btnExcluirQuadro.addEventListener('click', async e => {
+    e.preventDefault();
+    if (!confirm('Excluir este quadro e todas as suas colunas? Os tickets não são apagados.')) return;
+    try {
+      const resp = await fetch(QUADRO_EXCLUIR_URL(btnExcluirQuadro.dataset.id), {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) { M.toast({ html: data.error || 'Erro ao excluir quadro', classes: 'red' }); return; }
+      location.href = window.location.pathname;   // volta ao quadro padrão
+    } catch {
+      M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
+    }
+  });
+
+  // ── Adicionar / remover cards (quadros personalizados) ─
+  const addCardModalInst = M.Modal.init(document.getElementById('modal-add-card'), {});
+  const addCardColunaId  = document.getElementById('add-card-coluna-id');
+  const addCardBusca     = document.getElementById('add-card-busca');
+  const addCardResultados = document.getElementById('add-card-resultados');
+  const addCardTitulo    = document.getElementById('modal-add-card-titulo');
+  const addCardToggle    = document.getElementById('add-card-toggle');
+  const ticketMode       = document.getElementById('add-card-ticket-mode');
+  const avulsoMode       = document.getElementById('add-card-avulso-mode');
+  const freeCardId       = document.getElementById('free-card-id');
+  const freeCardTitulo   = document.getElementById('free-card-titulo');
+  const freeCardTexto    = document.getElementById('free-card-texto');
+  const btnSalvarAvulso  = document.getElementById('btn-salvar-avulso');
+  const fcClienteId      = document.getElementById('free-card-cliente-id');
+  const fcClienteBusca   = document.getElementById('free-card-cliente-busca');
+  const fcClienteRes     = document.getElementById('free-card-cliente-res');
+  const fcClienteSel     = document.getElementById('free-card-cliente-sel');
+  const fcClienteNome    = document.getElementById('free-card-cliente-nome');
+  const fcClienteClear   = document.getElementById('free-card-cliente-clear');
+  const fcComments       = document.getElementById('free-card-comments');
+  const fcCommentList    = document.getElementById('fc-comment-list');
+  const fcCommentForm    = document.getElementById('fc-comment-form');
+  const fcCommentText    = document.getElementById('fc-comment-text');
+
+  function setClienteSelecionado(id, texto) {
+    if (id) {
+      fcClienteId.value = id;
+      fcClienteNome.textContent = texto || '';
+      fcClienteSel.style.display = 'flex';
+      fcClienteBusca.style.display = 'none';
+      fcClienteRes.innerHTML = '';
+    } else {
+      fcClienteId.value = '';
+      fcClienteSel.style.display = 'none';
+      fcClienteBusca.style.display = '';
+      fcClienteBusca.value = '';
+      fcClienteRes.innerHTML = '';
+    }
+  }
+  fcClienteClear.addEventListener('click', e => { e.preventDefault(); setClienteSelecionado(null); });
+
+  function setAddMode(mode) {
+    const isTicket = mode === 'ticket';
+    ticketMode.style.display = isTicket ? '' : 'none';
+    avulsoMode.style.display = isTicket ? 'none' : '';
+    btnSalvarAvulso.style.display = isTicket ? 'none' : '';
+    addCardToggle.querySelectorAll('.act-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.mode === mode));
+  }
+
+  addCardToggle.querySelectorAll('.act-btn').forEach(b => {
+    b.addEventListener('click', () => setAddMode(b.dataset.mode));
+  });
+
+  board.addEventListener('click', e => {
+    const addBtn = e.target.closest('.add-card-btn');
+    if (addBtn) {
+      addCardColunaId.value = addBtn.dataset.colunaId;
+      freeCardId.value = '';
+      addCardBusca.value = '';
+      addCardResultados.innerHTML = '';
+      freeCardTitulo.value = '';
+      freeCardTexto.value = '';
+      setClienteSelecionado(null);
+      fcComments.style.display = 'none';
+      fcCommentList.innerHTML = '';
+      addCardTitulo.textContent = 'Adicionar card';
+      addCardToggle.style.display = '';
+      setAddMode('ticket');
+      addCardModalInst.open();
+      setTimeout(() => addCardBusca.focus(), 120);
+      return;
+    }
+    const rmBtn = e.target.closest('.card-remove-btn');
+    if (rmBtn) { e.preventDefault(); e.stopPropagation(); removerCard(rmBtn); return; }
+    const freeContent = e.target.closest('.free-card-content');
+    if (freeContent) { abrirEdicaoAvulso(freeContent.dataset.cardId); }
+  });
+
+  // Abre o modal em modo avulso para editar um card avulso existente
+  async function abrirEdicaoAvulso(cardId) {
+    freeCardId.value = cardId;
+    addCardTitulo.textContent = 'Editar card';
+    addCardToggle.style.display = 'none';   // edição é só do card avulso
+    setAddMode('avulso');
+    // Estado provisório enquanto carrega
+    freeCardTitulo.value = '';
+    freeCardTexto.value = '';
+    setClienteSelecionado(null);
+    fcComments.style.display = 'block';
+    fcCommentList.innerHTML = '<p class="tp-empty">Carregando...</p>';
+    addCardModalInst.open();
+    try {
+      const resp = await fetch(`${CARD_DETALHE_URL}?card_id=${cardId}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) { M.toast({ html: 'Erro ao carregar card', classes: 'red' }); return; }
+      freeCardTitulo.value = data.titulo || '';
+      freeCardTexto.value = data.texto || '';
+      if (data.cliente_id) setClienteSelecionado(data.cliente_id, data.cliente_text);
+      else setClienteSelecionado(null);
+      fcCommentList.innerHTML = data.comentarios_html || '<p class="tp-empty">Nenhum comentário.</p>';
+    } catch {
+      M.toast({ html: 'Erro de rede ao carregar card', classes: 'red' });
+    }
+    setTimeout(() => freeCardTitulo.focus(), 120);
+  }
+
+  // Salvar card avulso (criar ou editar)
+  btnSalvarAvulso.addEventListener('click', async () => {
+    const titulo = freeCardTitulo.value.trim();
+    if (!titulo) { M.toast({ html: 'Informe um título', classes: 'orange darken-2' }); return; }
+    const params = { titulo, texto: freeCardTexto.value, cliente_id: fcClienteId.value };
+    if (freeCardId.value) params.card_id = freeCardId.value;
+    else params.coluna_id = addCardColunaId.value;
+    btnSalvarAvulso.disabled = true;
+    try {
+      const resp = await fetch(AVULSO_URL, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCsrf(),
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams(params),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) { M.toast({ html: data.error || 'Erro ao salvar card', classes: 'red' }); return; }
+
+      if (freeCardId.value) {
+        // Substitui o card existente no DOM
+        const antigo = board.querySelector(`.free-card[data-card-id="${data.id}"]`);
+        if (antigo) {
+          antigo.insertAdjacentHTML('afterend', data.html);
+          const novo = antigo.nextElementSibling;
+          antigo.remove();
+          bindDraggable(novo);
+        }
+      } else {
+        const zone = document.getElementById(`drop-${addCardColunaId.value}`);
+        const addBtn = zone.querySelector('.add-card-btn');
+        addBtn.insertAdjacentHTML('beforebegin', data.html);
+        bindDraggable(addBtn.previousElementSibling);
+        removeEmpty(zone);
+        refreshCount(zone);
+      }
+      addCardModalInst.close();
+      M.toast({ html: 'Card salvo!', classes: 'teal darken-1' });
+    } catch {
+      M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
+    } finally {
+      btnSalvarAvulso.disabled = false;
+    }
+  });
+
+  // Busca de cliente (card avulso)
+  let clienteTimer = null;
+  fcClienteBusca.addEventListener('input', () => {
+    clearTimeout(clienteTimer);
+    const q = fcClienteBusca.value.trim();
+    if (!q) { fcClienteRes.innerHTML = ''; return; }
+    clienteTimer = setTimeout(() => buscarClientes(q), 300);
+  });
+
+  async function buscarClientes(q) {
+    try {
+      const resp = await fetch(`${CLIENTE_BUSCA_URL}?q=${encodeURIComponent(q)}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      const data = await resp.json().catch(() => ({ results: [] }));
+      if (!data.results || !data.results.length) {
+        fcClienteRes.innerHTML = '<p class="tp-empty" style="padding:8px">Nenhum cliente encontrado.</p>';
         return;
       }
+      fcClienteRes.innerHTML = data.results.map(c => `
+        <div class="add-card-item" data-id="${c.id}" data-text="${escapeHtml(c.text)}">
+          <span class="aci-titulo">${escapeHtml(c.text)}</span>
+        </div>`).join('');
+    } catch {
+      fcClienteRes.innerHTML = '<p class="tp-empty" style="padding:8px">Erro ao buscar.</p>';
+    }
+  }
 
-      const data = await resp.json();
+  fcClienteRes.addEventListener('click', e => {
+    const item = e.target.closest('.add-card-item');
+    if (item) setClienteSelecionado(item.dataset.id, item.dataset.text);
+  });
 
-      card.dataset.status = '1';
-      // Mantém draggable para permitir mover para Encerrado depois
-      targetZone.insertBefore(card, targetZone.firstChild);
-      removeEmpty(targetZone);
+  // Comentar num card avulso
+  fcCommentForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const texto = fcCommentText.value.trim();
+    if (!texto || !freeCardId.value) return;
+    const btn = fcCommentForm.querySelector('button');
+    btn.disabled = true;
+    try {
+      const resp = await fetch(CARD_COMENTAR_URL, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCsrf(),
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({ card_id: freeCardId.value, texto }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) { M.toast({ html: data.error || 'Erro ao comentar', classes: 'red' }); return; }
+      const vazio = fcCommentList.querySelector('.tp-empty');
+      if (vazio) vazio.remove();
+      fcCommentList.insertAdjacentHTML('afterbegin', data.html);
+      fcCommentText.value = '';
+      M.toast({ html: 'Comentário adicionado!', classes: 'green darken-2' });
+    } catch {
+      M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
+    } finally {
+      btn.disabled = false;
+    }
+  });
 
-      const respEl = card.querySelector('.responsavel-name');
-      if (respEl) respEl.textContent = data.responsavel;
-      const respRow = card.querySelector('.responsavel-row');
-      if (respRow) respRow.style.display = 'flex';
+  let buscaTimer = null;
+  addCardBusca.addEventListener('input', () => {
+    clearTimeout(buscaTimer);
+    const q = addCardBusca.value.trim();
+    if (!q) { addCardResultados.innerHTML = ''; return; }
+    buscaTimer = setTimeout(() => buscarTickets(q), 300);
+  });
 
-      updateCount(0, -1);
-      updateCount(1, +1);
-      M.toast({ html: `Ticket #${pk} aceito!`, classes: 'teal darken-1' });
+  async function buscarTickets(q) {
+    try {
+      const resp = await fetch(`${BUSCA_URL}?q=${encodeURIComponent(q)}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      const data = await resp.json().catch(() => ({ resultados: [] }));
+      if (!data.resultados || !data.resultados.length) {
+        addCardResultados.innerHTML = '<p class="tp-empty" style="padding:10px">Nenhum ticket encontrado.</p>';
+        return;
+      }
+      addCardResultados.innerHTML = data.resultados.map(t => `
+        <div class="add-card-item" data-id="${t.id}">
+          <div class="aci-main">
+            <span class="aci-id">#${t.id}</span>
+            <span class="aci-titulo">${escapeHtml(t.titulo)}</span>
+            <div class="aci-cliente">${escapeHtml(t.cliente)}</div>
+          </div>
+          <span class="aci-status">${escapeHtml(t.status)}</span>
+        </div>`).join('');
+    } catch {
+      addCardResultados.innerHTML = '<p class="tp-empty" style="padding:10px">Erro ao buscar.</p>';
+    }
+  }
 
+  addCardResultados.addEventListener('click', e => {
+    const item = e.target.closest('.add-card-item');
+    if (item) adicionarCard(item.dataset.id, addCardColunaId.value);
+  });
+
+  async function adicionarCard(ticketId, colunaId) {
+    try {
+      const resp = await fetch(ADD_CARD_URL, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCsrf(),
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({ ticket_id: ticketId, coluna_id: colunaId }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) { M.toast({ html: data.error || 'Erro ao adicionar card', classes: 'red' }); return; }
+      const zone = document.getElementById(`drop-${colunaId}`);
+      const addBtn = zone.querySelector('.add-card-btn');
+      addBtn.insertAdjacentHTML('beforebegin', data.html);
+      bindDraggable(addBtn.previousElementSibling);
+      removeEmpty(zone);
+      refreshCount(zone);
+      addCardModalInst.close();
+      M.toast({ html: `Ticket #${ticketId} adicionado!`, classes: 'teal darken-1' });
     } catch {
       M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
     }
   }
 
+  async function removerCard(btn) {
+    if (!confirm('Remover este card do quadro? Um ticket vinculado não será apagado.')) return;
+    try {
+      const resp = await fetch(REMOVE_CARD_URL, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCsrf(),
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({ card_id: btn.dataset.cardId }),
+      });
+      if (!resp.ok) { M.toast({ html: 'Erro ao remover card', classes: 'red' }); return; }
+      const card = btn.closest('.ticket-card');
+      const zone = card.parentElement;
+      card.remove();
+      refreshCount(zone);
+      M.toast({ html: 'Card removido do quadro', classes: 'grey darken-1' });
+    } catch {
+      M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
+    }
+  }
+
+  function escapeHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s == null ? '' : s;
+    return d.innerHTML;
+  }
+
+  // ── Adicionar comentário no modal de preview ─────────
+  previewBody.addEventListener('submit', async e => {
+    const form = e.target.closest('.tp-comment-form');
+    if (!form) return;
+    e.preventDefault();
+    const ta = form.querySelector('textarea');
+    const texto = ta.value.trim();
+    if (!texto || !currentPreviewPk) return;
+    const submitBtn = form.querySelector('button');
+    submitBtn.disabled = true;
+    try {
+      const resp = await fetch(COMENTAR_URL(currentPreviewPk), {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCsrf(),
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({ texto }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) { M.toast({ html: data.error || 'Erro ao comentar', classes: 'red' }); return; }
+      const lista = form.closest('.tp-section');
+      const vazio = lista.querySelector('.tp-empty');
+      if (vazio) vazio.remove();
+      form.insertAdjacentHTML('afterend', data.html);
+      ta.value = '';
+      M.toast({ html: 'Comentário adicionado!', classes: 'green darken-2' });
+    } catch {
+      M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+
   // ── Helpers ──────────────────────────────────────────
-  function updateCount(status, delta) {
-    const el = document.getElementById(`count-${status}`);
-    if (!el) return;
-    const current = parseInt(el.textContent) || 0;
-    el.textContent = Math.max(0, current + delta);
+  function refreshCount(zone) {
+    if (!zone) return;
+    const el = document.getElementById(`count-${zone.dataset.colunaId}`);
+    if (el) el.textContent = zone.querySelectorAll('.ticket-card').length;
   }
 
   function removeEmpty(zone) {
     const empty = zone.querySelector('.kanban-empty');
     if (empty) empty.remove();
+  }
+
+  // Aplica/remove o visual "Concluído" (apagado + selo verde) num card
+  function aplicarDone(card, isDone) {
+    card.classList.toggle('card-done', !!isDone);
+    const content = card.querySelector('.card-content');
+    if (!content) return;
+    let chip = content.querySelector('.card-done-check');
+    if (isDone && !chip) {
+      chip = document.createElement('div');
+      chip.className = 'card-done-check';
+      chip.innerHTML = '<i class="material-icons" translate="no">check_circle</i> Concluído';
+      content.appendChild(chip);
+    } else if (!isDone && chip) {
+      chip.remove();
+    }
+  }
+
+  function addEmptyIfNeeded(zone) {
+    if (!zone) return;
+    // Em quadros personalizados a coluna tem o botão "Adicionar card" — não exibe vazio
+    if (zone.querySelector('.add-card-btn')) return;
+    if (!zone.querySelector('.ticket-card') && !zone.querySelector('.kanban-empty')) {
+      const div = document.createElement('div');
+      div.className = 'kanban-empty';
+      div.textContent = 'Nenhum ticket';
+      const addBtn = zone.querySelector('.add-card-btn');
+      zone.insertBefore(div, addBtn || null);
+    }
   }
 })();
 </script>

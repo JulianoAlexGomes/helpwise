@@ -142,6 +142,8 @@ class Ticket(models.Model):
     titulo = models.CharField(max_length=60, null=True, blank=True)
     situacao = models.ForeignKey(Situacao, on_delete=models.PROTECT, default=1)
     cancelado = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='cancelado_por', editable=True)
+    kanban_coluna = models.ForeignKey('KanbanColuna', on_delete=models.SET_NULL, null=True, blank=True, related_name='tickets')
+    kanban_ordem = models.PositiveIntegerField(default=0)
 
 
     class Meta:
@@ -178,6 +180,87 @@ class Ticket(models.Model):
 
     def get_solucoes(self):
         return self.solucao_set.all()
+
+
+class KanbanQuadro(models.Model):
+    """Quadro Kanban (board). Compartilhado por todos os usuários.
+
+    O quadro `is_padrao=True` é o fluxo por status de hoje (Aberto/Em
+    atendimento/Encerrado): mostra todos os tickets automaticamente via status.
+    Quadros personalizados começam vazios — os tickets são adicionados
+    explicitamente (ver KanbanCard) e organizados em colunas livres, que podem
+    opcionalmente ser mapeadas a um status."""
+
+    nome = models.CharField(max_length=60)
+    is_padrao = models.BooleanField(default=False)
+    ordem = models.PositiveIntegerField(default=0)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-is_padrao', 'ordem', 'id']  # padrão sempre primeiro
+
+    def __str__(self):
+        return self.nome
+
+
+class KanbanColuna(models.Model):
+    """Coluna de um quadro Kanban.
+
+    Quando `status_associado` está preenchido, a coluna representa um estágio do
+    fluxo de negócio (Aberto/Em atendimento/Encerrado) e mover cards para ela
+    dispara a transição correspondente. Quando é None, é uma coluna livre,
+    puramente organizacional (estilo Trello)."""
+
+    quadro = models.ForeignKey(KanbanQuadro, on_delete=models.CASCADE, related_name='colunas')
+    nome = models.CharField(max_length=40)
+    cor = models.CharField(max_length=20, default='#607d8b')  # hex usado no header
+    ordem = models.PositiveIntegerField(default=0)
+    status_associado = models.SmallIntegerField(choices=Ticket.STATUS, null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['ordem', 'id']
+
+    def __str__(self):
+        return self.nome
+
+
+class KanbanCard(models.Model):
+    """Card numa coluna de um quadro personalizado.
+
+    Pode ser vinculado a um ticket (`ticket` preenchido) ou um card avulso —
+    uma nota livre com `titulo`/`texto` (sem ticket). Usado apenas em quadros
+    NÃO padrão; no quadro padrão a colocação vem do status do ticket."""
+
+    coluna = models.ForeignKey(KanbanColuna, on_delete=models.CASCADE, related_name='cards')
+    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='kanban_cards', null=True, blank=True)
+    titulo = models.CharField(max_length=120, blank=True, default='')   # card avulso
+    texto = models.TextField(blank=True, default='')                    # card avulso
+    cliente = models.ForeignKey(Cliente, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')  # card avulso
+    ordem = models.PositiveIntegerField(default=0)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['ordem', '-id']
+
+    def __str__(self):
+        if self.ticket_id:
+            return f"Ticket #{self.ticket_id} em {self.coluna}"
+        return f"Card '{self.titulo}' em {self.coluna}"
+
+
+class KanbanCardComentario(models.Model):
+    """Comentário em um card avulso do Kanban."""
+    card = models.ForeignKey(KanbanCard, on_delete=models.CASCADE, related_name='comentarios')
+    texto = models.TextField()
+    autor = models.ForeignKey(User, on_delete=models.CASCADE)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-criado_em']
+
+    def __str__(self):
+        return f"Comentário de {self.autor} no card #{self.card_id}"
 
 
 def validate_file_size(value):

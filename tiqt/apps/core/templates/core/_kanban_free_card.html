@@ -1,0 +1,19 @@
+<div class="card ticket-card free-card z-depth-1 {% if done %}card-done{% endif %}" draggable="true" data-card-id="{{ card.id }}">
+  <button class="card-remove-btn" type="button" title="Remover card" data-card-id="{{ card.id }}">
+    <i class="material-icons" translate="no">close</i>
+  </button>
+  <div class="card-content free-card-content" data-card-id="{{ card.id }}">
+    <p class="card-title free-card-title">{{ card.titulo }}</p>
+    {% if card.cliente %}
+    <div class="card-meta">
+      <i class="material-icons">business</i>
+      <span>{{ card.cliente.fantasia|default:card.cliente }}</span>
+    </div>
+    {% endif %}
+    {% if card.texto %}<p class="free-card-text">{{ card.texto|linebreaksbr }}</p>{% endif %}
+    {% if card.comentarios.count %}
+    <div class="free-card-badge"><i class="material-icons" translate="no">forum</i>{{ card.comentarios.count }}</div>
+    {% endif %}
+    {% if done %}<div class="card-done-check"><i class="material-icons" translate="no">check_circle</i> Concluído</div>{% endif %}
+  </div>
+</div>

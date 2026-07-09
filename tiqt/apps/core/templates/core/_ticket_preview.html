@@ -91,7 +91,17 @@
 
   <!-- Últimos comentários -->
   <div class="tp-section">
-    <h6 class="tp-section-title"><i class="material-icons tiny">forum</i> Últimos comentários</h6>
+    <h6 class="tp-section-title"><i class="material-icons tiny">forum</i> Comentários</h6>
+
+    <form class="tp-comment-form">
+      <textarea placeholder="Escreva um comentário..." maxlength="2000"></textarea>
+      <div class="tp-comment-actions">
+        <button type="submit" class="btn teal darken-1" style="border-radius:6px;">
+          <i class="material-icons left">send</i>Comentar
+        </button>
+      </div>
+    </form>
+
     {% for comentario in comentarios %}
       <div class="tp-block">
         <div class="tp-block-meta">

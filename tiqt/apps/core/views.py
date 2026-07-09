@@ -575,7 +575,7 @@ class KanbanView(LoginRequiredMixin, TemplateView):
     template_name = 'core/kanban.html'
 
     def get_context_data(self, **kwargs):
-        from .models import Tipo
+        from .models import Tipo, KanbanColuna, KanbanQuadro, KanbanCard
         context = super().get_context_data(**kwargs)
         responsavel_id = self.request.GET.get('responsavel', '')
         atendente_id   = self.request.GET.get('atendente', '')
@@ -589,9 +589,54 @@ class KanbanView(LoginRequiredMixin, TemplateView):
         if tipo_id:
             qs = qs.filter(tipo_id=tipo_id)
 
-        context['tickets_aberto']         = qs.filter(status=Ticket.ABERTO).order_by('-id')
-        context['tickets_em_atendimento'] = qs.filter(status=Ticket.EM_ATENDIMENTO).order_by('-id')
-        context['tickets_encerrado']      = qs.filter(status=Ticket.ENCERRADO).order_by('-encerrado_em')[:30]
+        # Quadro selecionado (default = o padrão, que vem primeiro na ordenação)
+        quadros = list(KanbanQuadro.objects.all())
+        quadro_id = self.request.GET.get('quadro', '')
+        quadro_atual = None
+        if quadro_id:
+            quadro_atual = next((q for q in quadros if str(q.id) == str(quadro_id)), None)
+        if quadro_atual is None:
+            quadro_atual = next((q for q in quadros if q.is_padrao), quadros[0] if quadros else None)
+
+        colunas = list(quadro_atual.colunas.all()) if quadro_atual else []
+
+        if quadro_atual and quadro_atual.is_padrao:
+            # Quadro padrão: tickets vêm do status (+ override em Ticket.kanban_coluna)
+            for coluna in colunas:
+                filtro = Q(kanban_coluna_id=coluna.id)
+                if coluna.status_associado is not None:
+                    filtro |= Q(kanban_coluna__isnull=True, status=coluna.status_associado)
+                tickets = qs.filter(filtro).order_by('kanban_ordem', '-id')
+                if coluna.status_associado == Ticket.ENCERRADO:
+                    tickets = tickets[:30]
+                coluna.lista = list(tickets)
+                coluna.qtd = len(coluna.lista)
+                coluna.arrastavel = coluna.status_associado != Ticket.ENCERRADO
+                coluna.encerrada = coluna.status_associado == Ticket.ENCERRADO
+        else:
+            # Quadro personalizado: cards explicitamente adicionados (tickets ou avulsos)
+            tem_filtro = bool(responsavel_id or atendente_id or tipo_id)
+            ids_permitidos = set(qs.values_list('id', flat=True)) if tem_filtro else None
+            for coluna in colunas:
+                cards = (KanbanCard.objects
+                         .filter(coluna=coluna)
+                         .select_related('ticket', 'ticket__cliente', 'ticket__prioridade',
+                                         'ticket__responsavel', 'ticket__tipo')
+                         .order_by('ordem', '-id'))
+                lista = []
+                for card in cards:
+                    # Cards avulsos sempre aparecem; cards de ticket respeitam os filtros
+                    if card.ticket_id and ids_permitidos is not None and card.ticket_id not in ids_permitidos:
+                        continue
+                    lista.append(card)
+                coluna.lista = lista
+                coluna.qtd = len(coluna.lista)
+                coluna.arrastavel = True
+                coluna.encerrada = coluna.status_associado == Ticket.ENCERRADO
+
+        context['quadros']                = quadros
+        context['quadro_atual']           = quadro_atual
+        context['colunas']                = colunas
         context['usuarios']               = User.objects.filter(is_active=True).order_by('first_name')
         context['tipos']                  = Tipo.objects.all().order_by('descricao')
         context['responsavel_selecionado'] = responsavel_id
@@ -679,6 +724,343 @@ class TicketCloseAjaxView(LoginRequiredMixin, View):
         Solucao.objects.create(ticket=ticket, texto=solucao_texto, autor=request.user)
         ticket.encerrar_atendimento()
         return JsonResponse({'ok': True})
+
+
+# ─────────────────────────────────────────────────────────────
+#  Kanban personalizável: quadros, colunas, cards + comentários
+# ─────────────────────────────────────────────────────────────
+
+def _parse_status_associado(val):
+    """Normaliza o status vindo do form ('' → None; 0..3 → int)."""
+    val = (val or '').strip()
+    if val == '':
+        return None
+    try:
+        iv = int(val)
+    except (TypeError, ValueError):
+        return None
+    return iv if iv in (Ticket.ABERTO, Ticket.EM_ATENDIMENTO, Ticket.ENCERRADO, Ticket.CANCELADO) else None
+
+
+# ── Quadros (boards) ─────────────────────────────────────────
+
+class KanbanQuadroCriarView(LoginRequiredMixin, View):
+    def post(self, request):
+        from .models import KanbanQuadro, KanbanColuna
+        nome = (request.POST.get('nome') or '').strip()
+        if not nome:
+            return JsonResponse({'error': 'Informe o nome do quadro'}, status=400)
+        ultimo = KanbanQuadro.objects.order_by('-ordem').first()
+        ordem = (ultimo.ordem + 1) if ultimo else 0
+        quadro = KanbanQuadro.objects.create(nome=nome, is_padrao=False, ordem=ordem)
+        # Coluna inicial para o quadro já ser utilizável
+        KanbanColuna.objects.create(quadro=quadro, nome='A fazer', cor='#607d8b', ordem=0)
+        return JsonResponse({'ok': True, 'id': quadro.id, 'nome': quadro.nome})
+
+
+class KanbanQuadroEditarView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        from .models import KanbanQuadro
+        quadro = get_object_or_404(KanbanQuadro, pk=pk)
+        if quadro.is_padrao:
+            return JsonResponse({'error': 'O quadro padrão não pode ser renomeado'}, status=400)
+        nome = (request.POST.get('nome') or '').strip()
+        if nome:
+            quadro.nome = nome
+            quadro.save(update_fields=['nome'])
+        return JsonResponse({'ok': True, 'nome': quadro.nome})
+
+
+class KanbanQuadroExcluirView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        from .models import KanbanQuadro
+        quadro = get_object_or_404(KanbanQuadro, pk=pk)
+        if quadro.is_padrao:
+            return JsonResponse({'error': 'O quadro padrão não pode ser excluído'}, status=400)
+        quadro.delete()  # colunas e cards em cascata
+        return JsonResponse({'ok': True})
+
+
+# ── Colunas ──────────────────────────────────────────────────
+
+class KanbanColunaCriarView(LoginRequiredMixin, View):
+    def post(self, request):
+        from .models import KanbanColuna, KanbanQuadro
+        quadro = get_object_or_404(KanbanQuadro, pk=request.POST.get('quadro_id'))
+        nome = (request.POST.get('nome') or '').strip()
+        cor = (request.POST.get('cor') or '#607d8b').strip()
+        if not nome:
+            return JsonResponse({'error': 'Informe o nome da coluna'}, status=400)
+        status = _parse_status_associado(request.POST.get('status_associado'))
+        ultima = quadro.colunas.order_by('-ordem').first()
+        ordem = (ultima.ordem + 1) if ultima else 0
+        coluna = KanbanColuna.objects.create(
+            quadro=quadro, nome=nome, cor=cor, ordem=ordem, status_associado=status)
+        return JsonResponse({'ok': True, 'id': coluna.id, 'nome': coluna.nome, 'cor': coluna.cor})
+
+
+class KanbanColunaEditarView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        from .models import KanbanColuna
+        coluna = get_object_or_404(KanbanColuna.objects.select_related('quadro'), pk=pk)
+        nome = (request.POST.get('nome') or '').strip()
+        cor = (request.POST.get('cor') or '').strip()
+        campos = []
+        if nome:
+            coluna.nome = nome
+            campos.append('nome')
+        if cor:
+            coluna.cor = cor
+            campos.append('cor')
+        # Só permite (re)mapear status em colunas de quadros personalizados
+        if not coluna.quadro.is_padrao and 'status_associado' in request.POST:
+            coluna.status_associado = _parse_status_associado(request.POST.get('status_associado'))
+            campos.append('status_associado')
+        if campos:
+            coluna.save(update_fields=campos)
+        return JsonResponse({'ok': True, 'nome': coluna.nome, 'cor': coluna.cor})
+
+
+class KanbanColunaExcluirView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        from .models import KanbanColuna
+        coluna = get_object_or_404(KanbanColuna.objects.select_related('quadro'), pk=pk)
+        if coluna.quadro.is_padrao:
+            return JsonResponse({'error': 'Colunas do quadro padrão não podem ser excluídas'}, status=400)
+        coluna.delete()  # cards em cascata
+        return JsonResponse({'ok': True})
+
+
+class KanbanColunasReordenarView(LoginRequiredMixin, View):
+    def post(self, request):
+        from .models import KanbanColuna
+        ids = [i for i in (request.POST.get('ordem') or '').split(',') if i]
+        for pos, coluna_id in enumerate(ids):
+            KanbanColuna.objects.filter(pk=coluna_id).update(ordem=pos)
+        return JsonResponse({'ok': True})
+
+
+# ── Cards e movimentação ─────────────────────────────────────
+
+class TicketMoverColunaView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        from .models import KanbanColuna, KanbanCard
+        ticket = get_object_or_404(Ticket, pk=pk)
+        coluna = get_object_or_404(KanbanColuna.objects.select_related('quadro'), pk=request.POST.get('coluna_id'))
+        status_destino = coluna.status_associado
+
+        if status_destino is not None and status_destino != ticket.status:
+            if status_destino == Ticket.EM_ATENDIMENTO and ticket.status == Ticket.ABERTO:
+                ticket.iniciar_atendimento(request.user)
+            elif status_destino == Ticket.ENCERRADO:
+                # Encerrar exige solução — tratado pelo modal (close-ajax) antes de mover
+                return JsonResponse({'error': 'needs_solution'}, status=400)
+            # Demais casos: apenas reposiciona (sem transição de negócio)
+
+        # Este endpoint é usado apenas pelo quadro padrão (move por ticket)
+        ticket.kanban_coluna = coluna
+        ticket.kanban_ordem = 0
+        ticket.save(update_fields=['kanban_coluna', 'kanban_ordem'])
+
+        return JsonResponse({
+            'ok': True,
+            'status': ticket.status,
+            'responsavel': ticket.responsavel.get_full_name() if ticket.responsavel else '',
+        })
+
+
+class KanbanCardMoverView(LoginRequiredMixin, View):
+    """Move um card (ticket ou avulso) entre colunas de um quadro personalizado."""
+    def post(self, request):
+        from .models import KanbanColuna, KanbanCard
+        card = get_object_or_404(
+            KanbanCard.objects.select_related('ticket', 'coluna__quadro'),
+            pk=request.POST.get('card_id'),
+        )
+        coluna = get_object_or_404(KanbanColuna.objects.select_related('quadro'), pk=request.POST.get('coluna_id'))
+        if coluna.quadro_id != card.coluna.quadro_id:
+            return JsonResponse({'error': 'Coluna de outro quadro'}, status=400)
+
+        ticket = card.ticket
+        status_destino = coluna.status_associado
+        if ticket and status_destino is not None and status_destino != ticket.status:
+            if status_destino == Ticket.EM_ATENDIMENTO and ticket.status == Ticket.ABERTO:
+                ticket.iniciar_atendimento(request.user)
+            elif status_destino == Ticket.ENCERRADO:
+                return JsonResponse({'error': 'needs_solution'}, status=400)
+
+        card.coluna = coluna
+        card.ordem = 0
+        card.save(update_fields=['coluna', 'ordem'])
+        return JsonResponse({
+            'ok': True,
+            'status': ticket.status if ticket else None,
+            'responsavel': ticket.responsavel.get_full_name() if ticket and ticket.responsavel else '',
+        })
+
+
+class KanbanCardAdicionarView(LoginRequiredMixin, View):
+    """Adiciona um ticket a uma coluna de um quadro personalizado."""
+    def post(self, request):
+        from .models import KanbanColuna, KanbanCard
+        coluna = get_object_or_404(KanbanColuna.objects.select_related('quadro'), pk=request.POST.get('coluna_id'))
+        if coluna.quadro.is_padrao:
+            return JsonResponse({'error': 'O quadro padrão é preenchido automaticamente'}, status=400)
+        ticket = get_object_or_404(
+            Ticket.objects.select_related('cliente', 'prioridade', 'responsavel', 'tipo'),
+            pk=request.POST.get('ticket_id'),
+        )
+        if KanbanCard.objects.filter(ticket=ticket, coluna__quadro=coluna.quadro).exists():
+            return JsonResponse({'error': 'Este ticket já está neste quadro'}, status=400)
+        card = KanbanCard.objects.create(ticket=ticket, coluna=coluna, ordem=0)
+        html = render_to_string('core/_kanban_card.html', {
+            'ticket': ticket, 'draggable': True, 'card_id': card.id,
+            'done': coluna.status_associado == Ticket.ENCERRADO,
+        })
+        return JsonResponse({'ok': True, 'html': html})
+
+
+def _cliente_id_valido(valor):
+    """Retorna um id de cliente válido (ou None se vazio/inexistente)."""
+    valor = (valor or '').strip()
+    if not valor:
+        return None
+    from .models import Cliente
+    return valor if Cliente.objects.filter(pk=valor).exists() else None
+
+
+def _render_card_comentario(coment):
+    """HTML de um bloco de comentário de card avulso (mesmo estilo do preview)."""
+    from django.utils.html import escape
+    autor = escape(coment.autor.get_full_name() or coment.autor.username)
+    data = timezone.localtime(coment.criado_em).strftime('%d/%m/%Y %H:%M')
+    texto_html = escape(coment.texto).replace('\n', '<br>')
+    return (
+        '<div class="tp-block">'
+        f'<div class="tp-block-meta">{autor} • {data}</div>'
+        f'<div class="tp-block-text">{texto_html}</div>'
+        '</div>'
+    )
+
+
+class KanbanCardAvulsoSalvarView(LoginRequiredMixin, View):
+    """Cria ou edita um card avulso (nota livre, sem ticket) num quadro personalizado."""
+    def post(self, request):
+        from .models import KanbanColuna, KanbanCard
+        titulo = (request.POST.get('titulo') or '').strip()
+        if not titulo:
+            return JsonResponse({'error': 'Informe um título para o card'}, status=400)
+        texto = (request.POST.get('texto') or '').strip()
+        cliente_id = _cliente_id_valido(request.POST.get('cliente_id'))
+        card_id = request.POST.get('card_id')
+
+        if card_id:  # edição
+            card = get_object_or_404(KanbanCard, pk=card_id)
+            card.titulo = titulo
+            card.texto = texto
+            card.cliente_id = cliente_id
+            card.save(update_fields=['titulo', 'texto', 'cliente'])
+        else:        # criação
+            coluna = get_object_or_404(KanbanColuna.objects.select_related('quadro'), pk=request.POST.get('coluna_id'))
+            if coluna.quadro.is_padrao:
+                return JsonResponse({'error': 'Cards avulsos só em quadros personalizados'}, status=400)
+            card = KanbanCard.objects.create(
+                coluna=coluna, ticket=None, titulo=titulo, texto=texto, cliente_id=cliente_id, ordem=0)
+
+        card = KanbanCard.objects.select_related('cliente', 'coluna').get(pk=card.id)
+        html = render_to_string('core/_kanban_free_card.html', {
+            'card': card, 'done': card.coluna.status_associado == Ticket.ENCERRADO,
+        })
+        return JsonResponse({'ok': True, 'id': card.id, 'html': html})
+
+
+class KanbanCardDetalheView(LoginRequiredMixin, View):
+    """Retorna os dados de um card avulso (para o modal de edição), incluindo comentários."""
+    def get(self, request):
+        from .models import KanbanCard
+        card = get_object_or_404(
+            KanbanCard.objects.select_related('cliente').prefetch_related('comentarios__autor'),
+            pk=request.GET.get('card_id'),
+        )
+        comentarios_html = ''.join(_render_card_comentario(c) for c in card.comentarios.all())
+        return JsonResponse({
+            'ok': True,
+            'titulo': card.titulo,
+            'texto': card.texto,
+            'cliente_id': card.cliente_id or '',
+            'cliente_text': str(card.cliente) if card.cliente_id else '',
+            'comentarios_html': comentarios_html,
+        })
+
+
+class KanbanCardComentarView(LoginRequiredMixin, View):
+    """Adiciona um comentário a um card avulso."""
+    def post(self, request):
+        from .models import KanbanCard, KanbanCardComentario
+        card = get_object_or_404(KanbanCard, pk=request.POST.get('card_id'))
+        texto = (request.POST.get('texto') or '').strip()
+        if not texto:
+            return JsonResponse({'error': 'Escreva um comentário'}, status=400)
+        coment = KanbanCardComentario.objects.create(card=card, texto=texto, autor=request.user)
+        return JsonResponse({'ok': True, 'html': _render_card_comentario(coment)})
+
+
+class KanbanCardRemoverView(LoginRequiredMixin, View):
+    """Remove um card de um quadro personalizado (não apaga o ticket vinculado)."""
+    def post(self, request):
+        from .models import KanbanCard
+        KanbanCard.objects.filter(pk=request.POST.get('card_id')).delete()
+        return JsonResponse({'ok': True})
+
+
+class TicketBuscaAjaxView(LoginRequiredMixin, View):
+    """Busca tickets por #id, título ou cliente (para adicionar cards a um quadro)."""
+    def get(self, request):
+        q = (request.GET.get('q') or '').strip()
+        base = Ticket.objects.select_related('cliente')
+        # Aceita "#332", "332" ou texto (título/cliente), combinando número + texto
+        num = q.lstrip('#').strip()
+        filtros = Q()
+        if num.isdigit():
+            filtros |= Q(pk=int(num))
+        if q:
+            filtros |= (
+                Q(titulo__icontains=q)
+                | Q(cliente__fantasia__icontains=q)
+                | Q(cliente__razao_social__icontains=q)
+            )
+        base = base.filter(filtros) if filtros else base.none()
+        resultados = [{
+            'id': t.pk,
+            'titulo': t.titulo or '(sem título)',
+            'cliente': str(t.cliente),
+            'status': t.get_status_display(),
+        } for t in base.order_by('-id')[:20]]
+        return JsonResponse({'resultados': resultados})
+
+
+class TicketComentarAjaxView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        from django.utils.html import escape
+        ticket = get_object_or_404(Ticket, pk=pk)
+        texto = (request.POST.get('texto') or '').strip()
+        if not texto:
+            return JsonResponse({'error': 'Escreva um comentário'}, status=400)
+        comentario = Comentario.objects.create(
+            ticket=ticket, texto=texto, autor=request.user, tipo_id=1,
+        )
+        autor = escape(request.user.get_full_name() or request.user.username)
+        data = timezone.localtime(comentario.criado_em).strftime('%d/%m/%Y %H:%M')
+        tipo = escape(comentario.tipo.descricao) if comentario.tipo else ''
+        texto_html = escape(texto).replace('\n', '<br>')
+        html = (
+            '<div class="tp-block">'
+            f'<div class="tp-block-meta">{autor} • {data}'
+            f'{" • " + tipo if tipo else ""}</div>'
+            f'<div class="tp-block-text">{texto_html}</div>'
+            '</div>'
+        )
+        return JsonResponse({'ok': True, 'html': html})
 
 
 class CloseTicketView(LoginRequiredMixin, View):

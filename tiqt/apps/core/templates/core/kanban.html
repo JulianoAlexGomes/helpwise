@@ -279,6 +279,17 @@
   html.dark .free-card .free-card-title { color: var(--hw-text) !important; }
   html.dark .free-card .free-card-text { color: var(--hw-text3) !important; }
 
+  /* Card de nota do mural */
+  .nota-card { border-left: 3px solid #5c6bc0 !important; }
+  .nota-card .nota-link { display: inline-flex; align-items: center; gap: 3px; color: #5c6bc0 !important; font-weight: 700; font-size: 0.78rem; }
+  .nota-card .nota-link i { font-size: 15px; }
+  .nota-card .nota-link:hover { text-decoration: underline; }
+  .nota-cat, .nota-status {
+    display: inline-block; font-size: 0.66rem; font-weight: 700;
+    padding: 2px 8px; border-radius: 10px; color: #fff; white-space: nowrap;
+  }
+  .nota-cat { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+
   /* Contador de comentários no card avulso */
   .free-card-badge {
     display: inline-flex; align-items: center; gap: 3px; margin-top: 8px;
@@ -663,6 +674,8 @@
           {% for card in coluna.lista %}
             {% if card.ticket %}
               {% include "core/_kanban_card.html" with ticket=card.ticket draggable=True card_id=card.id done=coluna.encerrada %}
+            {% elif card.nota %}
+              {% include "core/_kanban_nota_card.html" with card=card done=coluna.encerrada %}
             {% else %}
               {% include "core/_kanban_free_card.html" with card=card done=coluna.encerrada %}
             {% endif %}
@@ -753,13 +766,19 @@
       <input type="hidden" id="free-card-id" value="">
 
       <div class="add-card-toggle" id="add-card-toggle">
-        <button type="button" class="act-btn active" data-mode="ticket">Ticket existente</button>
+        <button type="button" class="act-btn active" data-mode="ticket">Ticket</button>
+        <button type="button" class="act-btn" data-mode="nota">Nota do mural</button>
         <button type="button" class="act-btn" data-mode="avulso">Card avulso</button>
       </div>
 
       <div id="add-card-ticket-mode">
         <input type="text" id="add-card-busca" class="browser-default coluna-input" placeholder="Buscar por #número, título ou cliente...">
         <div id="add-card-resultados" class="add-card-resultados"></div>
+      </div>
+
+      <div id="add-card-nota-mode" style="display:none;">
+        <input type="text" id="add-card-nota-busca" class="browser-default coluna-input" placeholder="Buscar nota por título ou conteúdo...">
+        <div id="add-card-nota-res" class="add-card-resultados"></div>
       </div>
 
       <div id="add-card-avulso-mode" style="display:none;">
@@ -871,6 +890,8 @@
   const REMOVE_CARD_URL = '/kanban/card/remover/';
   const BUSCA_URL       = '/ticket/busca-ajax/';
   const CLIENTE_BUSCA_URL = '/api/clientes/busca/';
+  const NOTA_BUSCA_URL  = '/nota/busca-ajax/';
+  const ADD_NOTA_URL    = '/kanban/card/adicionar-nota/';
 
   function getCsrf() {
     const m = document.cookie.match(/csrftoken=([^;]+)/);
@@ -1088,6 +1109,14 @@
           if (respEl) respEl.textContent = data.responsavel;
           const respRow = card.querySelector('.responsavel-row');
           if (respRow) respRow.style.display = 'flex';
+        }
+      }
+      // Nota do mural: reflete o novo status no chip
+      if (data.nota_status) {
+        const chip = card.querySelector('.nota-status');
+        if (chip) {
+          chip.textContent = data.nota_status;
+          chip.style.background = data.nota_cor;
         }
       }
       M.toast({ html: pk ? `Ticket #${pk} movido!` : 'Card movido!', classes: 'teal darken-1' });
@@ -1387,6 +1416,9 @@
   const addCardTitulo    = document.getElementById('modal-add-card-titulo');
   const addCardToggle    = document.getElementById('add-card-toggle');
   const ticketMode       = document.getElementById('add-card-ticket-mode');
+  const notaMode         = document.getElementById('add-card-nota-mode');
+  const notaBusca        = document.getElementById('add-card-nota-busca');
+  const notaRes          = document.getElementById('add-card-nota-res');
   const avulsoMode       = document.getElementById('add-card-avulso-mode');
   const freeCardId       = document.getElementById('free-card-id');
   const freeCardTitulo   = document.getElementById('free-card-titulo');
@@ -1421,10 +1453,10 @@
   fcClienteClear.addEventListener('click', e => { e.preventDefault(); setClienteSelecionado(null); });
 
   function setAddMode(mode) {
-    const isTicket = mode === 'ticket';
-    ticketMode.style.display = isTicket ? '' : 'none';
-    avulsoMode.style.display = isTicket ? 'none' : '';
-    btnSalvarAvulso.style.display = isTicket ? 'none' : '';
+    ticketMode.style.display = mode === 'ticket' ? '' : 'none';
+    notaMode.style.display   = mode === 'nota'   ? '' : 'none';
+    avulsoMode.style.display = mode === 'avulso' ? '' : 'none';
+    btnSalvarAvulso.style.display = mode === 'avulso' ? '' : 'none';
     addCardToggle.querySelectorAll('.act-btn').forEach(b =>
       b.classList.toggle('active', b.dataset.mode === mode));
   }
@@ -1440,6 +1472,8 @@
       freeCardId.value = '';
       addCardBusca.value = '';
       addCardResultados.innerHTML = '';
+      notaBusca.value = '';
+      notaRes.innerHTML = '';
       freeCardTitulo.value = '';
       freeCardTexto.value = '';
       setClienteSelecionado(null);
@@ -1534,6 +1568,69 @@
       btnSalvarAvulso.disabled = false;
     }
   });
+
+  // Busca e vínculo de notas do mural
+  let notaTimer = null;
+  notaBusca.addEventListener('input', () => {
+    clearTimeout(notaTimer);
+    const q = notaBusca.value.trim();
+    if (!q) { notaRes.innerHTML = ''; return; }
+    notaTimer = setTimeout(() => buscarNotas(q), 300);
+  });
+
+  async function buscarNotas(q) {
+    try {
+      const resp = await fetch(`${NOTA_BUSCA_URL}?q=${encodeURIComponent(q)}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      const data = await resp.json().catch(() => ({ resultados: [] }));
+      if (!data.resultados || !data.resultados.length) {
+        notaRes.innerHTML = '<p class="tp-empty" style="padding:10px">Nenhuma nota encontrada.</p>';
+        return;
+      }
+      notaRes.innerHTML = data.resultados.map(n => `
+        <div class="add-card-item" data-id="${n.id}">
+          <div class="aci-main">
+            <span class="aci-titulo">${escapeHtml(n.titulo)}</span>
+            <div class="aci-cliente">${escapeHtml(n.categoria || 'Sem categoria')}</div>
+          </div>
+          <span class="aci-status">${escapeHtml(n.status)}</span>
+        </div>`).join('');
+    } catch {
+      notaRes.innerHTML = '<p class="tp-empty" style="padding:10px">Erro ao buscar.</p>';
+    }
+  }
+
+  notaRes.addEventListener('click', e => {
+    const item = e.target.closest('.add-card-item');
+    if (item) adicionarNotaCard(item.dataset.id, addCardColunaId.value);
+  });
+
+  async function adicionarNotaCard(notaId, colunaId) {
+    try {
+      const resp = await fetch(ADD_NOTA_URL, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCsrf(),
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({ nota_id: notaId, coluna_id: colunaId }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) { M.toast({ html: data.error || 'Erro ao vincular nota', classes: 'red' }); return; }
+      const zone = document.getElementById(`drop-${colunaId}`);
+      const addBtn = zone.querySelector('.add-card-btn');
+      addBtn.insertAdjacentHTML('beforebegin', data.html);
+      bindDraggable(addBtn.previousElementSibling);
+      removeEmpty(zone);
+      refreshCount(zone);
+      addCardModalInst.close();
+      M.toast({ html: 'Nota vinculada ao quadro!', classes: 'teal darken-1' });
+    } catch {
+      M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
+    }
+  }
 
   // Busca de cliente (card avulso)
   let clienteTimer = null;

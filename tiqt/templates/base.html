@@ -1050,6 +1050,12 @@
               <i class="material-icons" style="font-size:13px; line-height:1;">edit</i> Alterar
             </a>
           </div>
+          <a href="#!" id="qt-nova-empresa"
+            style="display:inline-flex; align-items:center; gap:4px; margin-top:6px;
+                   font-size:11.5px; font-weight:700; color:#00796b; text-decoration:none;">
+            <i class="material-icons" style="font-size:15px; line-height:1;">add_business</i>
+            Cadastrar nova empresa
+          </a>
         </div>
 
         <!-- ── Título ── -->
@@ -1584,6 +1590,7 @@
   {{ form.media }}
 
   {% if user.is_authenticated %}
+  {% include "_modal_cliente_rapido.html" %}
   <script>
   (function () {
     var modalEl   = document.getElementById('modal-quick-ticket');
@@ -1766,6 +1773,16 @@
       document.getElementById('qt-lupa').style.display = 'none';
       fecharDropdown();
       document.getElementById('qt-titulo').focus();
+    }
+
+    // Cadastro rápido de empresa: ao concluir, já seleciona a empresa criada
+    var btnNovaEmpresa = document.getElementById('qt-nova-empresa');
+    if (btnNovaEmpresa) {
+      btnNovaEmpresa.addEventListener('click', function (e) {
+        e.preventDefault();
+        fecharDropdown();
+        window.abrirCadastroEmpresa(function (id, text) { selecionarCliente(id, text); });
+      });
     }
 
     function fecharDropdown() {

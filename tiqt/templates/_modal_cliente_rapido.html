@@ -1,0 +1,280 @@
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL DE CADASTRO RÁPIDO DE EMPRESA (busca por CNPJ)
+     Uso: window.abrirCadastroEmpresa(function (id, text) { ... })
+     ═══════════════════════════════════════════════════════════ -->
+<style>
+  /* modal-fixed-footer: o scroll fica só no .modal-content e o rodapé não corta */
+  #modal-cliente-rapido { border-radius: 12px; max-width: 640px; width: 92%; max-height: 82%; }
+  #modal-cliente-rapido .modal-content { padding: 26px 30px 12px; }
+  #modal-cliente-rapido .modal-footer { border-top: 1px solid #eee; }
+  #modal-cliente-rapido h5 { margin: 0 0 4px; font-size: 1.05rem; font-weight: 700; }
+  #modal-cliente-rapido .cr-sub { font-size: .82rem; color: #777; margin: 0 0 18px; }
+
+  /* Scrollbar discreta (uma só, no conteúdo) */
+  #modal-cliente-rapido .modal-content::-webkit-scrollbar { width: 8px; }
+  #modal-cliente-rapido .modal-content::-webkit-scrollbar-track { background: transparent; }
+  #modal-cliente-rapido .modal-content::-webkit-scrollbar-thumb { background: rgba(0,0,0,.16); border-radius: 8px; }
+  html.dark #modal-cliente-rapido .modal-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); }
+
+  .cr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; }
+  .cr-field { display: flex; flex-direction: column; }
+  .cr-field.cr-full { grid-column: 1 / -1; }
+  .cr-field label { font-size: .72rem; font-weight: 700; color: #6b7078; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 4px; }
+  /* Inputs usam .browser-default: sem isso o Materialize sobrescreve altura/box-sizing */
+  #modal-cliente-rapido .cr-field input {
+    display: block; width: 100%; height: 40px !important; box-sizing: border-box !important;
+    padding: 0 12px; margin: 0 !important;
+    border: 1px solid #ccc !important; border-radius: 6px;
+    font-size: .88rem; line-height: normal; background-color: #fff; color: #1c1d1f;
+    box-shadow: none !important; outline: none;
+  }
+  #modal-cliente-rapido .cr-field input:focus { border-color: #00796b !important; box-shadow: none !important; }
+  #modal-cliente-rapido .cr-field input[readonly] { background: #f5f5f5; color: #777; }
+
+  .cr-cnpj-row { display: flex; gap: 8px; align-items: flex-end; }
+  .cr-cnpj-row .cr-field { flex: 1; }
+  #cr-btn-buscar { border-radius: 6px; height: 40px; line-height: 40px; }
+
+  #cr-erro { display: none; color: #e53935; font-size: .8rem; margin-top: 10px; }
+  #cr-info { display: none; color: #00796b; font-size: .8rem; margin-top: 10px; }
+
+  @media (max-width: 600px) { .cr-grid { grid-template-columns: 1fr; } }
+
+  html.dark #modal-cliente-rapido { background-color: var(--hw-surface) !important; color: var(--hw-text) !important; }
+  html.dark #modal-cliente-rapido .cr-sub,
+  html.dark #modal-cliente-rapido .cr-field label { color: var(--hw-text2) !important; }
+  html.dark #modal-cliente-rapido .cr-field input {
+    background-color: var(--hw-input-bg) !important; color: var(--hw-text) !important; border-color: var(--hw-border) !important;
+  }
+  html.dark #modal-cliente-rapido .cr-field input[readonly] { opacity: .75; }
+  html.dark #modal-cliente-rapido .cr-field input::placeholder { color: var(--hw-text3) !important; }
+  html.dark #modal-cliente-rapido .modal-footer { background-color: var(--hw-surface) !important; border-top-color: var(--hw-border) !important; }
+</style>
+
+<div id="modal-cliente-rapido" class="modal modal-fixed-footer">
+  <div class="modal-content">
+    <h5><i class="material-icons tiny" style="vertical-align:middle; color:#00796b" translate="no">domain_add</i> Cadastro rápido de empresa</h5>
+    <p class="cr-sub">Informe o CNPJ e clique em buscar para preencher os dados automaticamente.</p>
+
+    {% csrf_token %}
+
+    <div class="cr-cnpj-row">
+      <div class="cr-field">
+        <label for="cr-cnpj">CNPJ</label>
+        <input type="text" class="browser-default" id="cr-cnpj" placeholder="00.000.000/0000-00" maxlength="18" autocomplete="off">
+      </div>
+      <button type="button" id="cr-btn-buscar" class="btn teal darken-1">
+        <i class="material-icons left" translate="no">search</i>Buscar
+      </button>
+    </div>
+
+    <div class="cr-grid" style="margin-top:14px;">
+      <div class="cr-field cr-full">
+        <label for="cr-razao">Razão social</label>
+        <input type="text" class="browser-default" id="cr-razao" maxlength="120">
+      </div>
+      <div class="cr-field cr-full">
+        <label for="cr-fantasia">Nome fantasia</label>
+        <input type="text" class="browser-default" id="cr-fantasia" maxlength="120">
+      </div>
+      <div class="cr-field">
+        <label for="cr-telefone">Telefone</label>
+        <input type="text" class="browser-default" id="cr-telefone" maxlength="11">
+      </div>
+      <div class="cr-field">
+        <label for="cr-email">E-mail</label>
+        <input type="text" class="browser-default" id="cr-email" maxlength="120">
+      </div>
+      <div class="cr-field">
+        <label for="cr-cep">CEP</label>
+        <input type="text" class="browser-default" id="cr-cep" maxlength="9">
+      </div>
+      <div class="cr-field">
+        <label for="cr-bairro">Bairro</label>
+        <input type="text" class="browser-default" id="cr-bairro" maxlength="120">
+      </div>
+      <div class="cr-field cr-full">
+        <label for="cr-endereco">Endereço</label>
+        <input type="text" class="browser-default" id="cr-endereco" maxlength="120">
+      </div>
+      <div class="cr-field">
+        <label for="cr-numero">Número</label>
+        <input type="text" class="browser-default" id="cr-numero" maxlength="10">
+      </div>
+      <div class="cr-field">
+        <label for="cr-complemento">Complemento</label>
+        <input type="text" class="browser-default" id="cr-complemento" maxlength="120">
+      </div>
+      <div class="cr-field">
+        <label for="cr-cidade-nome">Cidade</label>
+        <input type="text" class="browser-default" id="cr-cidade-nome" readonly placeholder="—">
+        <input type="hidden" id="cr-cidade-id">
+      </div>
+      <div class="cr-field">
+        <label for="cr-uf-nome">UF</label>
+        <input type="text" class="browser-default" id="cr-uf-nome" readonly placeholder="—">
+        <input type="hidden" id="cr-uf-id">
+      </div>
+    </div>
+
+    <div id="cr-erro"></div>
+    <div id="cr-info"></div>
+  </div>
+
+  <div class="modal-footer">
+    <a href="#!" class="modal-close btn-flat grey-text" style="margin-right:8px;">Cancelar</a>
+    <button type="button" id="cr-btn-salvar" class="btn teal darken-1" style="border-radius:6px;">
+      <i class="material-icons left" translate="no">save</i>Cadastrar empresa
+    </button>
+  </div>
+</div>
+
+<script>
+(function () {
+  var modalEl = document.getElementById('modal-cliente-rapido');
+  if (!modalEl) return;
+  var inst = M.Modal.init(modalEl, { dismissible: false });
+
+  var callback = null;   // recebe (id, text) ao cadastrar/selecionar
+
+  var el = function (id) { return document.getElementById(id); };
+  var campos = ['cr-cnpj','cr-razao','cr-fantasia','cr-telefone','cr-email','cr-cep',
+                'cr-bairro','cr-endereco','cr-numero','cr-complemento',
+                'cr-cidade-nome','cr-cidade-id','cr-uf-nome','cr-uf-id'];
+
+  function limpar() {
+    campos.forEach(function (id) { el(id).value = ''; });
+    ocultarMsgs();
+  }
+  function mostrarErro(msg) { el('cr-erro').textContent = msg; el('cr-erro').style.display = 'block'; el('cr-info').style.display = 'none'; }
+  function mostrarInfo(msg) { el('cr-info').textContent = msg; el('cr-info').style.display = 'block'; el('cr-erro').style.display = 'none'; }
+  function ocultarMsgs() { el('cr-erro').style.display = 'none'; el('cr-info').style.display = 'none'; }
+
+  function getCsrf() {
+    var input = modalEl.querySelector('input[name="csrfmiddlewaretoken"]');
+    if (input) return input.value;
+    var m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? m[1] : '';
+  }
+
+  function somenteDigitos(v) { return (v || '').replace(/\D/g, ''); }
+
+  // ── Consulta o CNPJ e preenche os campos ────────────────────────────
+  function consultarCnpj() {
+    var cnpj = somenteDigitos(el('cr-cnpj').value);
+    if (cnpj.length !== 14) { mostrarErro('Informe um CNPJ válido (14 dígitos).'); return; }
+    ocultarMsgs();
+
+    var btn = el('cr-btn-buscar');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="material-icons left" translate="no">hourglass_empty</i>Buscando...';
+
+    fetch('/api/cnpj/' + cnpj + '/')
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        if (!res.ok || res.d.erro) { mostrarErro(res.d.erro || 'Não foi possível consultar o CNPJ.'); return; }
+        var d = res.d;
+        el('cr-razao').value       = d.razao_social || '';
+        el('cr-fantasia').value    = d.fantasia || d.razao_social || '';
+        el('cr-email').value       = d.email || '';
+        el('cr-telefone').value    = somenteDigitos(d.telefone).slice(0, 11);
+        el('cr-cep').value         = somenteDigitos(d.cep).slice(0, 8);
+        el('cr-endereco').value    = d.logradouro || '';
+        el('cr-numero').value      = (d.numero || '').slice(0, 10);
+        el('cr-complemento').value = d.complemento || '';
+        el('cr-bairro').value      = d.bairro || '';
+        el('cr-cidade-nome').value = d.cidade || '';
+        el('cr-uf-nome').value     = d.uf || '';
+        el('cr-cidade-id').value   = d.cidade_id || '';
+        el('cr-uf-id').value       = d.uf_id || '';
+
+        if (!d.cidade_id || !d.uf_id) {
+          mostrarInfo('Dados preenchidos. Cidade/UF não encontradas no cadastro local — a empresa será criada sem elas.');
+        } else {
+          mostrarInfo('Dados encontrados. Revise e clique em Cadastrar.');
+        }
+      })
+      .catch(function () { mostrarErro('Erro de rede ao consultar o CNPJ.'); })
+      .finally(function () {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="material-icons left" translate="no">search</i>Buscar';
+      });
+  }
+
+  el('cr-btn-buscar').addEventListener('click', consultarCnpj);
+  el('cr-cnpj').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); consultarCnpj(); }
+  });
+  // Busca sozinho ao completar 14 dígitos
+  el('cr-cnpj').addEventListener('input', function () {
+    if (somenteDigitos(this.value).length === 14) consultarCnpj();
+  });
+
+  // ── Salva a empresa ─────────────────────────────────────────────────
+  function salvar() {
+    ocultarMsgs();
+    var razao = el('cr-razao').value.trim();
+    var fantasia = el('cr-fantasia').value.trim();
+    if (!razao && !fantasia) { mostrarErro('Informe ao menos a razão social ou o nome fantasia.'); return; }
+
+    var body = new URLSearchParams({
+      cnpj: somenteDigitos(el('cr-cnpj').value),
+      razao_social: razao,
+      fantasia: fantasia,
+      telefone: somenteDigitos(el('cr-telefone').value),
+      email: el('cr-email').value.trim(),
+      cep: somenteDigitos(el('cr-cep').value),
+      endereco: el('cr-endereco').value.trim(),
+      numero: el('cr-numero').value.trim(),
+      complemento: el('cr-complemento').value.trim(),
+      bairro: el('cr-bairro').value.trim(),
+      cidade: el('cr-cidade-id').value,
+      uf: el('cr-uf-id').value,
+    });
+
+    var btn = el('cr-btn-salvar');
+    btn.disabled = true;
+    var htmlOriginal = btn.innerHTML;
+    btn.innerHTML = '<i class="material-icons left" translate="no">hourglass_empty</i>Salvando...';
+
+    fetch('/api/clientes/quick-create/', {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCsrf(),
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: body,
+    })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        // CNPJ já cadastrado: seleciona a empresa existente em vez de duplicar
+        if (!res.ok && res.d.id) {
+          concluir(res.d.id, res.d.text);
+          if (window.M && M.toast) M.toast({ html: 'Empresa já cadastrada — selecionada.', classes: 'orange darken-2' });
+          return;
+        }
+        if (!res.ok) { mostrarErro(res.d.error || 'Não foi possível cadastrar a empresa.'); return; }
+        concluir(res.d.id, res.d.text);
+        if (window.M && M.toast) M.toast({ html: 'Empresa cadastrada!', classes: 'green darken-2' });
+      })
+      .catch(function () { mostrarErro('Erro de rede. Tente novamente.'); })
+      .finally(function () { btn.disabled = false; btn.innerHTML = htmlOriginal; });
+  }
+
+  function concluir(id, text) {
+    inst.close();
+    if (typeof callback === 'function') callback(id, text);
+  }
+
+  el('cr-btn-salvar').addEventListener('click', salvar);
+
+  // ── API pública ─────────────────────────────────────────────────────
+  window.abrirCadastroEmpresa = function (cb) {
+    callback = cb || null;
+    limpar();
+    inst.open();
+    setTimeout(function () { el('cr-cnpj').focus(); }, 150);
+  };
+})();
+</script>

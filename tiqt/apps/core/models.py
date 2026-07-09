@@ -228,12 +228,16 @@ class KanbanColuna(models.Model):
 class KanbanCard(models.Model):
     """Card numa coluna de um quadro personalizado.
 
-    Pode ser vinculado a um ticket (`ticket` preenchido) ou um card avulso —
-    uma nota livre com `titulo`/`texto` (sem ticket). Usado apenas em quadros
-    NÃO padrão; no quadro padrão a colocação vem do status do ticket."""
+    Pode ser vinculado a um ticket (`ticket`), a uma nota do mural (`nota`), ou
+    ser um card avulso — nota livre com `titulo`/`texto`. Usado apenas em quadros
+    NÃO padrão; no quadro padrão a colocação vem do status do ticket.
+
+    Os status de Ticket e de Nota compartilham os mesmos inteiros 0..3, então
+    `KanbanColuna.status_associado` serve para ambos."""
 
     coluna = models.ForeignKey(KanbanColuna, on_delete=models.CASCADE, related_name='cards')
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='kanban_cards', null=True, blank=True)
+    nota = models.ForeignKey('mural.Nota', on_delete=models.CASCADE, related_name='kanban_cards', null=True, blank=True)
     titulo = models.CharField(max_length=120, blank=True, default='')   # card avulso
     texto = models.TextField(blank=True, default='')                    # card avulso
     cliente = models.ForeignKey(Cliente, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')  # card avulso
@@ -246,6 +250,8 @@ class KanbanCard(models.Model):
     def __str__(self):
         if self.ticket_id:
             return f"Ticket #{self.ticket_id} em {self.coluna}"
+        if self.nota_id:
+            return f"Nota #{self.nota_id} em {self.coluna}"
         return f"Card '{self.titulo}' em {self.coluna}"
 
 

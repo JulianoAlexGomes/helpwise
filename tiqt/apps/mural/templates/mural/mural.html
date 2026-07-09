@@ -857,6 +857,33 @@
   setInterval(atualizarQuadro, REFRESH_MS);
 
   layout();
+
+  // Vindo de um card do Kanban (?nota=<pk>): rola até a nota, destaca e abre a edição
+  (function destacarNota() {
+    var pk = '{{ nota_destaque|escapejs }}';
+    if (!pk) return;
+    var card = document.querySelector('.mr-card[data-id="' + pk + '"]');
+    if (!card) {
+      if (window.M && M.toast) M.toast({ html: 'Nota não encontrada no mural.', classes: 'orange darken-2' });
+      return;
+    }
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('mr-destaque');
+    var btn = card.querySelector('.js-edit');
+    if (btn) setTimeout(function () { btn.click(); }, 450);
+  })();
 })();
 </script>
+<style>
+  /* Destaque da nota aberta a partir do Kanban */
+  .mr-card.mr-destaque {
+    outline: 3px solid var(--hw-brand, #00796b);
+    outline-offset: 3px;
+    animation: mr-pulse 1.2s ease-out 2;
+  }
+  @keyframes mr-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(0,121,107,.45); }
+    100% { box-shadow: 0 0 0 14px rgba(0,121,107,0); }
+  }
+</style>
 {% endblock extra_js %}

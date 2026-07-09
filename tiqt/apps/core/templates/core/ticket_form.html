@@ -239,7 +239,11 @@
         '<i class="material-icons" translate="no">check_circle</i>' +
         '<span class="tk-cli-nome"></span>' +
         '<a href="#" class="tk-cli-clear"><i class="material-icons" style="font-size:13px;" translate="no">edit</i> Alterar</a>' +
-      '</div>';
+      '</div>' +
+      '<a href="#" class="tk-cli-novo" style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;' +
+        'font-size:11.5px;font-weight:700;color:#00796b;text-decoration:none;">' +
+        '<i class="material-icons" style="font-size:15px;line-height:1;" translate="no">add_business</i>' +
+        'Cadastrar nova empresa</a>';
     wrapper.parentNode.insertBefore(box, wrapper);
 
     var search   = box.querySelector('.tk-cli-search');
@@ -321,6 +325,13 @@
 
     clear.addEventListener('click', function (e) { e.preventDefault(); sel.selectedIndex = -1; sel.value = ''; showSearch(); });
     document.addEventListener('click', function (e) { if (!box.contains(e.target)) closeDD(); });
+
+    // Cadastro rápido de empresa: ao concluir, já seleciona a empresa criada
+    box.querySelector('.tk-cli-novo').addEventListener('click', function (e) {
+      e.preventDefault();
+      closeDD();
+      window.abrirCadastroEmpresa(function (id, text) { setCliente(id, text); });
+    });
 
     // estado inicial (ex.: ?cliente=, edição ou erro de validação)
     if (sel.value) {

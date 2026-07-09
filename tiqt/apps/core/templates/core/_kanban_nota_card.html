@@ -1,0 +1,38 @@
+{% with nota=card.nota %}
+<div class="card ticket-card nota-card z-depth-1 {% if done %}card-done{% endif %}"
+     draggable="true" data-card-id="{{ card.id }}" data-nota-id="{{ nota.id }}">
+  <button class="card-remove-btn" type="button" title="Remover do quadro" data-card-id="{{ card.id }}">
+    <i class="material-icons" translate="no">close</i>
+  </button>
+  <div class="card-content">
+
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px;">
+      <a href="{% url 'nota_update' nota.pk %}" class="card-id nota-link" target="_blank" title="Abrir nota no mural">
+        <i class="material-icons" translate="no">description</i> Nota
+      </a>
+      {% if nota.categoria %}
+        <span class="nota-cat" style="background: {{ nota.categoria.cor }}">{{ nota.categoria.nome }}</span>
+      {% endif %}
+    </div>
+
+    <p class="card-title">{{ nota.titulo|truncatechars:60 }}</p>
+
+    {% if nota.responsavel %}
+    <div class="card-meta">
+      <i class="material-icons">person</i>
+      <span>{{ nota.responsavel.get_full_name|default:nota.responsavel.username }}</span>
+    </div>
+    {% endif %}
+
+    <div class="card-meta">
+      <span class="nota-status" style="background: {{ nota.cor_status }}">{{ nota.get_status_display }}</span>
+    </div>
+
+    {% if nota.vencimento %}
+      <p class="card-date">Vence {{ nota.vencimento|date:"d/m/Y H:i" }}</p>
+    {% endif %}
+
+    {% if done %}<div class="card-done-check"><i class="material-icons" translate="no">check_circle</i> Concluído</div>{% endif %}
+  </div>
+</div>
+{% endwith %}

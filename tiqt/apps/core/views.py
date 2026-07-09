@@ -621,7 +621,9 @@ class KanbanView(LoginRequiredMixin, TemplateView):
                 cards = (KanbanCard.objects
                          .filter(coluna=coluna)
                          .select_related('ticket', 'ticket__cliente', 'ticket__prioridade',
-                                         'ticket__responsavel', 'ticket__tipo')
+                                         'ticket__responsavel', 'ticket__tipo',
+                                         'nota', 'nota__categoria', 'nota__responsavel',
+                                         'cliente')
                          .order_by('ordem', '-id'))
                 lista = []
                 for card in cards:
@@ -882,12 +884,19 @@ class KanbanCardMoverView(LoginRequiredMixin, View):
             return JsonResponse({'error': 'Coluna de outro quadro'}, status=400)
 
         ticket = card.ticket
+        nota = card.nota
         status_destino = coluna.status_associado
+
         if ticket and status_destino is not None and status_destino != ticket.status:
             if status_destino == Ticket.EM_ATENDIMENTO and ticket.status == Ticket.ABERTO:
                 ticket.iniciar_atendimento(request.user)
             elif status_destino == Ticket.ENCERRADO:
                 return JsonResponse({'error': 'needs_solution'}, status=400)
+
+        # Nota do mural: status usa os mesmos inteiros (0..3), aplica direto
+        if nota and status_destino is not None and status_destino != nota.status:
+            nota.status = status_destino
+            nota.save(update_fields=['status'])
 
         card.coluna = coluna
         card.ordem = 0
@@ -896,6 +905,8 @@ class KanbanCardMoverView(LoginRequiredMixin, View):
             'ok': True,
             'status': ticket.status if ticket else None,
             'responsavel': ticket.responsavel.get_full_name() if ticket and ticket.responsavel else '',
+            'nota_status': nota.get_status_display() if nota else None,
+            'nota_cor': nota.cor_status if nota else None,
         })
 
 
@@ -916,6 +927,50 @@ class KanbanCardAdicionarView(LoginRequiredMixin, View):
         html = render_to_string('core/_kanban_card.html', {
             'ticket': ticket, 'draggable': True, 'card_id': card.id,
             'done': coluna.status_associado == Ticket.ENCERRADO,
+        })
+        return JsonResponse({'ok': True, 'html': html})
+
+
+class NotaBuscaAjaxView(LoginRequiredMixin, View):
+    """Busca notas do mural por título/conteúdo (para adicionar cards a um quadro)."""
+    def get(self, request):
+        from tiqt.apps.mural.models import Nota
+        q = (request.GET.get('q') or '').strip()
+        base = Nota.objects.select_related('categoria')
+        if q:
+            base = base.filter(Q(titulo__icontains=q) | Q(conteudo__icontains=q))
+        else:
+            base = base.none()
+        resultados = [{
+            'id': n.pk,
+            'titulo': n.titulo,
+            'categoria': n.categoria.nome if n.categoria_id else '',
+            'status': n.get_status_display(),
+        } for n in base.order_by('-criado_em')[:20]]
+        return JsonResponse({'resultados': resultados})
+
+
+class KanbanCardAdicionarNotaView(LoginRequiredMixin, View):
+    """Vincula uma nota do mural a uma coluna de um quadro personalizado."""
+    def post(self, request):
+        from .models import KanbanColuna, KanbanCard
+        from tiqt.apps.mural.models import Nota
+        coluna = get_object_or_404(KanbanColuna.objects.select_related('quadro'), pk=request.POST.get('coluna_id'))
+        if coluna.quadro.is_padrao:
+            return JsonResponse({'error': 'O quadro padrão é preenchido automaticamente'}, status=400)
+        nota = get_object_or_404(
+            Nota.objects.select_related('categoria', 'responsavel'), pk=request.POST.get('nota_id'))
+        if KanbanCard.objects.filter(nota=nota, coluna__quadro=coluna.quadro).exists():
+            return JsonResponse({'error': 'Esta nota já está neste quadro'}, status=400)
+
+        # Ao entrar numa coluna com status, a nota já assume esse status
+        if coluna.status_associado is not None and nota.status != coluna.status_associado:
+            nota.status = coluna.status_associado
+            nota.save(update_fields=['status'])
+
+        card = KanbanCard.objects.create(nota=nota, coluna=coluna, ordem=0)
+        html = render_to_string('core/_kanban_nota_card.html', {
+            'card': card, 'done': coluna.status_associado == Ticket.ENCERRADO,
         })
         return JsonResponse({'ok': True, 'html': html})
 
@@ -1326,6 +1381,38 @@ def clientes_autocomplete(request):
             data[label] = None  # Materialize exige esse formato
 
     return JsonResponse(data)
+
+
+def _cliente_label(cliente):
+    """Mesmo formato usado por clientes_busca_api, para o front reaproveitar."""
+    return " - ".join(filter(None, [cliente.fantasia, cliente.razao_social, cliente.cnpj]))
+
+
+class ClienteQuickCreateView(LoginRequiredMixin, View):
+    """Cadastro rápido de empresa (modal). Retorna {id, text} pronto para
+    ser selecionado nos autocompletes de cliente das telas de novo ticket."""
+
+    def post(self, request):
+        cnpj = ''.join(filter(str.isdigit, request.POST.get('cnpj') or ''))
+        if cnpj:
+            existente = Cliente.objects.filter(cnpj=cnpj).first()
+            if existente:
+                return JsonResponse({
+                    'error': 'Já existe uma empresa cadastrada com este CNPJ.',
+                    'id': existente.id,
+                    'text': _cliente_label(existente),
+                }, status=400)
+
+        form = ClienteForm(request.POST)
+        if not form.is_valid():
+            primeiro = next(iter(form.errors.values()))[0]
+            return JsonResponse({'error': primeiro, 'errors': form.errors}, status=400)
+
+        if not (form.cleaned_data.get('fantasia') or form.cleaned_data.get('razao_social')):
+            return JsonResponse({'error': 'Informe ao menos a razão social ou o nome fantasia.'}, status=400)
+
+        cliente = form.save()
+        return JsonResponse({'ok': True, 'id': cliente.id, 'text': _cliente_label(cliente)})
 
 
 # ─── API: busca de clientes retornando id + nome (para o modal rápido) ────────

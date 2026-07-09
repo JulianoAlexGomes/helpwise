@@ -7,7 +7,7 @@
   <div class="card-content">
 
     <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px;">
-      <a href="{% url 'nota_update' nota.pk %}" class="card-id nota-link" target="_blank" title="Abrir nota no mural">
+      <a href="{% url 'mural' %}?nota={{ nota.pk }}" class="card-id nota-link" target="_blank" title="Abrir nota no mural">
         <i class="material-icons" translate="no">description</i> Nota
       </a>
       {% if nota.categoria %}

@@ -3,7 +3,7 @@ from urllib.parse import parse_qs, urlencode, urlparse
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
@@ -51,6 +51,10 @@ class MuralView(LoginRequiredMixin, TemplateView):
         status = req.GET.get('status') or ''
         resp_id = req.GET.get('resp') or ''
         ver_arquivadas = req.GET.get('arquivadas') == '1'
+        # ?nota=<pk> — vindo de um card do Kanban: destaca e abre essa nota
+        nota_destaque = req.GET.get('nota') or ''
+        if not nota_destaque.isdigit():
+            nota_destaque = ''
 
         notas = (
             Nota.objects
@@ -58,7 +62,11 @@ class MuralView(LoginRequiredMixin, TemplateView):
             .prefetch_related('arquivos')
         )
         if not ver_arquivadas:
-            notas = notas.exclude(status=Nota.ARQUIVADA)
+            # A nota em destaque sempre aparece, mesmo arquivada
+            oculta = Q(status=Nota.ARQUIVADA)
+            if nota_destaque:
+                oculta &= ~Q(pk=nota_destaque)
+            notas = notas.exclude(oculta)
         if cat_id:
             notas = notas.filter(categoria_id=cat_id)
         if status != '':
@@ -107,6 +115,7 @@ class MuralView(LoginRequiredMixin, TemplateView):
             'f_status': str(status),
             'f_resp': str(resp_id),
             'ver_arquivadas': ver_arquivadas,
+            'nota_destaque': nota_destaque,
             # constantes p/ o template
             'STATUS_ARQUIVADA': Nota.ARQUIVADA,
             'STATUS_CONCLUIDA': Nota.CONCLUIDA,

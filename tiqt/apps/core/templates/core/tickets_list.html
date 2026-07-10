@@ -101,7 +101,7 @@
 {% block content %}
 <div class="tkl-wrap">
 
-  {% if request.path != '/ticket/my/' %}
+  {% if filter_form %}
   <form method="get">
     <div class="tkl-filters">
       <div class="tkl-top">
@@ -115,14 +115,18 @@
       </div>
 
       <div class="tkl-grid">
-        <div class="tkl-field"><span class="tkl-lbl">Responsável</span>{{ filter_form.responsavel }}</div>
-        <div class="tkl-field"><span class="tkl-lbl">Atendente</span>{{ filter_form.atendente }}</div>
-        <div class="tkl-field"><span class="tkl-lbl">Cliente</span>{{ filter_form.cliente }}</div>
-        <div class="tkl-field"><span class="tkl-lbl">Tipo</span>{{ filter_form.tipo }}</div>
-        <div class="tkl-field"><span class="tkl-lbl">Departamento</span>{{ filter_form.departamento }}</div>
-        <div class="tkl-field"><span class="tkl-lbl">Prioridade</span>{{ filter_form.prioridade }}</div>
-        <div class="tkl-field"><span class="tkl-lbl">Situação</span>{{ filter_form.situacao }}</div>
-        <div class="tkl-field"><span class="tkl-lbl">Status</span>{{ filter_form.status }}</div>
+        {% if is_meus_tickets %}
+          <div class="tkl-field"><span class="tkl-lbl">Meu papel</span>{{ filter_form.papel }}</div>
+        {% else %}
+          <div class="tkl-field"><span class="tkl-lbl">Responsável</span>{{ filter_form.responsavel }}</div>
+          <div class="tkl-field"><span class="tkl-lbl">Atendente</span>{{ filter_form.atendente }}</div>
+          <div class="tkl-field"><span class="tkl-lbl">Cliente</span>{{ filter_form.cliente }}</div>
+          <div class="tkl-field"><span class="tkl-lbl">Tipo</span>{{ filter_form.tipo }}</div>
+          <div class="tkl-field"><span class="tkl-lbl">Departamento</span>{{ filter_form.departamento }}</div>
+          <div class="tkl-field"><span class="tkl-lbl">Prioridade</span>{{ filter_form.prioridade }}</div>
+          <div class="tkl-field"><span class="tkl-lbl">Situação</span>{{ filter_form.situacao }}</div>
+          <div class="tkl-field"><span class="tkl-lbl">Status</span>{{ filter_form.status }}</div>
+        {% endif %}
       </div>
 
       <div class="tkl-actions">

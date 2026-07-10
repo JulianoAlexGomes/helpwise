@@ -184,6 +184,26 @@ class TicketFilterForm(forms.Form):
         empty_label="Todos"
     )
 
+
+class MeusTicketsFilterForm(forms.Form):
+    """Filtro da aba 'Meus tickets': restringe o papel do usuário no ticket.
+
+    Vazio = tickets em que ele é responsável OU atendente.
+    """
+
+    AMBOS = ''
+    RESPONSAVEL = 'resp'
+    ATENDENTE = 'atend'
+    PAPEL = [
+        (AMBOS, 'Ambos'),
+        (RESPONSAVEL, 'Responsável'),
+        (ATENDENTE, 'Atendente'),
+    ]
+
+    q = forms.CharField(required=False)
+    papel = forms.ChoiceField(choices=PAPEL, required=False)
+
+
 from django import forms
 from .models import Ticket, Cliente
 

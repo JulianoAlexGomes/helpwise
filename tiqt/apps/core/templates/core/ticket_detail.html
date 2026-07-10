@@ -190,6 +190,87 @@
   .td-sol p { margin: 4px 0; }
   .td-sol b { color: #1c1d1f; }
 
+  /* Vínculos (mural / agenda / kanban) */
+  .td-link-group + .td-link-group { margin-top: 16px; }
+  .td-link-group-label {
+    display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .4px; color: #8a8f98; margin-bottom: 8px;
+  }
+  .td-link-group-label i { font-size: 15px; }
+  .td-link {
+    display: flex; align-items: center; gap: 9px; padding: 9px 11px; margin-bottom: 6px;
+    border: 1px solid #e2e4e8; border-radius: 9px; background: #fafbfc;
+    color: #2a2c30; font-size: 13px; text-decoration: none; transition: all .15s;
+  }
+  .td-link:last-child { margin-bottom: 0; }
+  .td-link:hover { border-color: var(--hw-brand); background: rgba(0,121,107,.05); }
+  .td-link-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .td-link-body { flex: 1; min-width: 0; }
+  .td-link-title { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .td-link-sub { display: block; font-size: 11.5px; color: #8a8f98; margin-top: 1px; }
+  .td-link-late { color: #e53935; font-weight: 600; }
+
+  .td-link-body { text-decoration: none; color: inherit; }
+  .td-link-x {
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width: 26px; height: 26px; border: none; border-radius: 7px; cursor: pointer;
+    background: transparent; color: #b0b3b8; transition: all .15s;
+  }
+  .td-link-x:hover { background: rgba(229,57,53,.12); color: #e53935; }
+  .td-link-x i { font-size: 17px; }
+
+  .td-link-actions { display: flex; gap: 8px; margin-bottom: 14px; }
+  .td-link-btn {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 9px 10px; border: 1.5px dashed #d6d9de; border-radius: 9px; background: #fafbfc;
+    color: #44474c; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all .15s;
+  }
+  .td-link-btn:hover:not(:disabled) { border-color: var(--hw-brand); background: rgba(0,121,107,.05); color: var(--hw-brand-2); }
+  .td-link-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .td-link-btn i { font-size: 17px; }
+  .td-link-empty { color: #9ca3af; font-size: 13px; text-align: center; padding: 6px 0 2px; }
+
+  /* Modais de vínculo */
+  #modal-add-kanban, #modal-add-mural { border-radius: 14px; max-width: 520px; width: 92%; }
+  #modal-add-kanban .modal-content, #modal-add-mural .modal-content { padding: 24px 26px 6px; }
+  #modal-add-kanban .modal-content h5, #modal-add-mural .modal-content h5 {
+    margin: 0; font-size: 19px; font-weight: 700; color: #1c1d1f; letter-spacing: -.2px;
+  }
+  #modal-add-kanban .modal-footer, #modal-add-mural .modal-footer {
+    display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+    height: auto; padding: 12px 20px; border-top: 1px solid #eee;
+    border-radius: 0 0 14px 14px; background-color: #fff;
+  }
+  #modal-add-kanban .btn-flat, #modal-add-mural .btn-flat { color: #6b7280; }
+
+  .td-modal-sub { color: #8a8f98; font-size: 13.5px; margin: 4px 0 18px; }
+  .td-modal-label { display: block; font-size: 12.5px; font-weight: 600; color: #44474c; margin: 0 0 6px; }
+  .td-modal-input {
+    width: 100%; box-sizing: border-box; margin: 0 0 16px; display: block;
+    border: 1.5px solid #e2e4e8; border-radius: 9px; padding: 11px 13px;
+    background: #fff; color: #1c1d1f; font-size: 14px; font-family: inherit;
+  }
+  select.td-modal-input { height: 44px; padding: 0 10px; }
+  textarea.td-modal-input { resize: vertical; line-height: 1.5; }
+  .td-modal-input:focus { outline: none; border-color: var(--hw-brand); box-shadow: 0 0 0 3px rgba(0,121,107,.13); }
+  .td-modal-input:last-child { margin-bottom: 0; }
+
+  html.dark .td-link { border-color: var(--hw-border); background: var(--hw-surface2); color: var(--hw-text); }
+  html.dark .td-link:hover { border-color: var(--hw-brand); background: rgba(0,150,136,.08); }
+  html.dark .td-link-btn { border-color: var(--hw-border); background: var(--hw-input-bg); color: var(--hw-text2); }
+  html.dark .td-modal-label { color: var(--hw-text2); }
+  html.dark .td-modal-input { background: var(--hw-input-bg); color: var(--hw-text); border-color: var(--hw-border); }
+  html.dark #modal-add-kanban, html.dark #modal-add-mural { background: var(--hw-surface) !important; }
+  html.dark #modal-add-kanban .modal-content h5,
+  html.dark #modal-add-mural .modal-content h5 { color: var(--hw-text); }
+  html.dark #modal-add-kanban .modal-footer,
+  html.dark #modal-add-mural .modal-footer {
+    background-color: var(--hw-surface) !important; border-top-color: var(--hw-border) !important;
+  }
+  html.dark #modal-add-kanban .btn-flat, html.dark #modal-add-mural .btn-flat { color: var(--hw-text2); }
+  /* optgroup/option herdam o fundo do SO em alguns browsers; força o tema escuro */
+  html.dark #sel-coluna, html.dark #nota-categoria { color-scheme: dark; }
+
   /* ── Dark mode ── */
   html.dark .td-head-info h1 { color: var(--hw-text); }
   html.dark .td-back { background: rgba(255,255,255,.06); color: var(--hw-text2); }
@@ -363,7 +444,123 @@
           </div>
         </div>
       {% endif %}
+
+        <div class="td-card">
+          <div class="td-card-title"><i class="material-icons" translate="no">link</i> Vínculos</div>
+
+          <div class="td-link-actions">
+            <button type="button" class="td-link-btn" id="btn-add-kanban"
+                    {% if not quadros_kanban %}disabled title="Nenhum quadro personalizado criado"{% endif %}>
+              <i class="material-icons" translate="no">view_column</i> Add ao Kanban
+            </button>
+            <button type="button" class="td-link-btn" id="btn-add-mural">
+              <i class="material-icons" translate="no">sticky_note_2</i> Enviar ao Mural
+            </button>
+          </div>
+
+          {% if not notas and not agendamentos and not kanban_cards %}
+            <div class="td-link-empty">Nenhum vínculo ainda.</div>
+          {% endif %}
+
+          {% if agendamentos %}
+            <div class="td-link-group">
+              <div class="td-link-group-label"><i class="material-icons" translate="no">event</i> Agenda</div>
+              {% for ag in agendamentos %}
+                <a href="{% url 'agenda' %}" class="td-link">
+                  <span class="td-link-dot" style="background: {{ ag.cor }};"></span>
+                  <span class="td-link-body">
+                    <span class="td-link-title">{{ ag.titulo }}</span>
+                    <span class="td-link-sub">
+                      {{ ag.inicio|date:"d/m/Y H:i" }} · {{ ag.get_status_display }}
+                      {% if ag.atrasado %}<span class="td-link-late">· Atrasado</span>{% endif %}
+                    </span>
+                  </span>
+                </a>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          {% if notas %}
+            <div class="td-link-group">
+              <div class="td-link-group-label"><i class="material-icons" translate="no">sticky_note_2</i> Mural</div>
+              {% for nota in notas %}
+                <a href="{% url 'mural' %}" class="td-link">
+                  <span class="td-link-dot" style="background: {{ nota.cor_status }};"></span>
+                  <span class="td-link-body">
+                    <span class="td-link-title">{{ nota.titulo }}</span>
+                    <span class="td-link-sub">
+                      {% if nota.categoria %}{{ nota.categoria }} · {% endif %}{{ nota.get_status_display }}
+                      {% if nota.atrasado %}<span class="td-link-late">· Atrasada</span>{% endif %}
+                    </span>
+                  </span>
+                </a>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          {% if kanban_cards %}
+            <div class="td-link-group">
+              <div class="td-link-group-label"><i class="material-icons" translate="no">view_column</i> Kanban</div>
+              {% for card in kanban_cards %}
+                <div class="td-link">
+                  <span class="td-link-dot" style="background: {{ card.coluna.cor }};"></span>
+                  <a class="td-link-body" href="{% url 'ticket_kanban' %}?quadro={{ card.coluna.quadro.id }}">
+                    <span class="td-link-title">{{ card.coluna.quadro.nome }}</span>
+                    <span class="td-link-sub">Coluna: {{ card.coluna.nome }}</span>
+                  </a>
+                  <button type="button" class="td-link-x" data-card="{{ card.id }}"
+                          title="Remover deste quadro"><i class="material-icons" translate="no">close</i></button>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
     </div>
+  </div>
+</div>
+
+<!-- Modal: adicionar ticket a um quadro do Kanban -->
+<div id="modal-add-kanban" class="modal">
+  <div class="modal-content">
+    <h5>Adicionar ao Kanban</h5>
+    <p class="td-modal-sub">Escolha a coluna onde o ticket #{{ object.id }} deve aparecer.</p>
+    <select id="sel-coluna" class="browser-default td-modal-input">
+      {% for quadro in quadros_kanban %}
+        <optgroup label="{{ quadro.nome }}">
+          {% for coluna in quadro.colunas.all %}
+            <option value="{{ coluna.id }}">{{ coluna.nome }}</option>
+          {% endfor %}
+        </optgroup>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="modal-footer">
+    <a href="#!" class="modal-close btn-flat">Cancelar</a>
+    <button class="btn td-btn-save" id="btn-save-kanban" type="button">Adicionar</button>
+  </div>
+</div>
+
+<!-- Modal: criar nota no mural vinculada ao ticket -->
+<div id="modal-add-mural" class="modal">
+  <div class="modal-content">
+    <h5>Enviar ao Mural</h5>
+    <p class="td-modal-sub">Cria uma nota no mural já vinculada ao ticket #{{ object.id }}.</p>
+    <label class="td-modal-label" for="nota-titulo">Título</label>
+    <input id="nota-titulo" type="text" maxlength="120" class="browser-default td-modal-input"
+           value="{{ object.titulo|default:'' }}">
+    <label class="td-modal-label" for="nota-categoria">Categoria</label>
+    <select id="nota-categoria" class="browser-default td-modal-input">
+      <option value="">Sem categoria</option>
+      {% for cat in categorias_mural %}
+        <option value="{{ cat.id }}">{{ cat.nome }}</option>
+      {% endfor %}
+    </select>
+    <label class="td-modal-label" for="nota-conteudo">Conteúdo</label>
+    <textarea id="nota-conteudo" rows="3" class="browser-default td-modal-input"></textarea>
+  </div>
+  <div class="modal-footer">
+    <a href="#!" class="modal-close btn-flat">Cancelar</a>
+    <button class="btn td-btn-save" id="btn-save-mural" type="button">Criar nota</button>
   </div>
 </div>
 
@@ -468,6 +665,86 @@
   document.addEventListener('DOMContentLoaded', function () {
     setupUpload('id_arquivos', 'td-pv-arquivos', false);
     setupUpload('id_imagens',  'td-pv-imagens',  true);
+  });
+})();
+
+// ── Vínculos: adicionar ao Kanban / enviar ao Mural ──────────────────
+(function () {
+  const TICKET_ID = {{ object.id }};
+
+  function getCsrf() {
+    const m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? m[1] : '';
+  }
+
+  async function post(url, dados) {
+    const body = new FormData();
+    Object.entries(dados).forEach(([k, v]) => body.append(k, v));
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
+      body,
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data.error || 'Erro ao salvar');
+    return data;
+  }
+
+  // Enquanto a requisição roda, trava o botão para não duplicar o vínculo.
+  async function comBotao(btn, texto, fn) {
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = texto;
+    try {
+      await fn();
+    } catch (e) {
+      M.toast({ html: e.message, classes: 'red' });
+      btn.disabled = false;
+      btn.innerHTML = original;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const modalKanban = M.Modal.init(document.getElementById('modal-add-kanban'), {});
+    const modalMural  = M.Modal.init(document.getElementById('modal-add-mural'), {});
+
+    const btnKanban = document.getElementById('btn-add-kanban');
+    if (btnKanban && !btnKanban.disabled) {
+      btnKanban.addEventListener('click', () => modalKanban.open());
+    }
+    document.getElementById('btn-add-mural').addEventListener('click', () => modalMural.open());
+
+    document.getElementById('btn-save-kanban').addEventListener('click', function () {
+      const colunaId = document.getElementById('sel-coluna').value;
+      if (!colunaId) { M.toast({ html: 'Escolha uma coluna', classes: 'red' }); return; }
+      comBotao(this, 'Adicionando...', async () => {
+        await post('/kanban/card/adicionar/', { coluna_id: colunaId, ticket_id: TICKET_ID });
+        location.reload();
+      });
+    });
+
+    document.getElementById('btn-save-mural').addEventListener('click', function () {
+      const titulo = document.getElementById('nota-titulo').value.trim();
+      if (!titulo) { M.toast({ html: 'Informe um título para a nota', classes: 'red' }); return; }
+      comBotao(this, 'Criando...', async () => {
+        await post(`/ticket/${TICKET_ID}/enviar-mural/`, {
+          titulo,
+          categoria: document.getElementById('nota-categoria').value,
+          conteudo:  document.getElementById('nota-conteudo').value.trim(),
+        });
+        location.reload();
+      });
+    });
+
+    document.querySelectorAll('.td-link-x').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (!confirm('Remover este ticket do quadro? O ticket não será excluído.')) return;
+        comBotao(this, '...', async () => {
+          await post('/kanban/card/remover/', { card_id: this.dataset.card });
+          location.reload();
+        });
+      });
+    });
   });
 })();
 

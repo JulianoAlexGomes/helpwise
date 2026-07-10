@@ -628,6 +628,7 @@ class KanbanView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         from .models import Tipo, KanbanColuna, KanbanQuadro, KanbanCard
+        from .models import Prioridade
         context = super().get_context_data(**kwargs)
         responsavel_id = self.request.GET.get('responsavel', '')
         atendente_id   = self.request.GET.get('atendente', '')
@@ -697,6 +698,7 @@ class KanbanView(LoginRequiredMixin, TemplateView):
                                          'ticket__responsavel', 'ticket__tipo',
                                          'nota', 'nota__categoria', 'nota__responsavel',
                                          'cliente', 'autor')
+                         .prefetch_related('etiquetas', 'membros')
                          .order_by('ordem', '-id'))
                 coluna.lista = [card for card in cards if card_visivel(card)]
                 coluna.qtd = len(coluna.lista)
@@ -708,6 +710,7 @@ class KanbanView(LoginRequiredMixin, TemplateView):
         context['colunas']                = colunas
         context['usuarios']               = User.objects.filter(is_active=True).order_by('first_name')
         context['tipos']                  = Tipo.objects.all().order_by('descricao')
+        context['prioridades']            = Prioridade.objects.all().order_by('descricao')
         context['responsavel_selecionado'] = responsavel_id
         context['atendente_selecionado']   = atendente_id
         context['tipo_selecionado']        = tipo_id
@@ -1052,17 +1055,33 @@ def _cliente_id_valido(valor):
 
 
 def _render_card_comentario(coment):
-    """HTML de um bloco de comentário de card avulso (mesmo estilo do preview)."""
+    """HTML de um comentário de card avulso, estilo Trello (avatar + autor + tempo)."""
     from django.utils.html import escape
     autor = escape(coment.autor.get_full_name() or coment.autor.username)
     data = timezone.localtime(coment.criado_em).strftime('%d/%m/%Y %H:%M')
     texto_html = escape(coment.texto).replace('\n', '<br>')
+    if getattr(coment.autor, 'foto', None):
+        avatar = f'<span class="fc-c-avatar"><img src="{coment.autor.foto.url}" alt=""></span>'
+    else:
+        inicial = escape((autor[:1] or '?').upper())
+        avatar = f'<span class="fc-c-avatar">{inicial}</span>'
     return (
-        '<div class="tp-block">'
-        f'<div class="tp-block-meta">{autor} • {data}</div>'
-        f'<div class="tp-block-text">{texto_html}</div>'
+        '<div class="fc-comment">'
+        f'{avatar}'
+        '<div class="fc-comment-body">'
+        f'<div class="fc-comment-head"><b>{autor}</b> <span>{data}</span></div>'
+        f'<div class="fc-comment-text">{texto_html}</div>'
+        '</div>'
         '</div>'
     )
+
+
+def _id_valido(modelo, valor):
+    """Retorna o id se existir no modelo, senão None (aceita vazio)."""
+    valor = (valor or '').strip()
+    if not valor:
+        return None
+    return valor if modelo.objects.filter(pk=valor).exists() else None
 
 
 class KanbanCardAvulsoSalvarView(LoginRequiredMixin, View):
@@ -1074,6 +1093,10 @@ class KanbanCardAvulsoSalvarView(LoginRequiredMixin, View):
             return JsonResponse({'error': 'Informe um título para o card'}, status=400)
         texto = (request.POST.get('texto') or '').strip()
         cliente_id = _cliente_id_valido(request.POST.get('cliente_id'))
+        responsavel_id = _id_valido(User, request.POST.get('responsavel_id'))
+        prioridade_id = _id_valido(Prioridade, request.POST.get('prioridade_id'))
+        membros_ids = [m for m in request.POST.getlist('membros')
+                       if User.objects.filter(pk=m).exists()]
         card_id = request.POST.get('card_id')
 
         if card_id:  # edição
@@ -1081,16 +1104,24 @@ class KanbanCardAvulsoSalvarView(LoginRequiredMixin, View):
             card.titulo = titulo
             card.texto = texto
             card.cliente_id = cliente_id
-            card.save(update_fields=['titulo', 'texto', 'cliente'])
+            card.responsavel_id = responsavel_id
+            card.prioridade_id = prioridade_id
+            card.save(update_fields=['titulo', 'texto', 'cliente', 'responsavel', 'prioridade'])
         else:        # criação
             coluna = get_object_or_404(KanbanColuna.objects.select_related('quadro'), pk=request.POST.get('coluna_id'))
             if coluna.quadro.is_padrao:
                 return JsonResponse({'error': 'Cards avulsos só em quadros personalizados'}, status=400)
             card = KanbanCard.objects.create(
                 coluna=coluna, ticket=None, titulo=titulo, texto=texto, cliente_id=cliente_id,
+                responsavel_id=responsavel_id, prioridade_id=prioridade_id,
                 autor=request.user, ordem=0)
 
-        card = KanbanCard.objects.select_related('cliente', 'coluna').get(pk=card.id)
+        card.membros.set(membros_ids)
+
+        card = (KanbanCard.objects
+                .select_related('cliente', 'coluna', 'responsavel', 'prioridade')
+                .prefetch_related('membros', 'etiquetas')
+                .get(pk=card.id))
         html = render_to_string('core/_kanban_free_card.html', {
             'card': card, 'done': card.coluna.status_associado == Ticket.ENCERRADO,
         })
@@ -1102,16 +1133,22 @@ class KanbanCardDetalheView(LoginRequiredMixin, View):
     def get(self, request):
         from .models import KanbanCard
         card = get_object_or_404(
-            KanbanCard.objects.select_related('cliente').prefetch_related('comentarios__autor'),
+            KanbanCard.objects.select_related('cliente', 'responsavel', 'prioridade')
+            .prefetch_related('comentarios__autor', 'membros', 'etiquetas'),
             pk=request.GET.get('card_id'),
         )
         comentarios_html = ''.join(_render_card_comentario(c) for c in card.comentarios.all())
+        membros = [{'id': u.id, 'nome': u.get_full_name() or u.username} for u in card.membros.all()]
         return JsonResponse({
             'ok': True,
             'titulo': card.titulo,
             'texto': card.texto,
             'cliente_id': card.cliente_id or '',
             'cliente_text': str(card.cliente) if card.cliente_id else '',
+            'responsavel_id': card.responsavel_id or '',
+            'prioridade_id': card.prioridade_id or '',
+            'membros': membros,
+            'etiquetas_html': _card_etiquetas_html(card),
             'comentarios_html': comentarios_html,
         })
 
@@ -1126,6 +1163,91 @@ class KanbanCardComentarView(LoginRequiredMixin, View):
             return JsonResponse({'error': 'Escreva um comentário'}, status=400)
         coment = KanbanCardComentario.objects.create(card=card, texto=texto, autor=request.user)
         return JsonResponse({'ok': True, 'html': _render_card_comentario(coment)})
+
+
+# ── Etiquetas do Kanban (estilo Trello) ────────────────────────────────────
+
+def _etiquetas_payload(card=None):
+    """Lista todas as etiquetas; marca quais estão aplicadas ao card (se dado)."""
+    from .models import Etiqueta
+    aplicadas = set(card.etiquetas.values_list('id', flat=True)) if card else set()
+    return [{
+        'id': e.id, 'nome': e.nome, 'cor': e.cor, 'aplicada': e.id in aplicadas,
+    } for e in Etiqueta.objects.all()]
+
+
+def _card_etiquetas_html(card):
+    """Chips das etiquetas do card, para atualizar o card na tela após um toggle."""
+    return render_to_string('core/_kanban_etiquetas.html', {'etiquetas': card.etiquetas.all()})
+
+
+class EtiquetaListView(LoginRequiredMixin, View):
+    """Todas as etiquetas; com ?card_id=, indica quais estão no card."""
+    def get(self, request):
+        from .models import KanbanCard
+        card = None
+        card_id = request.GET.get('card_id')
+        if card_id:
+            card = get_object_or_404(KanbanCard, pk=card_id)
+        return JsonResponse({'etiquetas': _etiquetas_payload(card)})
+
+
+class EtiquetaCriarView(LoginRequiredMixin, View):
+    """Cria uma etiqueta nova (nome opcional + cor)."""
+    def post(self, request):
+        from .models import Etiqueta
+        cor = (request.POST.get('cor') or '').strip()
+        if not cor:
+            return JsonResponse({'error': 'Escolha uma cor'}, status=400)
+        etiqueta = Etiqueta.objects.create(
+            nome=(request.POST.get('nome') or '').strip()[:40], cor=cor[:7])
+        return JsonResponse({'ok': True, 'id': etiqueta.id, 'nome': etiqueta.nome, 'cor': etiqueta.cor})
+
+
+class EtiquetaEditarView(LoginRequiredMixin, View):
+    """Renomeia/recolore uma etiqueta (afeta todos os cards que a usam)."""
+    def post(self, request):
+        from .models import Etiqueta
+        etiqueta = get_object_or_404(Etiqueta, pk=request.POST.get('etiqueta_id'))
+        cor = (request.POST.get('cor') or '').strip()
+        if cor:
+            etiqueta.cor = cor[:7]
+        etiqueta.nome = (request.POST.get('nome') or '').strip()[:40]
+        etiqueta.save(update_fields=['nome', 'cor'])
+        return JsonResponse({'ok': True, 'id': etiqueta.id, 'nome': etiqueta.nome, 'cor': etiqueta.cor})
+
+
+class EtiquetaExcluirView(LoginRequiredMixin, View):
+    """Exclui uma etiqueta do sistema (remove de todos os cards)."""
+    def post(self, request):
+        from .models import Etiqueta
+        Etiqueta.objects.filter(pk=request.POST.get('etiqueta_id')).delete()
+        return JsonResponse({'ok': True})
+
+
+class KanbanQuadroFundoView(LoginRequiredMixin, View):
+    """Salva o fundo (wallpaper) do Modo Kanban de um quadro."""
+    def post(self, request):
+        from .models import KanbanQuadro
+        quadro = get_object_or_404(KanbanQuadro, pk=request.POST.get('quadro_id'))
+        quadro.fundo = (request.POST.get('fundo') or '').strip()[:255]
+        quadro.save(update_fields=['fundo'])
+        return JsonResponse({'ok': True, 'fundo': quadro.fundo})
+
+
+class CardEtiquetaToggleView(LoginRequiredMixin, View):
+    """Aplica/remove uma etiqueta de um card. Retorna os chips atualizados do card."""
+    def post(self, request):
+        from .models import KanbanCard, Etiqueta
+        card = get_object_or_404(KanbanCard, pk=request.POST.get('card_id'))
+        etiqueta = get_object_or_404(Etiqueta, pk=request.POST.get('etiqueta_id'))
+        if card.etiquetas.filter(pk=etiqueta.pk).exists():
+            card.etiquetas.remove(etiqueta)
+            aplicada = False
+        else:
+            card.etiquetas.add(etiqueta)
+            aplicada = True
+        return JsonResponse({'ok': True, 'aplicada': aplicada, 'html': _card_etiquetas_html(card)})
 
 
 class TicketEnviarMuralView(LoginRequiredMixin, View):

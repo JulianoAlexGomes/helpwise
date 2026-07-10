@@ -73,6 +73,12 @@ urlpatterns = [
     path('kanban/card/comentar/', views.KanbanCardComentarView.as_view(), name='kanban_card_comentar'),
     path('kanban/card/mover/', views.KanbanCardMoverView.as_view(), name='kanban_card_mover'),
     path('kanban/card/remover/', views.KanbanCardRemoverView.as_view(), name='kanban_card_remover'),
+    path('kanban/etiquetas/', views.EtiquetaListView.as_view(), name='kanban_etiquetas'),
+    path('kanban/etiqueta/criar/', views.EtiquetaCriarView.as_view(), name='kanban_etiqueta_criar'),
+    path('kanban/etiqueta/editar/', views.EtiquetaEditarView.as_view(), name='kanban_etiqueta_editar'),
+    path('kanban/etiqueta/excluir/', views.EtiquetaExcluirView.as_view(), name='kanban_etiqueta_excluir'),
+    path('kanban/card/etiqueta/toggle/', views.CardEtiquetaToggleView.as_view(), name='kanban_card_etiqueta_toggle'),
+    path('kanban/quadro/fundo/', views.KanbanQuadroFundoView.as_view(), name='kanban_quadro_fundo'),
 
     path('notifications/', include('tiqt.apps.notifications.urls')),
     path('', include('tiqt.apps.ia.urls')),

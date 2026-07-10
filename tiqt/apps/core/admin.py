@@ -1,6 +1,11 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User, Ticket, Comentario, Departamento, Cliente
+from .models import User, Ticket, Comentario, Departamento, Cliente, Etiqueta
+
+
+@admin.register(Etiqueta)
+class EtiquetaAdmin(admin.ModelAdmin):
+    list_display = ['id', 'nome', 'cor', 'criado_em']
 
 class ComentarioInline(admin.TabularInline):
     model = Comentario

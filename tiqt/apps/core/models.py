@@ -194,6 +194,9 @@ class KanbanQuadro(models.Model):
     nome = models.CharField(max_length=60)
     is_padrao = models.BooleanField(default=False)
     ordem = models.PositiveIntegerField(default=0)
+    # Fundo do Modo Kanban (estilo wallpaper do Trello). Guarda um valor CSS de
+    # background: cor (#0079bf), gradiente (linear-gradient(...)) ou url('...').
+    fundo = models.CharField(max_length=255, blank=True, default='')
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -244,6 +247,12 @@ class KanbanCard(models.Model):
     # Quem criou o card avulso. É a "pessoa" do card nos filtros do Kanban, já que
     # ele não tem responsável nem atendente. Nulo nos cards criados antes deste campo.
     autor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    # Etiquetas coloridas do card (estilo Trello). Vivem no card, não no ticket.
+    etiquetas = models.ManyToManyField('Etiqueta', blank=True, related_name='cards')
+    # Pessoas e prioridade do card avulso (estilo Trello). Só usados em cards avulsos.
+    responsavel = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    membros = models.ManyToManyField(User, blank=True, related_name='+')
+    prioridade = models.ForeignKey(Prioridade, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
     ordem = models.PositiveIntegerField(default=0)
     criado_em = models.DateTimeField(auto_now_add=True)
 
@@ -270,6 +279,25 @@ class KanbanCardComentario(models.Model):
 
     def __str__(self):
         return f"Comentário de {self.autor} no card #{self.card_id}"
+
+
+class Etiqueta(models.Model):
+    """Etiqueta colorida aplicável a cards do Kanban (estilo Trello).
+
+    Conjunto global e compartilhado; o nome é opcional (etiqueta só-cor, como no
+    Trello). Relaciona-se a KanbanCard via M2M (KanbanCard.etiquetas)."""
+
+    nome = models.CharField(max_length=40, blank=True, default='')
+    cor = models.CharField(max_length=7, default='#61bd4f')  # hex
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['criado_em', 'id']
+        verbose_name = 'Etiqueta'
+        verbose_name_plural = 'Etiquetas'
+
+    def __str__(self):
+        return self.nome or self.cor
 
 
 def validate_file_size(value):

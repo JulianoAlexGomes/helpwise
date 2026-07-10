@@ -8,8 +8,13 @@
   <button class="card-remove-btn" type="button" title="Remover do quadro" data-card-id="{{ card_id }}">
     <i class="material-icons" translate="no">close</i>
   </button>
+  <button class="card-label-btn" type="button" title="Etiquetas" data-card-id="{{ card_id }}">
+    <i class="material-icons" translate="no">label</i>
+  </button>
   {% endif %}
   <div class="card-content">
+
+    <div class="card-labels">{% include "core/_kanban_etiquetas.html" with etiquetas=etiquetas %}</div>
 
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
       <a href="{{ ticket.get_absolute_url }}" class="teal-text darken-2 card-id js-ticket-preview" data-pk="{{ ticket.pk }}">#{{ ticket.pk }}</a>

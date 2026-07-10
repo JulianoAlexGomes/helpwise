@@ -1,0 +1,8 @@
+{% comment %}Chips das etiquetas de um card do Kanban (estilo Trello).
+Cada chip tem um × (aparece no hover) para remover a etiqueta direto no card.{% endcomment %}
+{% for e in etiquetas %}
+  <span class="kb-label" style="background: {{ e.cor }};" data-et-id="{{ e.id }}" title="{{ e.nome }}">
+    <span class="kb-label-txt">{{ e.nome }}</span>
+    <button type="button" class="kb-label-x" title="Remover etiqueta"><i class="material-icons" translate="no">close</i></button>
+  </span>
+{% endfor %}

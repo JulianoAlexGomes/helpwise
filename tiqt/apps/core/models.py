@@ -241,6 +241,9 @@ class KanbanCard(models.Model):
     titulo = models.CharField(max_length=120, blank=True, default='')   # card avulso
     texto = models.TextField(blank=True, default='')                    # card avulso
     cliente = models.ForeignKey(Cliente, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')  # card avulso
+    # Quem criou o card avulso. É a "pessoa" do card nos filtros do Kanban, já que
+    # ele não tem responsável nem atendente. Nulo nos cards criados antes deste campo.
+    autor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
     ordem = models.PositiveIntegerField(default=0)
     criado_em = models.DateTimeField(auto_now_add=True)
 

@@ -41,7 +41,7 @@ from django.db.models import Count, Case, When, IntegerField, DateField
 from .models import Ticket
 from django.db.models.functions import TruncMonth, Cast
 from django.template.loader import render_to_string
-from .forms import TicketFilterForm, NewTicketForm
+from .forms import TicketFilterForm, NewTicketForm, MeusTicketsFilterForm
 from .filters import apply_filters
 from tiqt.apps.notifications.services import notificar_atribuicao
 import json
@@ -247,8 +247,34 @@ class MyTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     # }
 
     def get_table_data(self, **kwargs):
-        return Ticket.objects.filter(Q(status=Ticket.ABERTO) | Q(status=Ticket.EM_ATENDIMENTO),responsavel=self.request.user)
-    
+        user = self.request.user
+        queryset = Ticket.objects.filter(
+            Q(status=Ticket.ABERTO) | Q(status=Ticket.EM_ATENDIMENTO)
+        ).select_related('cliente', 'responsavel', 'atendente', 'tipo', 'prioridade', 'situacao')
+
+        form = MeusTicketsFilterForm(self.request.GET)
+        papel = form.cleaned_data.get('papel') if form.is_valid() else ''
+        if papel == MeusTicketsFilterForm.RESPONSAVEL:
+            queryset = queryset.filter(responsavel=user)
+        elif papel == MeusTicketsFilterForm.ATENDENTE:
+            queryset = queryset.filter(atendente=user)
+        else:
+            queryset = queryset.filter(Q(responsavel=user) | Q(atendente=user))
+
+        query = self.request.GET.get('q')
+        if query:
+            queryset = queryset.filter(Q(titulo__icontains=query) | Q(id__icontains=query))
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['filter_form'] = MeusTicketsFilterForm(self.request.GET)
+        context['is_meus_tickets'] = True
+        context['query'] = self.request.GET.get('q', '')
+        context['request'] = self.request
+        context['filtered_count'] = self.get_table_data().count()
+        return context
+
 
 class OpenTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     template_name = 'core/tickets_list.html'
@@ -521,13 +547,40 @@ class PerfilView(LoginRequiredMixin, View):
 
 
 class TicketDetailView(View):
+    def _contexto(self, ticket, form):
+        from .models import KanbanQuadro
+        from tiqt.apps.mural.models import CategoriaNota
+
+        comments = (
+            Comentario.objects.filter(ticket=ticket)
+            .select_related('autor', 'tipo')
+            .prefetch_related('arquivos', 'imagens')
+            .order_by('-criado_em')
+        )
+        # O quadro padrão é preenchido pelo status do ticket, então não entra no seletor.
+        quadros = KanbanQuadro.objects.filter(is_padrao=False).prefetch_related('colunas')
+        return {
+            'object': ticket,
+            'comments': comments,
+            'solucoes': ticket.get_solucoes().select_related('autor'),
+            'form': form,
+            'client': ticket.cliente,
+            'notas': ticket.notas_mural.select_related('categoria', 'responsavel'),
+            'agendamentos': ticket.agendamentos.select_related('responsavel'),
+            'kanban_cards': ticket.kanban_cards.select_related('coluna__quadro'),
+            'quadros_kanban': quadros,
+            'categorias_mural': CategoriaNota.objects.filter(ativo=True),
+        }
+
     def get(self, request, pk):
-        ticket = get_object_or_404(Ticket, pk=pk)
-        comments = Comentario.objects.filter(ticket=ticket).order_by('-criado_em')
-        solucoes = ticket.get_solucoes()
-        form = ComentarioForm()
-        client = Cliente.objects.get(pk=ticket.cliente.pk)  
-        return render(request, 'core/ticket_detail.html', {'object': ticket, 'comments': comments, 'solucoes': solucoes, 'form': form, 'client': client})
+        ticket = get_object_or_404(
+            Ticket.objects.select_related(
+                'cliente', 'tipo', 'prioridade', 'situacao',
+                'responsavel', 'atendente', 'cancelado',
+            ),
+            pk=pk,
+        )
+        return render(request, 'core/ticket_detail.html', self._contexto(ticket, ComentarioForm()))
 
     def post(self, request, pk):
         ticket = get_object_or_404(Ticket, pk=pk)
@@ -551,8 +604,7 @@ class TicketDetailView(View):
 
             return redirect(reverse('ticket_detail', kwargs={'pk': pk}))
 
-        comments = Comentario.objects.filter(ticket=ticket).order_by('criado_em')
-        return render(request, 'core/ticket_detail.html', {'object': ticket, 'comments': comments, 'form': form})
+        return render(request, 'core/ticket_detail.html', self._contexto(ticket, form))
 
 
 
@@ -614,24 +666,39 @@ class KanbanView(LoginRequiredMixin, TemplateView):
                 coluna.arrastavel = coluna.status_associado != Ticket.ENCERRADO
                 coluna.encerrada = coluna.status_associado == Ticket.ENCERRADO
         else:
-            # Quadro personalizado: cards explicitamente adicionados (tickets ou avulsos)
+            # Quadro personalizado: cards explicitamente adicionados (tickets, notas ou avulsos)
             tem_filtro = bool(responsavel_id or atendente_id or tipo_id)
             ids_permitidos = set(qs.values_list('id', flat=True)) if tem_filtro else None
+
+            def card_visivel(card):
+                """Aplica os filtros a um card de quadro personalizado.
+
+                Cards de ticket seguem o filtro completo. Notas e cards avulsos não têm
+                atendente nem tipo, então usam uma única "pessoa" — o responsável da nota
+                ou quem criou o card — comparada tanto ao filtro de responsável quanto ao
+                de atendente. O filtro de tipo, que eles não têm como satisfazer, os esconde.
+                """
+                if not tem_filtro:
+                    return True
+                if card.ticket_id:
+                    return card.ticket_id in ids_permitidos
+                if tipo_id:
+                    return False
+                pessoa_id = card.nota.responsavel_id if card.nota_id else card.autor_id
+                if pessoa_id is None:
+                    return False
+                # Cada filtro de pessoa ativo precisa bater, igual ao AND dos cards de ticket.
+                return all(str(pessoa_id) == f for f in (responsavel_id, atendente_id) if f)
+
             for coluna in colunas:
                 cards = (KanbanCard.objects
                          .filter(coluna=coluna)
                          .select_related('ticket', 'ticket__cliente', 'ticket__prioridade',
                                          'ticket__responsavel', 'ticket__tipo',
                                          'nota', 'nota__categoria', 'nota__responsavel',
-                                         'cliente')
+                                         'cliente', 'autor')
                          .order_by('ordem', '-id'))
-                lista = []
-                for card in cards:
-                    # Cards avulsos sempre aparecem; cards de ticket respeitam os filtros
-                    if card.ticket_id and ids_permitidos is not None and card.ticket_id not in ids_permitidos:
-                        continue
-                    lista.append(card)
-                coluna.lista = lista
+                coluna.lista = [card for card in cards if card_visivel(card)]
                 coluna.qtd = len(coluna.lista)
                 coluna.arrastavel = True
                 coluna.encerrada = coluna.status_associado == Ticket.ENCERRADO
@@ -1020,7 +1087,8 @@ class KanbanCardAvulsoSalvarView(LoginRequiredMixin, View):
             if coluna.quadro.is_padrao:
                 return JsonResponse({'error': 'Cards avulsos só em quadros personalizados'}, status=400)
             card = KanbanCard.objects.create(
-                coluna=coluna, ticket=None, titulo=titulo, texto=texto, cliente_id=cliente_id, ordem=0)
+                coluna=coluna, ticket=None, titulo=titulo, texto=texto, cliente_id=cliente_id,
+                autor=request.user, ordem=0)
 
         card = KanbanCard.objects.select_related('cliente', 'coluna').get(pk=card.id)
         html = render_to_string('core/_kanban_free_card.html', {
@@ -1058,6 +1126,31 @@ class KanbanCardComentarView(LoginRequiredMixin, View):
             return JsonResponse({'error': 'Escreva um comentário'}, status=400)
         coment = KanbanCardComentario.objects.create(card=card, texto=texto, autor=request.user)
         return JsonResponse({'ok': True, 'html': _render_card_comentario(coment)})
+
+
+class TicketEnviarMuralView(LoginRequiredMixin, View):
+    """Cria uma nota no mural já vinculada a este ticket."""
+    def post(self, request, pk):
+        from tiqt.apps.mural.models import CategoriaNota, Nota
+        ticket = get_object_or_404(Ticket, pk=pk)
+
+        titulo = (request.POST.get('titulo') or '').strip()
+        if not titulo:
+            return JsonResponse({'error': 'Informe um título para a nota'}, status=400)
+
+        categoria = None
+        cat_id = (request.POST.get('categoria') or '').strip()
+        if cat_id:
+            categoria = CategoriaNota.objects.filter(pk=cat_id, ativo=True).first()
+
+        nota = Nota.objects.create(
+            titulo=titulo[:120],
+            conteudo=(request.POST.get('conteudo') or '').strip(),
+            categoria=categoria,
+            ticket=ticket,
+            autor=request.user,
+        )
+        return JsonResponse({'ok': True, 'nota_id': nota.pk})
 
 
 class KanbanCardRemoverView(LoginRequiredMixin, View):

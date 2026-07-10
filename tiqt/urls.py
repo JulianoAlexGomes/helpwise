@@ -56,6 +56,7 @@ urlpatterns = [
     path('ticket/<int:pk>/preview-ajax/', views.TicketPreviewAjaxView.as_view(), name='ticket_preview_ajax'),
     path('ticket/<int:pk>/mover-coluna/', views.TicketMoverColunaView.as_view(), name='ticket_mover_coluna'),
     path('ticket/<int:pk>/comentar-ajax/', views.TicketComentarAjaxView.as_view(), name='ticket_comentar_ajax'),
+    path('ticket/<int:pk>/enviar-mural/', views.TicketEnviarMuralView.as_view(), name='ticket_enviar_mural'),
     path('ticket/busca-ajax/', views.TicketBuscaAjaxView.as_view(), name='ticket_busca_ajax'),
     path('kanban/quadro/criar/', views.KanbanQuadroCriarView.as_view(), name='kanban_quadro_criar'),
     path('kanban/quadro/<int:pk>/editar/', views.KanbanQuadroEditarView.as_view(), name='kanban_quadro_editar'),

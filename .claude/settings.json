@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ' *)",
+      "Bash(python \"C:/Users/sinos/AppData/Local/Temp/claude/c--projetos-sinos-helpwise/2eaa05fa-e792-4be7-a69e-b3dda36156ae/scratchpad/t9.py\")"
+    ]
+  }
+}

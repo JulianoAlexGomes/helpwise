@@ -4,7 +4,12 @@
   <button class="card-remove-btn" type="button" title="Remover do quadro" data-card-id="{{ card.id }}">
     <i class="material-icons" translate="no">close</i>
   </button>
+  <button class="card-label-btn" type="button" title="Etiquetas" data-card-id="{{ card.id }}">
+    <i class="material-icons" translate="no">label</i>
+  </button>
   <div class="card-content">
+
+    <div class="card-labels">{% include "core/_kanban_etiquetas.html" with etiquetas=card.etiquetas.all %}</div>
 
     <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px;">
       <a href="{% url 'mural' %}?nota={{ nota.pk }}" class="card-id nota-link" target="_blank" title="Abrir nota no mural">

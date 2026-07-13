@@ -128,6 +128,17 @@ TEMPLATES = [
 
 CSRF_TRUSTED_ORIGINS = ["https://app1.brothersti.com"]
 
+# Sem isto o DRF usa AllowAny por padrão — /api/clientes/ ficava com GET/POST/PUT/
+# DELETE abertos para qualquer um que alcançasse o servidor, sem login.
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+}
+
 # Password validation
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-password-validators
 

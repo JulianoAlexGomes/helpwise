@@ -5,7 +5,9 @@ from django.views.generic import TemplateView, DetailView, ListView
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.contrib import messages
 from django.contrib.auth import logout as auth_logout
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.models import Group
 from django.contrib.auth.views import LogoutView as BaseLogoutView
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
@@ -22,9 +24,10 @@ from datetime import datetime, timedelta, time
 import tiqt.settings as settings
 from django.db.models import Q
 from django.db.models.deletion import ProtectedError
+from django.core.exceptions import PermissionDenied
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-from rest_framework import viewsets
+from rest_framework import viewsets, permissions
 from .serializers import ClienteSerializer
 from django.utils import timezone
 from .models import Ticket
@@ -49,6 +52,7 @@ from collections import Counter
 
 User = get_user_model()
 
+@login_required
 def HomeView(request):
     hoje = timezone.localdate()
     primeiro_dia_mes = hoje.replace(day=1)
@@ -188,6 +192,7 @@ def HomeView(request):
 
 
 
+@login_required
 def excluir_comentario(request, comentario_id):
     comentario = get_object_or_404(Comentario, id=comentario_id)
     ticket_id = comentario.ticket.id
@@ -195,6 +200,7 @@ def excluir_comentario(request, comentario_id):
     return redirect('ticket_detail', ticket_id)
 
 
+@login_required
 def excluir_arquivo(request, comentario_id, tipo):
     comentario = get_object_or_404(Comentario, id=comentario_id)
     arquivo_removido = False
@@ -226,6 +232,7 @@ def excluir_arquivo(request, comentario_id, tipo):
 
 from datetime import datetime
 
+@login_required
 def download_certificado(request, cliente_id):
     cliente = get_object_or_404(Cliente, id=cliente_id)
     if not cliente.certificado_digital:
@@ -546,7 +553,7 @@ class PerfilView(LoginRequiredMixin, View):
         return render(request, 'core/perfil.html', {'form': form})
 
 
-class TicketDetailView(View):
+class TicketDetailView(LoginRequiredMixin, View):
     def _contexto(self, ticket, form):
         from .models import KanbanQuadro
         from tiqt.apps.mural.models import CategoriaNota
@@ -623,12 +630,57 @@ class TicketCancelView(LoginRequiredMixin, View):
         return HttpResponseRedirect(reverse("ticket_detail", kwargs={"pk": pk}))
 
 
+# ── Permissão de acesso aos quadros do Kanban ──────────────────────────────
+#
+# Um quadro sem grupos é público. Com grupos, só entra quem está em pelo menos
+# um deles. Superusuário entra em tudo e é o único que define os grupos.
+#
+# IMPORTANTE: esconder a aba na tela não basta — quem souber o id do quadro/coluna/
+# card conseguiria mexer via requisição direta. Por isso todo endpoint do Kanban
+# passa por checar_quadro() antes de agir.
+
+def pode_ver_quadro(user, quadro):
+    if not quadro:
+        return False
+    if user.is_superuser:
+        return True
+    grupos = list(quadro.grupos.values_list('id', flat=True))
+    if not grupos:
+        return True   # quadro público
+    return user.groups.filter(id__in=grupos).exists()
+
+
+def quadros_visiveis(user):
+    """Quadros que o usuário pode ver: os públicos + os dos grupos dele."""
+    from .models import KanbanQuadro
+    qs = KanbanQuadro.objects.all()
+    if user.is_superuser:
+        return qs
+    return qs.filter(Q(grupos__isnull=True) | Q(grupos__in=user.groups.all())).distinct()
+
+
+def checar_quadro(user, quadro):
+    """Barra o acesso a um quadro restrito. Use em TODO endpoint do Kanban."""
+    if not pode_ver_quadro(user, quadro):
+        raise PermissionDenied('Você não tem acesso a este quadro.')
+    return quadro
+
+
+def card_permitido(user, card_id, qs=None):
+    """Busca um KanbanCard já validando o acesso ao quadro dele."""
+    from .models import KanbanCard
+    base = qs if qs is not None else KanbanCard.objects.all()
+    card = get_object_or_404(base.select_related('coluna__quadro'), pk=card_id)
+    checar_quadro(user, card.coluna.quadro)
+    return card
+
+
 class KanbanView(LoginRequiredMixin, TemplateView):
     template_name = 'core/kanban.html'
 
     def get_context_data(self, **kwargs):
         from .models import Tipo, KanbanColuna, KanbanQuadro, KanbanCard
-        from .models import Prioridade
+        from .models import Prioridade, Situacao
         context = super().get_context_data(**kwargs)
         responsavel_id = self.request.GET.get('responsavel', '')
         atendente_id   = self.request.GET.get('atendente', '')
@@ -642,12 +694,15 @@ class KanbanView(LoginRequiredMixin, TemplateView):
         if tipo_id:
             qs = qs.filter(tipo_id=tipo_id)
 
-        # Quadro selecionado (default = o padrão, que vem primeiro na ordenação)
-        quadros = list(KanbanQuadro.objects.all())
+        # Só os quadros que o usuário pode ver (públicos + os dos grupos dele)
+        quadros = list(quadros_visiveis(self.request.user).prefetch_related('grupos'))
         quadro_id = self.request.GET.get('quadro', '')
         quadro_atual = None
         if quadro_id:
-            quadro_atual = next((q for q in quadros if str(q.id) == str(quadro_id)), None)
+            # Pedir um quadro restrito pela URL não passa: 403.
+            alvo = get_object_or_404(KanbanQuadro, pk=quadro_id)
+            checar_quadro(self.request.user, alvo)
+            quadro_atual = alvo
         if quadro_atual is None:
             quadro_atual = next((q for q in quadros if q.is_padrao), quadros[0] if quadros else None)
 
@@ -711,6 +766,14 @@ class KanbanView(LoginRequiredMixin, TemplateView):
         context['usuarios']               = User.objects.filter(is_active=True).order_by('first_name')
         context['tipos']                  = Tipo.objects.all().order_by('descricao')
         context['prioridades']            = Prioridade.objects.all().order_by('descricao')
+        context['departamentos']          = Departamento.objects.all().order_by('descricao')
+        context['situacoes']              = Situacao.objects.all().order_by('descricao')
+        context['caixa_count']            = tickets_caixa_entrada(quadro_atual).count()
+        # Só superusuário define quem entra no quadro
+        context['pode_definir_permissao'] = self.request.user.is_superuser
+        context['grupos']                 = Group.objects.all().order_by('name')
+        context['grupos_do_quadro']       = list(
+            quadro_atual.grupos.values_list('id', flat=True)) if quadro_atual else []
         context['responsavel_selecionado'] = responsavel_id
         context['atendente_selecionado']   = atendente_id
         context['tipo_selecionado']        = tipo_id
@@ -824,7 +887,13 @@ class KanbanQuadroCriarView(LoginRequiredMixin, View):
             return JsonResponse({'error': 'Informe o nome do quadro'}, status=400)
         ultimo = KanbanQuadro.objects.order_by('-ordem').first()
         ordem = (ultimo.ordem + 1) if ultimo else 0
-        quadro = KanbanQuadro.objects.create(nome=nome, is_padrao=False, ordem=ordem)
+        quadro = KanbanQuadro.objects.create(
+            nome=nome, is_padrao=False, ordem=ordem,
+            departamento_entrada_id=_id_valido(Departamento, request.POST.get('departamento_entrada')),
+        )
+        # Quem não é superusuário cria quadro público — o campo de grupos é ignorado.
+        if request.user.is_superuser:
+            quadro.grupos.set(request.POST.getlist('grupos'))
         # Coluna inicial para o quadro já ser utilizável
         KanbanColuna.objects.create(quadro=quadro, nome='A fazer', cor='#607d8b', ordem=0)
         return JsonResponse({'ok': True, 'id': quadro.id, 'nome': quadro.nome})
@@ -833,20 +902,24 @@ class KanbanQuadroCriarView(LoginRequiredMixin, View):
 class KanbanQuadroEditarView(LoginRequiredMixin, View):
     def post(self, request, pk):
         from .models import KanbanQuadro
-        quadro = get_object_or_404(KanbanQuadro, pk=pk)
+        quadro = checar_quadro(request.user, get_object_or_404(KanbanQuadro, pk=pk))
         if quadro.is_padrao:
             return JsonResponse({'error': 'O quadro padrão não pode ser renomeado'}, status=400)
         nome = (request.POST.get('nome') or '').strip()
         if nome:
             quadro.nome = nome
-            quadro.save(update_fields=['nome'])
+        quadro.departamento_entrada_id = _id_valido(Departamento, request.POST.get('departamento_entrada'))
+        quadro.save(update_fields=['nome', 'departamento_entrada'])
+        # Só superusuário mexe em quem tem acesso ao quadro.
+        if request.user.is_superuser:
+            quadro.grupos.set(request.POST.getlist('grupos'))
         return JsonResponse({'ok': True, 'nome': quadro.nome})
 
 
 class KanbanQuadroExcluirView(LoginRequiredMixin, View):
     def post(self, request, pk):
         from .models import KanbanQuadro
-        quadro = get_object_or_404(KanbanQuadro, pk=pk)
+        quadro = checar_quadro(request.user, get_object_or_404(KanbanQuadro, pk=pk))
         if quadro.is_padrao:
             return JsonResponse({'error': 'O quadro padrão não pode ser excluído'}, status=400)
         quadro.delete()  # colunas e cards em cascata
@@ -858,7 +931,8 @@ class KanbanQuadroExcluirView(LoginRequiredMixin, View):
 class KanbanColunaCriarView(LoginRequiredMixin, View):
     def post(self, request):
         from .models import KanbanColuna, KanbanQuadro
-        quadro = get_object_or_404(KanbanQuadro, pk=request.POST.get('quadro_id'))
+        quadro = checar_quadro(
+            request.user, get_object_or_404(KanbanQuadro, pk=request.POST.get('quadro_id')))
         nome = (request.POST.get('nome') or '').strip()
         cor = (request.POST.get('cor') or '#607d8b').strip()
         if not nome:
@@ -875,6 +949,7 @@ class KanbanColunaEditarView(LoginRequiredMixin, View):
     def post(self, request, pk):
         from .models import KanbanColuna
         coluna = get_object_or_404(KanbanColuna.objects.select_related('quadro'), pk=pk)
+        checar_quadro(request.user, coluna.quadro)
         nome = (request.POST.get('nome') or '').strip()
         cor = (request.POST.get('cor') or '').strip()
         campos = []
@@ -897,6 +972,7 @@ class KanbanColunaExcluirView(LoginRequiredMixin, View):
     def post(self, request, pk):
         from .models import KanbanColuna
         coluna = get_object_or_404(KanbanColuna.objects.select_related('quadro'), pk=pk)
+        checar_quadro(request.user, coluna.quadro)
         if coluna.quadro.is_padrao:
             return JsonResponse({'error': 'Colunas do quadro padrão não podem ser excluídas'}, status=400)
         coluna.delete()  # cards em cascata
@@ -908,6 +984,10 @@ class KanbanColunasReordenarView(LoginRequiredMixin, View):
         from .models import KanbanColuna
         ids = [i for i in (request.POST.get('ordem') or '').split(',') if i]
         for pos, coluna_id in enumerate(ids):
+            coluna = KanbanColuna.objects.select_related('quadro').filter(pk=coluna_id).first()
+            if not coluna:
+                continue
+            checar_quadro(request.user, coluna.quadro)
             KanbanColuna.objects.filter(pk=coluna_id).update(ordem=pos)
         return JsonResponse({'ok': True})
 
@@ -919,6 +999,7 @@ class TicketMoverColunaView(LoginRequiredMixin, View):
         from .models import KanbanColuna, KanbanCard
         ticket = get_object_or_404(Ticket, pk=pk)
         coluna = get_object_or_404(KanbanColuna.objects.select_related('quadro'), pk=request.POST.get('coluna_id'))
+        checar_quadro(request.user, coluna.quadro)
         status_destino = coluna.status_associado
 
         if status_destino is not None and status_destino != ticket.status:
@@ -949,6 +1030,7 @@ class KanbanCardMoverView(LoginRequiredMixin, View):
             KanbanCard.objects.select_related('ticket', 'coluna__quadro'),
             pk=request.POST.get('card_id'),
         )
+        checar_quadro(request.user, card.coluna.quadro)
         coluna = get_object_or_404(KanbanColuna.objects.select_related('quadro'), pk=request.POST.get('coluna_id'))
         if coluna.quadro_id != card.coluna.quadro_id:
             return JsonResponse({'error': 'Coluna de outro quadro'}, status=400)
@@ -985,6 +1067,7 @@ class KanbanCardAdicionarView(LoginRequiredMixin, View):
     def post(self, request):
         from .models import KanbanColuna, KanbanCard
         coluna = get_object_or_404(KanbanColuna.objects.select_related('quadro'), pk=request.POST.get('coluna_id'))
+        checar_quadro(request.user, coluna.quadro)
         if coluna.quadro.is_padrao:
             return JsonResponse({'error': 'O quadro padrão é preenchido automaticamente'}, status=400)
         ticket = get_object_or_404(
@@ -993,12 +1076,103 @@ class KanbanCardAdicionarView(LoginRequiredMixin, View):
         )
         if KanbanCard.objects.filter(ticket=ticket, coluna__quadro=coluna.quadro).exists():
             return JsonResponse({'error': 'Este ticket já está neste quadro'}, status=400)
-        card = KanbanCard.objects.create(ticket=ticket, coluna=coluna, ordem=0)
+        # autor = quem adicionou/aprovou o card (usado pela Caixa de entrada)
+        card = KanbanCard.objects.create(ticket=ticket, coluna=coluna, ordem=0, autor=request.user)
         html = render_to_string('core/_kanban_card.html', {
             'ticket': ticket, 'draggable': True, 'card_id': card.id, 'card': card,
             'done': coluna.status_associado == Ticket.ENCERRADO,
         })
         return JsonResponse({'ok': True, 'html': html})
+
+
+# ── Caixa de entrada (triagem de tickets do departamento do quadro) ─────────
+
+def tickets_caixa_entrada(quadro):
+    """Tickets pendentes de triagem num quadro.
+
+    São os tickets abertos/em atendimento do `departamento_entrada` do quadro que
+    ainda não viraram card nele (aprovados) e não foram recusados."""
+    from .models import CaixaEntradaRecusa
+    if not quadro or not quadro.departamento_entrada_id:
+        return Ticket.objects.none()
+    return (Ticket.objects
+            .filter(departamento_id=quadro.departamento_entrada_id,
+                    status__in=[Ticket.ABERTO, Ticket.EM_ATENDIMENTO])
+            .exclude(kanban_cards__coluna__quadro=quadro)
+            .exclude(id__in=CaixaEntradaRecusa.objects.filter(quadro=quadro).values('ticket_id'))
+            .select_related('cliente', 'prioridade', 'tipo', 'situacao', 'responsavel')
+            .order_by('-id'))
+
+
+class CaixaEntradaListView(LoginRequiredMixin, View):
+    """Tickets aguardando triagem na caixa de entrada de um quadro.
+
+    Pagina de 50 em 50 (a fila pode ter centenas) e aceita filtros por tipo,
+    prioridade, situação e busca livre."""
+
+    PAGINA = 50
+
+    def get(self, request):
+        from .models import KanbanQuadro
+        quadro = checar_quadro(
+            request.user, get_object_or_404(KanbanQuadro, pk=request.GET.get('quadro')))
+        qs = tickets_caixa_entrada(quadro)
+
+        tipo = (request.GET.get('tipo') or '').strip()
+        prioridade = (request.GET.get('prioridade') or '').strip()
+        situacao = (request.GET.get('situacao') or '').strip()
+        busca = (request.GET.get('q') or '').strip()
+
+        if tipo:
+            qs = qs.filter(tipo_id=tipo)
+        if prioridade:
+            qs = qs.filter(prioridade_id=prioridade)
+        if situacao:
+            qs = qs.filter(situacao_id=situacao)
+        if busca:
+            filtros = Q(titulo__icontains=busca) | Q(cliente__fantasia__icontains=busca)
+            num = busca.lstrip('#').strip()
+            if num.isdigit():
+                filtros |= Q(pk=int(num))
+            qs = qs.filter(filtros)
+
+        total = qs.count()
+        try:
+            offset = max(0, int(request.GET.get('offset') or 0))
+        except ValueError:
+            offset = 0
+
+        itens = [{
+            'id': t.pk,
+            'titulo': t.titulo or '(sem título)',
+            'cliente': str(t.cliente) if t.cliente_id else '',
+            'prioridade': t.prioridade.descricao if t.prioridade_id else '',
+            'tipo': t.tipo.descricao if t.tipo_id else '',
+            'situacao': t.situacao.descricao if t.situacao_id else '',
+            'responsavel': t.responsavel.get_full_name() if t.responsavel_id else '',
+            'criado_em': timezone.localtime(t.criado_em).strftime('%d/%m/%Y %H:%M'),
+        } for t in qs[offset:offset + self.PAGINA]]
+
+        return JsonResponse({
+            'itens': itens,
+            'total': total,                                   # com os filtros aplicados
+            'offset': offset,
+            'tem_mais': offset + self.PAGINA < total,
+        })
+
+
+class CaixaEntradaRecusarView(LoginRequiredMixin, View):
+    """Recusa um ticket na triagem: some da caixa, mas o ticket não é alterado."""
+    def post(self, request):
+        from .models import KanbanQuadro, CaixaEntradaRecusa
+        quadro = checar_quadro(
+            request.user, get_object_or_404(KanbanQuadro, pk=request.POST.get('quadro_id')))
+        ticket = get_object_or_404(Ticket, pk=request.POST.get('ticket_id'))
+        CaixaEntradaRecusa.objects.get_or_create(
+            quadro=quadro, ticket=ticket,
+            defaults={'usuario': request.user, 'motivo': (request.POST.get('motivo') or '').strip()},
+        )
+        return JsonResponse({'ok': True, 'total': tickets_caixa_entrada(quadro).count()})
 
 
 class NotaBuscaAjaxView(LoginRequiredMixin, View):
@@ -1026,6 +1200,7 @@ class KanbanCardAdicionarNotaView(LoginRequiredMixin, View):
         from .models import KanbanColuna, KanbanCard
         from tiqt.apps.mural.models import Nota
         coluna = get_object_or_404(KanbanColuna.objects.select_related('quadro'), pk=request.POST.get('coluna_id'))
+        checar_quadro(request.user, coluna.quadro)
         if coluna.quadro.is_padrao:
             return JsonResponse({'error': 'O quadro padrão é preenchido automaticamente'}, status=400)
         nota = get_object_or_404(
@@ -1100,7 +1275,7 @@ class KanbanCardAvulsoSalvarView(LoginRequiredMixin, View):
         card_id = request.POST.get('card_id')
 
         if card_id:  # edição
-            card = get_object_or_404(KanbanCard, pk=card_id)
+            card = card_permitido(request.user, card_id)
             card.titulo = titulo
             card.texto = texto
             card.cliente_id = cliente_id
@@ -1109,6 +1284,7 @@ class KanbanCardAvulsoSalvarView(LoginRequiredMixin, View):
             card.save(update_fields=['titulo', 'texto', 'cliente', 'responsavel', 'prioridade'])
         else:        # criação
             coluna = get_object_or_404(KanbanColuna.objects.select_related('quadro'), pk=request.POST.get('coluna_id'))
+            checar_quadro(request.user, coluna.quadro)
             if coluna.quadro.is_padrao:
                 return JsonResponse({'error': 'Cards avulsos só em quadros personalizados'}, status=400)
             card = KanbanCard.objects.create(
@@ -1132,10 +1308,10 @@ class KanbanCardDetalheView(LoginRequiredMixin, View):
     """Retorna os dados de um card avulso (para o modal de edição), incluindo comentários."""
     def get(self, request):
         from .models import KanbanCard
-        card = get_object_or_404(
+        card = card_permitido(
+            request.user, request.GET.get('card_id'),
             KanbanCard.objects.select_related('cliente', 'responsavel', 'prioridade')
             .prefetch_related('comentarios__autor', 'membros', 'etiquetas'),
-            pk=request.GET.get('card_id'),
         )
         comentarios_html = ''.join(_render_card_comentario(c) for c in card.comentarios.all())
         membros = [{'id': u.id, 'nome': u.get_full_name() or u.username} for u in card.membros.all()]
@@ -1157,7 +1333,7 @@ class KanbanCardComentarView(LoginRequiredMixin, View):
     """Adiciona um comentário a um card avulso."""
     def post(self, request):
         from .models import KanbanCard, KanbanCardComentario
-        card = get_object_or_404(KanbanCard, pk=request.POST.get('card_id'))
+        card = card_permitido(request.user, request.POST.get('card_id'))
         texto = (request.POST.get('texto') or '').strip()
         if not texto:
             return JsonResponse({'error': 'Escreva um comentário'}, status=400)
@@ -1184,11 +1360,10 @@ def _card_etiquetas_html(card):
 class EtiquetaListView(LoginRequiredMixin, View):
     """Todas as etiquetas; com ?card_id=, indica quais estão no card."""
     def get(self, request):
-        from .models import KanbanCard
         card = None
         card_id = request.GET.get('card_id')
         if card_id:
-            card = get_object_or_404(KanbanCard, pk=card_id)
+            card = card_permitido(request.user, card_id)
         return JsonResponse({'etiquetas': _etiquetas_payload(card)})
 
 
@@ -1230,8 +1405,7 @@ class CardMembrosSalvarView(LoginRequiredMixin, View):
 
     É informação interna do Kanban: não altera o ticket nem a nota vinculados."""
     def post(self, request):
-        from .models import KanbanCard
-        card = get_object_or_404(KanbanCard, pk=request.POST.get('card_id'))
+        card = card_permitido(request.user, request.POST.get('card_id'))
         ids = [m for m in request.POST.getlist('membros') if User.objects.filter(pk=m).exists()]
         card.membros.set(ids)
         html = render_to_string('core/_kanban_membros.html', {'membros': card.membros.all()})
@@ -1242,7 +1416,8 @@ class KanbanQuadroFundoView(LoginRequiredMixin, View):
     """Salva o fundo (wallpaper) do Modo Kanban de um quadro."""
     def post(self, request):
         from .models import KanbanQuadro
-        quadro = get_object_or_404(KanbanQuadro, pk=request.POST.get('quadro_id'))
+        quadro = checar_quadro(
+            request.user, get_object_or_404(KanbanQuadro, pk=request.POST.get('quadro_id')))
         quadro.fundo = (request.POST.get('fundo') or '').strip()[:255]
         quadro.save(update_fields=['fundo'])
         return JsonResponse({'ok': True, 'fundo': quadro.fundo})
@@ -1251,8 +1426,8 @@ class KanbanQuadroFundoView(LoginRequiredMixin, View):
 class CardEtiquetaToggleView(LoginRequiredMixin, View):
     """Aplica/remove uma etiqueta de um card. Retorna os chips atualizados do card."""
     def post(self, request):
-        from .models import KanbanCard, Etiqueta
-        card = get_object_or_404(KanbanCard, pk=request.POST.get('card_id'))
+        from .models import Etiqueta
+        card = card_permitido(request.user, request.POST.get('card_id'))
         etiqueta = get_object_or_404(Etiqueta, pk=request.POST.get('etiqueta_id'))
         if card.etiquetas.filter(pk=etiqueta.pk).exists():
             card.etiquetas.remove(etiqueta)
@@ -1291,8 +1466,8 @@ class TicketEnviarMuralView(LoginRequiredMixin, View):
 class KanbanCardRemoverView(LoginRequiredMixin, View):
     """Remove um card de um quadro personalizado (não apaga o ticket vinculado)."""
     def post(self, request):
-        from .models import KanbanCard
-        KanbanCard.objects.filter(pk=request.POST.get('card_id')).delete()
+        card = card_permitido(request.user, request.POST.get('card_id'))
+        card.delete()
         return JsonResponse({'ok': True})
 
 
@@ -1408,6 +1583,9 @@ class CommentView(LoginRequiredMixin, View):
             reverse("ticket_detail", kwargs={"pk": ticket_pk}))
 
 class ClienteViewSet(viewsets.ModelViewSet):
+    # Explícito, além do padrão IsAuthenticated do settings: esta API expõe
+    # POST/PUT/DELETE de clientes e não pode ficar aberta.
+    permission_classes = [permissions.IsAuthenticated]
     queryset = Cliente.objects.all()
     serializer_class = ClienteSerializer
 
@@ -1419,7 +1597,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
 #     def get_queryset(self):
 #         return Cliente.objects.all().order_by('fantasia')
 
-class ClienteListView(ListView):
+class ClienteListView(LoginRequiredMixin, ListView):
     model = Cliente
     template_name = 'core/cliente_list.html'
     context_object_name = 'clientes'
@@ -1469,7 +1647,7 @@ class ClienteListView(ListView):
         context['situacao'] = self.request.GET.get('situacao') or 'ativos'
         return context
 
-class ClienteCreateView(CreateView):
+class ClienteCreateView(LoginRequiredMixin, CreateView):
     model = Cliente
     form_class = ClienteForm
     template_name = 'core/cliente_form.html'
@@ -1483,7 +1661,7 @@ class ClienteCreateView(CreateView):
             CertificadoCliente.objects.create(cliente=cliente, arquivo=certificado)
         return response
 
-class ClienteUpdateView(UpdateView):
+class ClienteUpdateView(LoginRequiredMixin, UpdateView):
     model = Cliente
     form_class = ClienteForm
     template_name = 'core/cliente_form.html'
@@ -1583,6 +1761,7 @@ class LogoutView(BaseLogoutView):
         else:
             return self.request.path
 
+@login_required
 def clientes_autocomplete(request):
     term = request.GET.get('term', '').strip()
 
@@ -1644,6 +1823,7 @@ class ClienteQuickCreateView(LoginRequiredMixin, View):
 
 
 # ─── API: busca de clientes retornando id + nome (para o modal rápido) ────────
+@login_required
 def clientes_busca_api(request):
     q = request.GET.get('q', '').strip()
     results = []
@@ -1666,6 +1846,7 @@ def clientes_busca_api(request):
     return JsonResponse({'results': results})
 
 
+@login_required
 def buscar_cep(request, cep):
     cep = cep.replace('-', '').replace('.', '').strip()
     if len(cep) != 8 or not cep.isdigit():
@@ -1739,6 +1920,7 @@ def buscar_cep(request, cep):
     })
 
 
+@login_required
 def buscar_cnpj(request, cnpj):
     cnpj = ''.join(filter(str.isdigit, cnpj))
     if len(cnpj) != 14:

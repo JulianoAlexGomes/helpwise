@@ -96,8 +96,91 @@
   .kanban-exit-fab:hover { background: rgba(0,0,0,.75); }
   .kanban-exit-fab i { font-size: 18px; }
   body.kanban-trello .kanban-exit-fab { display: inline-flex; }
-  /* Botão "Fundo" fica à esquerda do "Sair" */
+  /* Botão "Fundo" fica à esquerda do "Sair"; a Caixa de entrada à esquerda dele */
   .kanban-fundo-fab { right: 210px; }
+  .kanban-inbox-fab { right: 320px; }
+  .kb-inbox-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 20px; height: 20px; padding: 0 6px; margin-left: 2px;
+    border-radius: 10px; background: #e53935; color: #fff; font-size: 11.5px; font-weight: 700;
+  }
+
+  /* ── Gaveta da Caixa de entrada (triagem) ───────────────────────────── */
+  .kb-inbox {
+    position: fixed; top: 0; left: 0; bottom: 0; width: 340px; z-index: 1100;
+    display: flex; flex-direction: column;
+    background: rgba(18,20,26,.96); backdrop-filter: blur(6px);
+    border-right: 1px solid rgba(255,255,255,.08);
+    box-shadow: 4px 0 24px rgba(0,0,0,.35);
+    transform: translateX(-100%); transition: transform .22s ease;
+  }
+  .kb-inbox.open { transform: translateX(0); }
+  .kb-inbox-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 16px 16px 12px; border-bottom: 1px solid rgba(255,255,255,.08); flex-shrink: 0;
+  }
+  .kb-inbox-head b { color: #fff; font-size: 14px; display: block; }
+  .kb-inbox-sub { color: #9099a1; font-size: 11.5px; }
+  .kb-inbox-close { cursor: pointer; color: #9099a1; line-height: 0; }
+  .kb-inbox-close:hover { color: #e53935; }
+  .kb-inbox-body { flex: 1; overflow-y: auto; padding: 12px; }
+  .kb-inbox-body::-webkit-scrollbar { width: 8px; }
+  .kb-inbox-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius: 8px; }
+
+  /* Painel de filtros (abre pelo ícone de funil) */
+  .kb-inbox-filtros {
+    display: none; flex-direction: column; gap: 7px; flex-shrink: 0;
+    padding: 12px; border-bottom: 1px solid rgba(255,255,255,.08); background: rgba(0,0,0,.2);
+  }
+  .kb-inbox-filtros.open { display: flex; }
+  .kb-in-f {
+    width: 100%; box-sizing: border-box; height: 32px; padding: 0 9px;
+    border: 1.5px solid rgba(255,255,255,.14); border-radius: 7px;
+    background: rgba(0,0,0,.35); color: #fff; font-size: 12.5px;
+  }
+  .kb-in-f::placeholder { color: #7b838c; }
+  .kb-in-f:focus { outline: none; border-color: var(--hw-brand); }
+  .kb-f-limpar { color: #9099a1; font-size: 11.5px; text-align: right; }
+  .kb-f-limpar:hover { color: #e53935; }
+
+  /* Contador "mostrando X de Y" */
+  .kb-inbox-total {
+    flex-shrink: 0; padding: 8px 14px 0; color: #7b838c; font-size: 11.5px;
+  }
+  .kb-inbox-total:empty { display: none; }
+
+  /* Carregar mais (paginação de 50 em 50) */
+  .kb-mais {
+    width: 100%; height: 34px; margin-top: 2px; border: 1.5px dashed rgba(255,255,255,.18);
+    border-radius: 8px; background: transparent; color: #c7cad1;
+    font-size: 12.5px; font-weight: 600; cursor: pointer;
+  }
+  .kb-mais:hover { border-color: var(--hw-brand); color: #fff; background: rgba(0,137,123,.18); }
+  .kb-mais:disabled { opacity: .6; cursor: default; }
+
+  /* Card da triagem */
+  .kb-in-card {
+    background: rgba(255,255,255,.07); border-radius: 10px; padding: 11px 12px; margin-bottom: 10px;
+  }
+  .kb-in-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 5px; }
+  .kb-in-id { color: #4db6ac; font-weight: 700; font-size: 12.5px; text-decoration: none; }
+  .kb-in-id:hover { text-decoration: underline; }
+  .kb-in-tit { color: #fff; font-size: 13px; font-weight: 600; line-height: 1.35; margin-bottom: 5px; }
+  .kb-in-meta { color: #9099a1; font-size: 11.5px; line-height: 1.45; margin-bottom: 9px; }
+  .kb-in-acoes { display: flex; align-items: center; gap: 6px; }
+  .kb-in-col {
+    flex: 1; min-width: 0; height: 30px; padding: 0 8px; border-radius: 7px;
+    border: 1.5px solid rgba(255,255,255,.14); background: rgba(0,0,0,.3); color: #fff; font-size: 12px;
+  }
+  .kb-in-ok, .kb-in-no {
+    height: 30px; padding: 0 10px; border: none; border-radius: 7px; cursor: pointer;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+  }
+  .kb-in-ok { background: #00897b; color: #fff; }
+  .kb-in-ok:hover { background: #00a08e; }
+  .kb-in-no { background: rgba(255,255,255,.1); color: #d7dade; }
+  .kb-in-no:hover { background: rgba(229,57,53,.85); color: #fff; }
+  .kb-in-vazio { color: #9099a1; font-size: 13px; text-align: center; padding: 30px 10px; }
 
   /* Fundo (wallpaper) do Modo Kanban. Precisa vencer o `html.dark body` e o
      `html.dark main` do base.html — daí o seletor com `html` (mesma
@@ -684,6 +767,13 @@
   html.dark #modal-add-card .coluna-input { background-color: var(--hw-input-bg) !important; color: var(--hw-text) !important; border-color: var(--hw-border) !important; }
   html.dark #modal-quadro .modal-footer { background-color: var(--hw-surface) !important; border-top-color: var(--hw-border) !important; }
 
+  /* Grupos que podem entrar no quadro (só superusuário vê) */
+  .qd-grupos {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;
+    padding: 8px; border: 1px solid #e2e4e8; border-radius: 8px;
+  }
+  html.dark .qd-grupos { border-color: var(--hw-border); }
+
   /* ── Header de coluna personalizável ─────────────── */
   .kanban-col-header[draggable="true"] { cursor: grab; }
   .kanban-col-header[draggable="true"]:active { cursor: grabbing; }
@@ -910,6 +1000,14 @@
 {% endblock %}
 
 {% block content %}
+{% if quadro_atual.departamento_entrada %}
+<button type="button" id="btn-kanban-inbox" class="kanban-exit-fab kanban-inbox-fab"
+        title="Caixa de entrada — tickets de {{ quadro_atual.departamento_entrada }} aguardando triagem"
+        data-quadro-id="{{ quadro_atual.id }}">
+  <i class="material-icons" translate="no">inbox</i> Caixa de entrada
+  <span class="kb-inbox-badge" id="kb-inbox-badge" {% if not caixa_count %}style="display:none"{% endif %}>{{ caixa_count }}</span>
+</button>
+{% endif %}
 <button type="button" id="btn-kanban-fundo" class="kanban-exit-fab kanban-fundo-fab"
         title="Mudar fundo do quadro"
         data-quadro-id="{{ quadro_atual.id }}" data-fundo="{{ quadro_atual.fundo }}">
@@ -918,6 +1016,41 @@
 <button type="button" id="btn-kanban-exit" class="kanban-exit-fab" title="Sair do modo Kanban">
   <i class="material-icons" translate="no">close</i> Sair do modo Kanban
 </button>
+
+<!-- Gaveta lateral: triagem dos tickets que chegaram no departamento do quadro -->
+<div class="kb-inbox" id="kb-inbox">
+  <div class="kb-inbox-head">
+    <div>
+      <b>Caixa de entrada</b>
+      <span class="kb-inbox-sub">{{ quadro_atual.departamento_entrada }} · aguardando triagem</span>
+    </div>
+    <span style="display:flex; align-items:center; gap:4px;">
+      <span class="kb-inbox-close" id="kb-inbox-filtro" title="Filtrar"><i class="material-icons" translate="no">filter_list</i></span>
+      <span class="kb-inbox-close" id="kb-inbox-close" title="Fechar"><i class="material-icons" translate="no">close</i></span>
+    </span>
+  </div>
+
+  <div class="kb-inbox-filtros" id="kb-inbox-filtros">
+    <input type="text" id="kb-f-q" class="kb-in-f" placeholder="Buscar por #nº, título ou cliente...">
+    <select id="kb-f-tipo" class="kb-in-f browser-default">
+      <option value="">Todos os tipos</option>
+      {% for t in tipos %}<option value="{{ t.id }}">{{ t.descricao }}</option>{% endfor %}
+    </select>
+    <select id="kb-f-prio" class="kb-in-f browser-default">
+      <option value="">Todas as prioridades</option>
+      {% for p in prioridades %}<option value="{{ p.id }}">{{ p.descricao }}</option>{% endfor %}
+    </select>
+    <select id="kb-f-sit" class="kb-in-f browser-default">
+      <option value="">Todas as situações</option>
+      {% for s in situacoes %}<option value="{{ s.id }}">{{ s.descricao }}</option>{% endfor %}
+    </select>
+    <a href="#!" id="kb-f-limpar" class="kb-f-limpar">Limpar filtros</a>
+  </div>
+
+  <div class="kb-inbox-total" id="kb-inbox-total"></div>
+  <div class="kb-inbox-body" id="kb-inbox-body"></div>
+</div>
+
 <div class="kanban-wrapper" data-fundo="{{ quadro_atual.fundo }}">
 <div class="container-fluid" style="padding:0;">
 
@@ -935,8 +1068,9 @@
     </button>
     {% if quadro_atual and not quadro_atual.is_padrao %}
       <span class="kanban-tab-actions">
-        <a href="#!" id="btn-editar-quadro" title="Renomear quadro"
-           data-id="{{ quadro_atual.id }}" data-nome="{{ quadro_atual.nome }}"><i class="material-icons" translate="no">edit</i></a>
+        <a href="#!" id="btn-editar-quadro" title="Editar quadro"
+           data-id="{{ quadro_atual.id }}" data-nome="{{ quadro_atual.nome }}"
+           data-depto="{{ quadro_atual.departamento_entrada_id|default_if_none:'' }}"><i class="material-icons" translate="no">edit</i></a>
         <a href="#!" id="btn-excluir-quadro" title="Excluir quadro"
            data-id="{{ quadro_atual.id }}"><i class="material-icons" translate="no">delete</i></a>
       </span>
@@ -1104,6 +1238,41 @@
       <input type="hidden" id="quadro-id" value="">
       <label for="quadro-nome" style="font-size:0.82rem; font-weight:600; color:#444;">Nome do quadro</label>
       <input type="text" id="quadro-nome" class="browser-default coluna-input" placeholder="Ex.: Por setor, Projeto X..." maxlength="60">
+
+      <label for="quadro-depto" style="display:block; margin-top:14px; font-size:0.82rem; font-weight:600; color:#444;">
+        Recebe tickets do departamento
+      </label>
+      <select id="quadro-depto" class="browser-default coluna-input">
+        <option value="">— Nenhum (sem caixa de entrada) —</option>
+        {% for d in departamentos %}<option value="{{ d.id }}">{{ d.descricao }}</option>{% endfor %}
+      </select>
+      <p style="margin:6px 0 0; font-size:0.76rem; color:#8a8f98;">
+        Ao escolher um departamento, o quadro ganha uma <b>Caixa de entrada</b>: os tickets abertos desse
+        departamento entram numa fila para serem aprovados (viram card numa coluna) ou recusados.
+      </p>
+
+      {% if pode_definir_permissao %}
+      <label style="display:block; margin-top:14px; font-size:0.82rem; font-weight:600; color:#444;">
+        Quem pode entrar neste quadro
+      </label>
+      <div class="qd-grupos" id="quadro-grupos">
+        {% for g in grupos %}
+          <label class="fc-membro">
+            <input type="checkbox" value="{{ g.id }}">
+            <span class="fc-membro-nome">{{ g.name }}</span>
+          </label>
+        {% empty %}
+          <span style="font-size:0.78rem; color:#8a8f98;">
+            Nenhum grupo cadastrado. Crie os grupos no
+            <a href="/admin/auth/group/" target="_blank">/admin</a> e coloque as pessoas neles.
+          </span>
+        {% endfor %}
+      </div>
+      <p style="margin:6px 0 0; font-size:0.76rem; color:#8a8f98;">
+        Sem nenhum grupo marcado, o quadro é <b>público</b> (todos veem). Marcando grupos, só entra quem
+        estiver em pelo menos um deles. Só administradores podem mudar isso.
+      </p>
+      {% endif %}
     </div>
     <div class="modal-footer">
       <a href="#!" class="modal-close btn-flat grey-text" style="margin-right:8px;">Cancelar</a>
@@ -2226,10 +2395,24 @@ window.kanbanUrl = function (url) {
   const quadroId     = document.getElementById('quadro-id');
   const quadroNome   = document.getElementById('quadro-nome');
   const quadroTitulo = document.getElementById('modal-quadro-titulo');
+  const quadroDepto  = document.getElementById('quadro-depto');
+  const quadroGrupos = document.getElementById('quadro-grupos');   // só existe para superusuário
+
+  // Grupos do quadro atual, vindos do servidor (vazio = quadro público)
+  const GRUPOS_DO_QUADRO = {{ grupos_do_quadro|safe }};
+
+  function setGrupos(ids) {
+    if (!quadroGrupos) return;
+    const set = new Set((ids || []).map(String));
+    quadroGrupos.querySelectorAll('input[type=checkbox]')
+      .forEach(c => { c.checked = set.has(String(c.value)); });
+  }
 
   document.getElementById('btn-novo-quadro').addEventListener('click', () => {
     quadroId.value = '';
     quadroNome.value = '';
+    quadroDepto.value = '';
+    setGrupos([]);                       // quadro novo nasce público
     quadroTitulo.textContent = 'Novo quadro';
     quadroModalInst.open();
     setTimeout(() => quadroNome.focus(), 120);
@@ -2240,7 +2423,9 @@ window.kanbanUrl = function (url) {
     e.preventDefault();
     quadroId.value = btnEditarQuadro.dataset.id;
     quadroNome.value = btnEditarQuadro.dataset.nome;
-    quadroTitulo.textContent = 'Renomear quadro';
+    quadroDepto.value = btnEditarQuadro.dataset.depto || '';
+    setGrupos(GRUPOS_DO_QUADRO);         // grupos do quadro que está aberto
+    quadroTitulo.textContent = 'Editar quadro';
     quadroModalInst.open();
     setTimeout(() => quadroNome.focus(), 120);
   });
@@ -2258,7 +2443,14 @@ window.kanbanUrl = function (url) {
           'X-Requested-With': 'XMLHttpRequest',
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: new URLSearchParams({ nome }),
+        body: (() => {
+          const b = new URLSearchParams({ nome, departamento_entrada: quadroDepto.value });
+          if (quadroGrupos) {
+            quadroGrupos.querySelectorAll('input[type=checkbox]:checked')
+              .forEach(c => b.append('grupos', c.value));
+          }
+          return b;
+        })(),
       });
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok) { M.toast({ html: data.error || 'Erro ao salvar quadro', classes: 'red' }); return; }
@@ -2801,13 +2993,215 @@ window.kanbanUrl = function (url) {
     }
   }
 
+  // ── Caixa de entrada (triagem) ────────────────────────────────────────
+  const inboxEl    = document.getElementById('kb-inbox');
+  const inboxBtn   = document.getElementById('btn-kanban-inbox');
+  const inboxBody  = document.getElementById('kb-inbox-body');
+  const inboxBadge = document.getElementById('kb-inbox-badge');
+  const inboxClose = document.getElementById('kb-inbox-close');
+
+  function inboxAberta() { return inboxEl && inboxEl.classList.contains('open'); }
+
+  function setBadge(n) {
+    if (!inboxBadge) return;
+    inboxBadge.textContent = n;
+    inboxBadge.style.display = n > 0 ? '' : 'none';
+  }
+
+  // As colunas do select saem do próprio board (já estão no DOM).
+  function opcoesColunas() {
+    return Array.from(board.querySelectorAll('.kanban-col')).map(col => {
+      const id = col.dataset.colunaId;
+      const nome = (col.querySelector('.col-title') || {}).textContent || '';
+      return '<option value="' + id + '">' + nome.trim() + '</option>';
+    }).join('');
+  }
+
+  function esc(s) {
+    const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML;
+  }
+
+  function itemHtml(t, colunas) {
+    const meta = [t.cliente, t.situacao, t.responsavel].filter(Boolean).map(esc).join(' · ');
+    return '<div class="kb-in-card" data-ticket="' + t.id + '">' +
+      '<div class="kb-in-top">' +
+        '<a class="kb-in-id" href="/ticket/' + t.id + '/" target="_blank">#' + t.id + '</a>' +
+        (t.prioridade ? '<span class="prio-chip prio-default">' + esc(t.prioridade) + '</span>' : '') +
+      '</div>' +
+      '<div class="kb-in-tit">' + esc(t.titulo) + '</div>' +
+      '<div class="kb-in-meta">' + meta + '</div>' +
+      '<div class="kb-in-acoes">' +
+        '<select class="kb-in-col browser-default">' + colunas + '</select>' +
+        '<button type="button" class="kb-in-ok">Aprovar</button>' +
+        '<button type="button" class="kb-in-no">Recusar</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  // Paginação: a fila pode ter centenas de tickets, então busca de 50 em 50.
+  const inboxFiltros = document.getElementById('kb-inbox-filtros');
+  const inboxTotalEl = document.getElementById('kb-inbox-total');
+  const btnFiltro    = document.getElementById('kb-inbox-filtro');
+  const fQ    = document.getElementById('kb-f-q');
+  const fTipo = document.getElementById('kb-f-tipo');
+  const fPrio = document.getElementById('kb-f-prio');
+  const fSit  = document.getElementById('kb-f-sit');
+  let inboxTotal = 0;
+
+  function paramsInbox(offset) {
+    return new URLSearchParams({
+      quadro: inboxBtn.dataset.quadroId,
+      offset: offset,
+      q: fQ.value.trim(),
+      tipo: fTipo.value,
+      prioridade: fPrio.value,
+      situacao: fSit.value,
+    });
+  }
+
+  function pintarTotal() {
+    const mostrando = inboxBody.querySelectorAll('.kb-in-card').length;
+    inboxTotalEl.textContent = inboxTotal
+      ? 'Mostrando ' + mostrando + ' de ' + inboxTotal
+      : '';
+  }
+
+  // offset=0 recarrega do zero; offset>0 acrescenta a próxima página.
+  async function carregarInbox(offset) {
+    if (!inboxBtn) return;
+    const primeiro = !offset;
+    if (primeiro) inboxBody.innerHTML = '<div class="kb-in-vazio">Carregando…</div>';
+    const antigo = inboxBody.querySelector('.kb-mais');
+    if (antigo) { antigo.disabled = true; antigo.textContent = 'Carregando…'; }
+
+    try {
+      const resp = await fetch('/kanban/caixa-entrada/?' + paramsInbox(offset).toString(),
+                               { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const d = await resp.json();
+      inboxTotal = d.total;
+
+      if (primeiro) {
+        inboxBody.innerHTML = '';
+        if (!d.total) {
+          inboxBody.innerHTML = '<div class="kb-in-vazio">Nada para triar aqui. 🎉</div>';
+          pintarTotal();
+          return;
+        }
+      } else if (antigo) {
+        antigo.remove();
+      }
+
+      const colunas = opcoesColunas();
+      inboxBody.insertAdjacentHTML('beforeend', d.itens.map(t => itemHtml(t, colunas)).join(''));
+
+      if (d.tem_mais) {
+        const prox = d.offset + d.itens.length;
+        inboxBody.insertAdjacentHTML('beforeend',
+          '<button type="button" class="kb-mais" data-offset="' + prox + '">Carregar mais 50</button>');
+      }
+      pintarTotal();
+    } catch {
+      inboxBody.innerHTML = '<div class="kb-in-vazio">Erro ao carregar.</div>';
+    }
+  }
+
+  // Depois de aprovar/recusar, o item sai da lista (não recarrega a página toda).
+  function fecharItem(card) {
+    card.remove();
+    inboxTotal = Math.max(0, inboxTotal - 1);
+    setBadge(Math.max(0, (parseInt(inboxBadge.textContent, 10) || 0) - 1));
+    if (!inboxBody.querySelector('.kb-in-card')) {
+      inboxBody.innerHTML = '<div class="kb-in-vazio">Nada para triar aqui. 🎉</div>';
+    }
+    pintarTotal();
+  }
+
+  if (inboxBtn) {
+    inboxBtn.addEventListener('click', () => { inboxEl.classList.add('open'); carregarInbox(0); });
+    inboxClose.addEventListener('click', () => inboxEl.classList.remove('open'));
+
+    btnFiltro.addEventListener('click', () => inboxFiltros.classList.toggle('open'));
+
+    // Qualquer filtro reinicia a paginação do começo.
+    let debounce = null;
+    fQ.addEventListener('input', () => {
+      clearTimeout(debounce);
+      debounce = setTimeout(() => carregarInbox(0), 350);
+    });
+    [fTipo, fPrio, fSit].forEach(el => el.addEventListener('change', () => carregarInbox(0)));
+    document.getElementById('kb-f-limpar').addEventListener('click', e => {
+      e.preventDefault();
+      fQ.value = ''; fTipo.value = ''; fPrio.value = ''; fSit.value = '';
+      carregarInbox(0);
+    });
+
+    inboxBody.addEventListener('click', async e => {
+      const mais = e.target.closest('.kb-mais');
+      if (mais) { carregarInbox(parseInt(mais.dataset.offset, 10) || 0); return; }
+
+      const card = e.target.closest('.kb-in-card');
+      if (!card) return;
+      const ticketId = card.dataset.ticket;
+
+      // Aprovar: cria o card na coluna escolhida (mesmo endpoint do "Adicionar card")
+      if (e.target.closest('.kb-in-ok')) {
+        const colunaId = card.querySelector('.kb-in-col').value;
+        const body = new URLSearchParams({ coluna_id: colunaId, ticket_id: ticketId });
+        try {
+          const resp = await fetch(ADD_CARD_URL, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
+            body,
+          });
+          const d = await resp.json().catch(() => ({}));
+          if (!resp.ok) { M.toast({ html: d.error || 'Erro ao aprovar', classes: 'red' }); return; }
+          const zone = document.getElementById('drop-' + colunaId);
+          if (zone) {
+            removeEmpty(zone);
+            const addBtn = zone.querySelector('.add-card-btn');
+            if (addBtn) addBtn.insertAdjacentHTML('beforebegin', d.html);
+            else zone.insertAdjacentHTML('beforeend', d.html);
+            const novo = zone.querySelector('.ticket-card[data-pk="' + ticketId + '"]');
+            if (novo) bindDraggable(novo);
+            refreshCount(zone);
+          }
+          fecharItem(card);
+          M.toast({ html: 'Ticket #' + ticketId + ' aprovado', classes: 'green darken-2' });
+        } catch {
+          M.toast({ html: 'Erro de rede', classes: 'red' });
+        }
+        return;
+      }
+
+      // Recusar: sai da caixa, mas o ticket não é alterado
+      if (e.target.closest('.kb-in-no')) {
+        const motivo = prompt('Motivo da recusa (opcional):') ;
+        if (motivo === null) return;   // cancelou
+        const body = new URLSearchParams({
+          quadro_id: inboxBtn.dataset.quadroId, ticket_id: ticketId, motivo,
+        });
+        try {
+          const resp = await fetch('/kanban/caixa-entrada/recusar/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
+            body,
+          });
+          if (!resp.ok) { M.toast({ html: 'Erro ao recusar', classes: 'red' }); return; }
+          fecharItem(card);
+        } catch {
+          M.toast({ html: 'Erro de rede', classes: 'red' });
+        }
+      }
+    });
+  }
+
   // ── Auto-refresh silencioso dos cards a cada 5s (igual agenda/mural) ──
   // Troca só o conteúdo de cada coluna (preserva a drop-zone e seus listeners de
   // drag) e re-liga o draggable. Pausa enquanto arrasta, com modal/popover aberto
   // ou com a aba em segundo plano, para não atrapalhar o que você está fazendo.
   const REFRESH_MS = 5000;
   function refreshOcupado() {
-    return document.hidden || draggingCard ||
+    return document.hidden || draggingCard || inboxAberta() ||
            document.querySelector('.modal.open') || document.querySelector('.kb-pop');
   }
   async function atualizarCards() {
@@ -2828,6 +3222,10 @@ window.kanbanUrl = function (url) {
         const nb = b.id ? doc.getElementById(b.id) : null;
         if (nb) b.textContent = nb.textContent;
       });
+      // O refresh já baixou a página inteira: aproveita para atualizar o contador
+      // da caixa de entrada (tickets novos que chegaram no departamento).
+      const novoBadge = doc.getElementById('kb-inbox-badge');
+      if (inboxBadge && novoBadge) setBadge(parseInt(novoBadge.textContent, 10) || 0);
     } catch (e) {}
   }
   setInterval(atualizarCards, REFRESH_MS);

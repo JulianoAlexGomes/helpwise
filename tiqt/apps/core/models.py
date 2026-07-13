@@ -197,6 +197,15 @@ class KanbanQuadro(models.Model):
     # Fundo do Modo Kanban (estilo wallpaper do Trello). Guarda um valor CSS de
     # background: cor (#0079bf), gradiente (linear-gradient(...)) ou url('...').
     fundo = models.CharField(max_length=255, blank=True, default='')
+    # Quem pode entrar no quadro. VAZIO = quadro público (todos veem).
+    # Com grupos, só entra quem está em pelo menos um deles (superusuário sempre entra).
+    # Só superusuário pode definir isso. Ver pode_ver_quadro() em views.py.
+    grupos = models.ManyToManyField('auth.Group', blank=True, related_name='quadros_kanban')
+    # Quando preenchido, o quadro ganha uma Caixa de entrada: os tickets abertos
+    # deste departamento entram numa fila de triagem para serem aprovados (viram
+    # card numa coluna) ou recusados. Ver CaixaEntradaRecusa.
+    departamento_entrada = models.ForeignKey(
+        Departamento, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -279,6 +288,29 @@ class KanbanCardComentario(models.Model):
 
     def __str__(self):
         return f"Comentário de {self.autor} no card #{self.card_id}"
+
+
+class CaixaEntradaRecusa(models.Model):
+    """Ticket recusado na triagem da Caixa de entrada de um quadro.
+
+    Aprovar um ticket é simplesmente criar o KanbanCard dele numa coluna — por isso
+    só a recusa precisa de registro próprio. O ticket NÃO é alterado: ele apenas
+    deixa de aparecer na caixa daquele quadro."""
+
+    quadro = models.ForeignKey(KanbanQuadro, on_delete=models.CASCADE, related_name='recusas')
+    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='+')
+    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    motivo = models.TextField(blank=True, default='')
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('quadro', 'ticket')
+        ordering = ['-criado_em']
+        verbose_name = 'Recusa da caixa de entrada'
+        verbose_name_plural = 'Recusas da caixa de entrada'
+
+    def __str__(self):
+        return f"Ticket #{self.ticket_id} recusado em {self.quadro}"
 
 
 class Etiqueta(models.Model):

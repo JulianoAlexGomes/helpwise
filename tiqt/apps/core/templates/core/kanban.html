@@ -106,8 +106,10 @@
   }
 
   /* ── Gaveta da Caixa de entrada (triagem) ───────────────────────────── */
+  /* z-index abaixo do modal do Materialize (overlay 1002 / modal 1003): assim o
+     preview do ticket abre POR CIMA da gaveta, e não atrás dela. */
   .kb-inbox {
-    position: fixed; top: 0; left: 0; bottom: 0; width: 340px; z-index: 1100;
+    position: fixed; top: 0; left: 0; bottom: 0; width: 340px; z-index: 1000;
     display: flex; flex-direction: column;
     background: rgba(18,20,26,.96); backdrop-filter: blur(6px);
     border-right: 1px solid rgba(255,255,255,.08);
@@ -165,7 +167,11 @@
   .kb-in-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 5px; }
   .kb-in-id { color: #4db6ac; font-weight: 700; font-size: 12.5px; text-decoration: none; }
   .kb-in-id:hover { text-decoration: underline; }
-  .kb-in-tit { color: #fff; font-size: 13px; font-weight: 600; line-height: 1.35; margin-bottom: 5px; }
+  .kb-in-tit {
+    color: #fff; font-size: 13px; font-weight: 600; line-height: 1.35; margin-bottom: 5px;
+    cursor: pointer;
+  }
+  .kb-in-tit:hover { text-decoration: underline; }
   .kb-in-meta { color: #9099a1; font-size: 11.5px; line-height: 1.45; margin-bottom: 9px; }
   .kb-in-acoes { display: flex; align-items: center; gap: 6px; }
   .kb-in-col {
@@ -288,8 +294,20 @@
     border-radius: 8px !important;
     margin-bottom: 10px !important;
     cursor: default;
-    transition: box-shadow 0.2s, opacity 0.2s;
+    transition: box-shadow 0.18s, transform 0.18s, opacity 0.2s;
   }
+  /* Hover: contorno fino e discreto + sombra (nada de anel colorido berrante).
+     Usa box-shadow, e não border, para o card não mudar de tamanho e empurrar
+     os vizinhos ao passar o mouse. */
+  .ticket-card:hover {
+    box-shadow: 0 0 0 1px rgba(0,0,0,.14), 0 6px 16px rgba(0,0,0,.13) !important;
+    transform: translateY(-1px);
+  }
+  html.dark .ticket-card:hover {
+    box-shadow: 0 0 0 1px rgba(255,255,255,.22), 0 6px 18px rgba(0,0,0,.5) !important;
+  }
+  /* Enquanto arrasta, não fica com o anel de hover */
+  .ticket-card.dragging:hover { box-shadow: none !important; transform: none; }
 
   .ticket-card-closed {
     background: #f0f0f0 !important;
@@ -309,6 +327,20 @@
   .ticket-card-closed .prio-chip {
     filter: grayscale(60%);
     opacity: 0.7;
+  }
+
+  /* Marcador de destino: linha que segue o cursor mostrando ONDE o card vai cair */
+  .kb-drop-marker {
+    height: 4px;
+    margin: 6px 2px;
+    border-radius: 4px;
+    background: var(--hw-brand, #00796b);
+    box-shadow: 0 0 0 1px rgba(0,121,107,.35), 0 0 10px rgba(0,121,107,.5);
+    pointer-events: none;   /* não atrapalha o cálculo do dragover */
+  }
+  html.dark .kb-drop-marker {
+    background: #4db6ac;
+    box-shadow: 0 0 0 1px rgba(77,182,172,.35), 0 0 10px rgba(77,182,172,.55);
   }
 
   .ticket-card[draggable="true"] { cursor: grab; }
@@ -333,12 +365,21 @@
     text-decoration: none;
   }
 
-  .ticket-card .card-title {
+  /* O seletor precisa incluir o <p> para vencer o `.card .card-content p` do
+     Materialize, que estava impondo o espaçamento grande entre as linhas do
+     título quando ele quebrava em duas. */
+  .ticket-card .card-content p.card-title {
     font-size: 0.85rem;
     font-weight: 500;
-    line-height: 1.35;
-    margin: 6px 0;
+    line-height: 1.3;
+    margin: 5px 0 7px;
     color: #333;
+    /* Título longo não estoura o card: quebra palavra grande e limita a 3 linhas */
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .ticket-card .card-meta {
@@ -514,15 +555,36 @@
   html.dark .kanban-tab-add { background: transparent; border-color: var(--hw-border); }
 
   /* Adicionar card (quadros personalizados) */
-  .add-card-btn {
-    display: flex; align-items: center; gap: 4px; width: 100%; margin-top: 4px;
-    padding: 8px 10px; border: none; background: transparent; color: #6b7078;
-    border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background .15s;
+  /* "Mostrar mais": fica FORA da drop-zone, no rodapé da coluna — não rola junto
+     com os cards nem briga com o "Adicionar card". */
+  .kb-mais-wrap:empty { display: none; }
+  .kb-mais-wrap { padding-top: 6px; }
+  .kb-mais-cards {
+    width: 100%; margin: 0; padding: 9px;
+    border: 1.5px dashed #cfd3d8; border-radius: 8px; background: transparent;
+    color: #6b7078; font-size: 0.78rem; font-weight: 600; cursor: pointer;
   }
-  .add-card-btn:hover { background: rgba(0,0,0,.05); }
+  .kb-mais-cards:hover { border-color: var(--hw-brand); color: var(--hw-brand); background: rgba(0,121,107,.06); }
+  .kb-mais-cards:disabled { opacity: .6; cursor: default; }
+  html.dark .kb-mais-cards { border-color: var(--hw-border); color: var(--hw-text2); }
+
+  /* Fica colado no rodapé da coluna: os cards rolam por baixo e o botão continua
+     visível, sem precisar rolar até o fim da lista para adicionar. */
+  .add-card-btn {
+    position: sticky; bottom: 0; z-index: 2;
+    display: flex; align-items: center; gap: 4px; width: 100%; margin-top: 4px;
+    padding: 10px; border: none; color: #6b7078;
+    border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+    transition: background .15s;
+    background: #f1f2f4;                 /* opaco: card não aparece por trás */
+  }
+  .add-card-btn:hover { background: #e4e6e9; }
   .add-card-btn i { font-size: 16px; }
-  html.dark .add-card-btn { color: var(--hw-text2); }
-  html.dark .add-card-btn:hover { background: rgba(255,255,255,.06); }
+  html.dark .add-card-btn { color: var(--hw-text2); background: #1b1e24; }
+  html.dark .add-card-btn:hover { background: #242830; }
+  /* No Modo Kanban a coluna é um painel translúcido — acompanha o mesmo tom */
+  body.kanban-trello .add-card-btn { background: rgba(28,31,38,.92); }
+  body.kanban-trello .add-card-btn:hover { background: rgba(40,44,53,.96); }
 
   /* Botão remover card do quadro */
   /* Barra de ações do card: aparece no hover, sobreposta no canto (não muda o
@@ -604,9 +666,26 @@
   .kb-pop-edit:hover { color: var(--hw-brand); }
   .kb-pop-edit i { font-size: 17px; }
   .kb-pop-new { margin-top: 8px; border-top: 1px solid #eef0f2; padding-top: 10px; }
-  .kb-pop-colors { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
-  .kb-swatch { width: 26px; height: 26px; border-radius: 6px; cursor: pointer; border: 2px solid transparent; }
+  /* Paleta em grade (muitas cores) + scroll para não esticar o popover */
+  .kb-pop-colors {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 8px 0;
+    max-height: 190px; overflow-y: auto;
+  }
+  .kb-pop-colors::-webkit-scrollbar { width: 7px; }
+  .kb-pop-colors::-webkit-scrollbar-thumb { background: rgba(128,128,128,.35); border-radius: 8px; }
+  .kb-swatch { height: 26px; border-radius: 6px; cursor: pointer; border: 2px solid transparent; }
+  .kb-swatch:hover { transform: scale(1.06); }
   .kb-swatch.sel { border-color: #1c1d1f; }
+  html.dark .kb-swatch.sel { border-color: #fff; }
+
+  .kb-pop-cor-livre {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    margin-bottom: 8px; font-size: 12px; font-weight: 600; color: #6b7078; cursor: pointer;
+  }
+  .kb-pop-cor-livre input[type=color] {
+    width: 42px; height: 28px; padding: 0; border: none; background: none; cursor: pointer;
+  }
+  html.dark .kb-pop-cor-livre { color: var(--hw-text2); }
   .kb-pop-input {
     width: 100%; box-sizing: border-box; height: 34px; padding: 0 10px; margin-bottom: 8px;
     border: 1.5px solid #e2e4e8; border-radius: 7px; font-size: 13px; background: #fff; color: #1c1d1f;
@@ -627,7 +706,17 @@
   /* Card avulso */
   .free-card .free-card-content { cursor: pointer; }
   .free-card .free-card-title { color: #333; font-weight: 600; margin: 0; }
-  .free-card .free-card-text { font-size: 0.78rem; color: #777; margin: 6px 0 0; line-height: 1.35; }
+  /* Descrição do card avulso: limitada a 4 linhas para uma descrição longa não
+     esticar o card coluna abaixo. O texto completo fica no modal, ao abrir o card.
+     O <p> no seletor é para vencer o `.card .card-content p` do Materialize. */
+  .free-card .card-content p.free-card-text {
+    font-size: 0.78rem; color: #777; margin: 6px 0 0; line-height: 1.35;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
   .free-card { border-left: 3px solid #b0bec5 !important; }
   html.dark .free-card .free-card-title { color: var(--hw-text) !important; }
   html.dark .free-card .free-card-text { color: var(--hw-text3) !important; }
@@ -1219,6 +1308,7 @@
       </div>
       <div class="kanban-drop-zone" id="drop-{{ coluna.id }}"
            data-coluna-id="{{ coluna.id }}"
+           data-total="{{ coluna.total }}"
            data-status="{{ coluna.status_associado|default_if_none:'' }}">
         {% if quadro_atual.is_padrao %}
           {% for ticket in coluna.lista %}
@@ -1239,6 +1329,14 @@
           <button class="add-card-btn" type="button" data-coluna-id="{{ coluna.id }}">
             <i class="material-icons" translate="no">add</i> Adicionar card
           </button>
+        {% endif %}
+      </div>
+
+      {# "Mostrar mais" fica fora da área que rola, no rodapé da coluna #}
+      <div class="kb-mais-wrap" id="mais-wrap-{{ coluna.id }}">
+        {% if coluna.tem_mais %}
+          <button class="kb-mais-cards" type="button" data-coluna-id="{{ coluna.id }}"
+                  data-offset="{{ coluna.carregados }}">Mostrar mais ({{ coluna.restantes }} restantes)</button>
         {% endif %}
       </div>
     </div>
@@ -1694,8 +1792,19 @@ window.kanbanUrl = function (url) {
 <script>
 // ── Etiquetas do Kanban (estilo Trello) ─────────────────────────────────
 (function () {
-  const PALETA = ['#61bd4f','#f2d600','#ff9f1a','#eb5a46','#c377e0','#0079bf',
-                  '#00c2e0','#51e898','#ff78cb','#4d4d4d'];
+  // Paleta ampliada (5 colunas no popover). Sempre dá para escolher uma cor
+  // livre no seletor de cor, abaixo dos swatches.
+  const PALETA = [
+    '#61bd4f', '#7bc86c', '#519839', '#2d6a1f', '#b7ddb0',   // verdes
+    '#f2d600', '#ffd94d', '#e6c60d', '#d9b51c', '#faf3c0',   // amarelos
+    '#ff9f1a', '#ffaf3f', '#e79217', '#d29034', '#fce6c6',   // laranjas
+    '#eb5a46', '#ef7564', '#cf513d', '#b04632', '#efb3ab',   // vermelhos
+    '#c377e0', '#dfc0eb', '#a632db', '#89609e', '#8e44ad',   // roxos
+    '#0079bf', '#5ba4cf', '#026aa7', '#055a8c', '#2c5364',   // azuis
+    '#00c2e0', '#29cce5', '#00aecc', '#0098b7', '#51e898',   // cianos
+    '#ff78cb', '#ff8ed4', '#c9558f', '#ad5391', '#e91e63',   // rosas
+    '#344563', '#5e6c84', '#838c91', '#4d4d4d', '#172b4d',   // neutros
+  ];
 
   function getCsrf() {
     const m = document.cookie.match(/csrftoken=([^;]+)/);
@@ -1715,6 +1824,11 @@ window.kanbanUrl = function (url) {
 
   let pop = null;            // elemento do popover aberto
   let cardId = null;         // card em edição
+  // Modo "seleção local": card ainda não existe (criação). Em vez de gravar no
+  // servidor a cada clique, marca num Set e avisa quem abriu, que renderiza os
+  // chips e envia as etiquetas junto no salvar.
+  let selLocal = null;       // { set: Set<string>, onChange: fn(etiquetas) }
+  let ultimaLista = [];      // últimas etiquetas carregadas (para o onChange)
 
   function fechar() {
     if (pop) { pop.remove(); pop = null; cardId = null; }
@@ -1727,7 +1841,9 @@ window.kanbanUrl = function (url) {
     const modal = document.getElementById('fc-card-labels');
     if (modal && String(modal.dataset.cardId) === String(id)) modal.innerHTML = html;
   };
-  function pintarCard(html) { window.kbSetCardLabels(cardId, html); }
+  function pintarCard(html) {
+    if (cardId) window.kbSetCardLabels(cardId, html);
+  }
 
   function novaLinha(et) {
     const row = document.createElement('div');
@@ -1741,11 +1857,23 @@ window.kanbanUrl = function (url) {
     }
     chip.innerHTML = marca(et.aplicada) +
                      '<span class="kb-txt">' + (et.nome ? escapeHtml(et.nome) : 'Sem nome') + '</span>';
+    function marcarChip(on) {
+      chip.classList.toggle('on', on);
+      chip.querySelector('.kb-check i').textContent = on ? 'check' : 'radio_button_unchecked';
+    }
     chip.addEventListener('click', async () => {
+      // Criação: só marca localmente, sem gravar (o card ainda não existe)
+      if (selLocal) {
+        const id = String(et.id);
+        const on = !selLocal.set.has(id);
+        if (on) selLocal.set.add(id); else selLocal.set.delete(id);
+        marcarChip(on);
+        selLocal.onChange(ultimaLista);
+        return;
+      }
       try {
         const d = await post('/kanban/card/etiqueta/toggle/', { card_id: cardId, etiqueta_id: et.id });
-        chip.classList.toggle('on', d.aplicada);
-        chip.querySelector('.kb-check i').textContent = d.aplicada ? 'check' : 'radio_button_unchecked';
+        marcarChip(d.aplicada);
         pintarCard(d.html);
       } catch (e) { M.toast({ html: e.message, classes: 'red' }); }
     });
@@ -1788,6 +1916,19 @@ window.kanbanUrl = function (url) {
       cores.appendChild(sw);
     });
 
+    // Cor livre, além dos swatches
+    const linhaCor = document.createElement('label');
+    linhaCor.className = 'kb-pop-cor-livre';
+    linhaCor.innerHTML = '<span>Outra cor</span>';
+    const inputCor = document.createElement('input');
+    inputCor.type = 'color';
+    inputCor.value = cor;
+    inputCor.addEventListener('input', () => {
+      cor = inputCor.value;
+      cores.querySelectorAll('.kb-swatch').forEach(x => x.classList.remove('sel'));
+    });
+    linhaCor.appendChild(inputCor);
+
     const salvar = document.createElement('button');
     salvar.className = 'kb-pop-btn';
     salvar.textContent = et ? 'Salvar' : 'Criar etiqueta';
@@ -1798,15 +1939,23 @@ window.kanbanUrl = function (url) {
           location.reload();  // a cor/nome muda em todos os cards
         } else {
           const d = await post('/kanban/etiqueta/criar/', { nome: input.value, cor });
-          // Cria e já aplica ao card atual
-          const t = await post('/kanban/card/etiqueta/toggle/', { card_id: cardId, etiqueta_id: d.id });
-          pintarCard(t.html);
-          abrir(cardId, ancora);  // recarrega a lista do popover
+          if (selLocal) {
+            // Criação do card: só marca a etiqueta nova na seleção local
+            selLocal.set.add(String(d.id));
+            abrir(null, ancora);
+            selLocal.onChange(ultimaLista.concat([{ id: d.id, nome: d.nome, cor: d.cor }]));
+          } else {
+            // Cria e já aplica ao card atual
+            const t = await post('/kanban/card/etiqueta/toggle/', { card_id: cardId, etiqueta_id: d.id });
+            pintarCard(t.html);
+            abrir(cardId, ancora);  // recarrega a lista do popover
+          }
         }
       } catch (e) { M.toast({ html: e.message, classes: 'red' }); }
     });
     box.appendChild(input);
     box.appendChild(cores);
+    box.appendChild(linhaCor);
     box.appendChild(salvar);
 
     if (et) {
@@ -1852,7 +2001,12 @@ window.kanbanUrl = function (url) {
     pop.querySelector('.kb-pop-close').addEventListener('click', fechar);
 
     try {
-      const data = await post_get('/kanban/etiquetas/?card_id=' + id);
+      // Sem card (criação) busca só a lista; a marcação vem do Set local.
+      const data = await post_get('/kanban/etiquetas/' + (id ? '?card_id=' + id : ''));
+      if (selLocal) {
+        data.etiquetas.forEach(et => { et.aplicada = selLocal.set.has(String(et.id)); });
+      }
+      ultimaLista = data.etiquetas;
       const lista = pop.querySelector('.kb-pop-list');
       lista.innerHTML = '';
       if (!data.etiquetas.length) {
@@ -1894,7 +2048,18 @@ window.kanbanUrl = function (url) {
   }
 
   // Exposto para o modal do card avulso abrir o mesmo popover de etiquetas.
-  window.abrirEtiquetasPopover = function (id, btn) { abrir(id, btn); };
+  window.abrirEtiquetasPopover = function (id, btn) {
+    selLocal = null;             // modo normal: grava no servidor a cada clique
+    abrir(id, btn);
+  };
+
+  // Modo criação: card ainda não existe, então a escolha fica num Set e o modal
+  // envia as etiquetas junto no salvar.
+  window.abrirEtiquetasSelecao = function (btn, set, onChange) {
+    selLocal = { set: set, onChange: onChange };
+    cardId = null;
+    abrir(null, btn);
+  };
 
   // Abre o popover ao clicar no botão de etiqueta de qualquer card
   document.addEventListener('click', function (e) {
@@ -2025,6 +2190,7 @@ window.kanbanUrl = function (url) {
   const CARD_DETALHE_URL = '/kanban/card/detalhe/';
   const CARD_COMENTAR_URL = '/kanban/card/comentar/';
   const CARD_MOVER_URL  = '/kanban/card/mover/';
+  const CARDS_REORDENAR_URL = '/kanban/cards/reordenar/';
   const REMOVE_CARD_URL = '/kanban/card/remover/';
   const BUSCA_URL       = '/ticket/busca-ajax/';
   const CLIENTE_BUSCA_URL = '/api/clientes/busca/';
@@ -2149,6 +2315,10 @@ window.kanbanUrl = function (url) {
 
   // ── Drag & Drop de cards ────────────────────────────
   let draggingCard = null;
+  // Quantas gravações do arrasto estão em voo. Enquanto > 0, o auto-refresh
+  // segura — senão traria o estado antigo do servidor e desfaria o movimento
+  // otimista na tela.
+  let gravacoesPendentes = 0;
 
   function bindDraggable(card) {
     card.addEventListener('dragstart', e => {
@@ -2160,7 +2330,31 @@ window.kanbanUrl = function (url) {
     card.addEventListener('dragend', () => {
       if (draggingCard) draggingCard.classList.remove('dragging');
       draggingCard = null;
+      limparMarcador();
     });
+  }
+
+  // ── Marcador de destino: mostra onde o card vai cair ──────────────────
+  let marcador = null;
+  function pegarMarcador() {
+    if (!marcador) {
+      marcador = document.createElement('div');
+      marcador.className = 'kb-drop-marker';
+    }
+    return marcador;
+  }
+  function limparMarcador() {
+    if (marcador && marcador.parentElement) marcador.remove();
+  }
+  // Coloca o marcador na posição onde o card seria solto, seguindo o cursor.
+  function posicionarMarcador(zone, y) {
+    const alvo = posicaoDeInsercao(zone, y);
+    const ref = alvo || zone.querySelector('.add-card-btn') || null;
+    const ph = pegarMarcador();
+    // dragover dispara sem parar: só mexe no DOM se a posição mudou de verdade,
+    // senão o marcador pisca.
+    if (ph.parentElement === zone && ph.nextElementSibling === ref) return;
+    zone.insertBefore(ph, ref);
   }
 
   document.querySelectorAll('.ticket-card[draggable="true"]').forEach(bindDraggable);
@@ -2171,10 +2365,12 @@ window.kanbanUrl = function (url) {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
       zone.classList.add(zone.dataset.status === '2' ? 'dragover-close' : 'dragover');
+      posicionarMarcador(zone, e.clientY);
     });
     zone.addEventListener('dragleave', e => {
       if (!zone.contains(e.relatedTarget)) {
         zone.classList.remove('dragover', 'dragover-close');
+        limparMarcador();
       }
     });
     zone.addEventListener('drop', async e => {
@@ -2189,7 +2385,18 @@ window.kanbanUrl = function (url) {
       const card      = draggingCard;
       const sourceZone = card.parentElement;
 
-      if (sourceZone === zone) return;                    // mesma coluna
+      // Solta exatamente onde o marcador estava (o que o usuário viu na tela).
+      const noLugar = marcador && marcador.parentElement === zone;
+      const alvo = noLugar ? marcador.nextElementSibling
+                           : posicaoDeInsercao(zone, e.clientY);
+      limparMarcador();
+
+      // Mesma coluna = só reordenar (não precisa mover no servidor)
+      if (sourceZone === zone) {
+        inserirCard(zone, card, alvo);
+        await salvarOrdem(zone);
+        return;
+      }
 
       // Encerrar exige solução — só para cards de ticket
       if (colStatus === '2' && pk) {
@@ -2208,15 +2415,84 @@ window.kanbanUrl = function (url) {
 
       // Quadro personalizado move por card_id; quadro padrão move por ticket
       if (cardId) {
-        await moverCardServer(CARD_MOVER_URL, { card_id: cardId, coluna_id: colunaId }, zone, card, sourceZone, pk);
+        await moverCardServer(CARD_MOVER_URL, { card_id: cardId, coluna_id: colunaId }, zone, card, sourceZone, pk, alvo);
       } else {
-        await moverCardServer(MOVER_URL(pk), { coluna_id: colunaId }, zone, card, sourceZone, pk);
+        await moverCardServer(MOVER_URL(pk), { coluna_id: colunaId }, zone, card, sourceZone, pk, alvo);
       }
     });
   });
 
-  // Move um card para a coluna destino e persiste no servidor
-  async function moverCardServer(url, params, zone, card, sourceZone, pk) {
+  // ── Reordenar cards dentro da coluna (arrastar, estilo Trello) ─────────
+  // Descobre antes de qual card soltar: o primeiro cuja metade de cima está
+  // abaixo do cursor. Null = vai para o fim da coluna.
+  function posicaoDeInsercao(zone, y) {
+    const cards = Array.from(zone.querySelectorAll('.ticket-card:not(.dragging)'));
+    return cards.find(c => {
+      const r = c.getBoundingClientRect();
+      return y < r.top + r.height / 2;
+    }) || null;
+  }
+
+  // Insere sempre antes do botão "Adicionar card", que fica no fim da coluna.
+  function inserirCard(zone, card, alvo) {
+    const addBtn = zone.querySelector('.add-card-btn');
+    zone.insertBefore(card, alvo || addBtn || null);
+  }
+
+  // Acrescenta HTML de card(s) no fim da lista (antes do "Adicionar card").
+  function anexarCards(zone, html) {
+    const addBtn = zone.querySelector('.add-card-btn');
+    if (addBtn) addBtn.insertAdjacentHTML('beforebegin', html);
+    else zone.insertAdjacentHTML('beforeend', html);
+    zone.querySelectorAll('.ticket-card[draggable="true"]').forEach(bindDraggable);
+  }
+
+  // Persiste a ordem da coluna inteira (quadro personalizado usa card_id,
+  // o quadro padrão usa o ticket).
+  async function salvarOrdem(zone) {
+    const cards = Array.from(zone.querySelectorAll('.ticket-card'));
+    const body = new URLSearchParams({ coluna_id: zone.dataset.colunaId });
+    const cardIds   = cards.map(c => c.dataset.cardId).filter(Boolean);
+    const ticketIds = cards.filter(c => !c.dataset.cardId).map(c => c.dataset.pk).filter(Boolean);
+    if (cardIds.length)   body.set('card_ids', cardIds.join(','));
+    if (ticketIds.length) body.set('ticket_ids', ticketIds.join(','));
+    gravacoesPendentes++;
+    try {
+      await fetch(CARDS_REORDENAR_URL, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
+        body,
+      });
+    } catch {
+      M.toast({ html: 'Erro ao salvar a ordem', classes: 'red' });
+    } finally {
+      gravacoesPendentes--;
+    }
+  }
+
+  // Move um card para a coluna destino e persiste no servidor.
+  // O card muda de lugar NA HORA (otimista) e só volta atrás se o servidor recusar
+  // — antes ele só se mexia depois da resposta, o que dava a sensação de delay.
+  async function moverCardServer(url, params, zone, card, sourceZone, pk, alvo) {
+    const irmaoOriginal = card.nextElementSibling;   // para desfazer, se der erro
+
+    inserirCard(zone, card, alvo);
+    removeEmpty(zone);
+    addEmptyIfNeeded(sourceZone);
+    refreshCount(zone, +1);          // entrou um card nesta coluna
+    refreshCount(sourceZone, -1);    // e saiu da origem
+    aplicarDone(card, zone.dataset.status === '2');
+
+    function desfazer() {
+      sourceZone.insertBefore(card, irmaoOriginal || null);
+      removeEmpty(sourceZone);
+      addEmptyIfNeeded(zone);
+      refreshCount(zone, -1);
+      refreshCount(sourceZone, +1);
+      aplicarDone(card, sourceZone.dataset.status === '2');
+    }
+
+    gravacoesPendentes++;
     try {
       const resp = await fetch(url, {
         method: 'POST',
@@ -2229,16 +2505,13 @@ window.kanbanUrl = function (url) {
       });
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok) {
+        desfazer();
         M.toast({ html: data.error === 'needs_solution' ? 'Encerre pelo fluxo (arraste para uma coluna Encerrado).' : (data.error || 'Erro ao mover card'), classes: 'red' });
         return;
       }
 
-      zone.insertBefore(card, zone.firstChild);
-      removeEmpty(zone);
-      addEmptyIfNeeded(sourceZone);
-      refreshCount(zone);
-      refreshCount(sourceZone);
-      aplicarDone(card, zone.dataset.status === '2');
+      salvarOrdem(zone);
+      if (sourceZone) salvarOrdem(sourceZone);
 
       if (data.status !== null && typeof data.status !== 'undefined') {
         card.dataset.status = data.status;
@@ -2259,7 +2532,10 @@ window.kanbanUrl = function (url) {
       }
       M.toast({ html: pk ? `Ticket #${pk} movido!` : 'Card movido!', classes: 'teal darken-1' });
     } catch {
+      desfazer();   // caiu a rede: devolve o card para a coluna de origem
       M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
+    } finally {
+      gravacoesPendentes--;
     }
   }
 
@@ -2322,8 +2598,8 @@ window.kanbanUrl = function (url) {
 
       removeEmpty(pendingZone);
       addEmptyIfNeeded(pendingSourceZone);
-      refreshCount(pendingZone);
-      refreshCount(pendingSourceZone);
+      refreshCount(pendingZone, +1);
+      refreshCount(pendingSourceZone, -1);
 
       modalInst.close();
       M.toast({ html: `Ticket #${pendingPk} encerrado!`, classes: 'green darken-2' });
@@ -2604,14 +2880,29 @@ window.kanbanUrl = function (url) {
   const fcEtqWrap        = document.getElementById('fc-etq-wrap');
   const fcAddEtiqueta    = document.getElementById('fc-add-etiqueta');
 
-  // Botão "Etiquetas" no modal abre o mesmo popover, usando o card em edição.
+  // Etiquetas escolhidas na CRIAÇÃO (card ainda não existe): ficam aqui até salvar.
+  const etiquetasNovas = new Set();
+
+  function pintarChipsLocais(todas) {
+    const sel = (todas || []).filter(e => etiquetasNovas.has(String(e.id)));
+    fcCardLabels.innerHTML = sel.map(e =>
+      '<span class="kb-label" style="background:' + e.cor + '" title="' + (e.nome || '') + '">' +
+      '<span class="kb-label-txt">' + (e.nome || '') + '</span></span>'
+    ).join('');
+  }
+
+  // Botão "Etiquetas" no modal abre o mesmo popover.
   // stopPropagation: sem isso, este mesmo clique borbulharia até o handler
   // "fechar ao clicar fora" do popover, que o removeria na hora.
   fcAddEtiqueta.addEventListener('click', function (e) {
     e.preventDefault();
     e.stopPropagation();
-    if (window.abrirEtiquetasPopover && freeCardId.value) {
+    if (freeCardId.value) {
+      // Card já existe: o popover grava direto no servidor
       window.abrirEtiquetasPopover(freeCardId.value, fcAddEtiqueta);
+    } else {
+      // Criação: escolhe agora, aplica no salvar
+      window.abrirEtiquetasSelecao(fcAddEtiqueta, etiquetasNovas, pintarChipsLocais);
     }
   });
 
@@ -2682,7 +2973,10 @@ window.kanbanUrl = function (url) {
       setClienteSelecionado(null);
       resetAvulsoExtras();
       setDuasColunas(false);
-      fcEtqWrap.style.display = 'none';   // etiquetas só após o card existir
+      // Etiquetas já na criação: seleção começa vazia e vai junto no salvar
+      etiquetasNovas.clear();
+      fcEtqWrap.style.display = 'block';
+      fcCardLabels.removeAttribute('data-card-id');
       fcCardLabels.innerHTML = '';
       fcCommentList.innerHTML = '';
       addCardTitulo.textContent = 'Adicionar card';
@@ -2746,8 +3040,13 @@ window.kanbanUrl = function (url) {
       prioridade_id: fcPrioridade.value,
       responsavel_id: fcResponsavel.value,
     });
-    if (freeCardId.value) body.set('card_id', freeCardId.value);
-    else body.set('coluna_id', addCardColunaId.value);
+    if (freeCardId.value) {
+      body.set('card_id', freeCardId.value);
+    } else {
+      body.set('coluna_id', addCardColunaId.value);
+      // Só na criação: na edição o popover já grava as etiquetas na hora
+      etiquetasNovas.forEach(function (id) { body.append('etiquetas', id); });
+    }
     getMembros().forEach(function (id) { body.append('membros', id); });
     btnSalvarAvulso.disabled = true;
     try {
@@ -2774,11 +3073,9 @@ window.kanbanUrl = function (url) {
         }
       } else {
         const zone = document.getElementById(`drop-${addCardColunaId.value}`);
-        const addBtn = zone.querySelector('.add-card-btn');
-        addBtn.insertAdjacentHTML('beforebegin', data.html);
-        bindDraggable(addBtn.previousElementSibling);
+        anexarCards(zone, data.html);
         removeEmpty(zone);
-        refreshCount(zone);
+        refreshCount(zone, +1);
       }
       addCardModalInst.close();
       M.toast({ html: 'Card salvo!', classes: 'teal darken-1' });
@@ -2840,11 +3137,9 @@ window.kanbanUrl = function (url) {
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok) { M.toast({ html: data.error || 'Erro ao vincular nota', classes: 'red' }); return; }
       const zone = document.getElementById(`drop-${colunaId}`);
-      const addBtn = zone.querySelector('.add-card-btn');
-      addBtn.insertAdjacentHTML('beforebegin', data.html);
-      bindDraggable(addBtn.previousElementSibling);
+      anexarCards(zone, data.html);
       removeEmpty(zone);
-      refreshCount(zone);
+      refreshCount(zone, +1);
       addCardModalInst.close();
       M.toast({ html: 'Nota vinculada ao quadro!', classes: 'teal darken-1' });
     } catch {
@@ -2967,11 +3262,9 @@ window.kanbanUrl = function (url) {
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok) { M.toast({ html: data.error || 'Erro ao adicionar card', classes: 'red' }); return; }
       const zone = document.getElementById(`drop-${colunaId}`);
-      const addBtn = zone.querySelector('.add-card-btn');
-      addBtn.insertAdjacentHTML('beforebegin', data.html);
-      bindDraggable(addBtn.previousElementSibling);
+      anexarCards(zone, data.html);
       removeEmpty(zone);
-      refreshCount(zone);
+      refreshCount(zone, +1);
       addCardModalInst.close();
       M.toast({ html: `Ticket #${ticketId} adicionado!`, classes: 'teal darken-1' });
     } catch {
@@ -2995,7 +3288,7 @@ window.kanbanUrl = function (url) {
       const card = btn.closest('.ticket-card');
       const zone = card.parentElement;
       card.remove();
-      refreshCount(zone);
+      refreshCount(zone, -1);
       M.toast({ html: 'Card removido do quadro', classes: 'grey darken-1' });
     } catch {
       M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
@@ -3044,11 +3337,50 @@ window.kanbanUrl = function (url) {
   });
 
   // ── Helpers ──────────────────────────────────────────
-  function refreshCount(zone) {
+  // O badge mostra o TOTAL da coluna (que vem do servidor), não o que está
+  // carregado na tela — com a paginação, contar o DOM daria um número errado.
+  // `delta` ajusta o total quando um card entra (+1) ou sai (-1) da coluna.
+  function refreshCount(zone, delta) {
     if (!zone) return;
+    let total = parseInt(zone.dataset.total || '', 10);
+    if (Number.isNaN(total)) total = zone.querySelectorAll('.ticket-card').length;
+    if (delta) total = Math.max(0, total + delta);
+    zone.dataset.total = total;
     const el = document.getElementById(`count-${zone.dataset.colunaId}`);
-    if (el) el.textContent = zone.querySelectorAll('.ticket-card').length;
+    if (el) el.textContent = total;
   }
+
+  // ── "Mostrar mais": próxima leva de cards da coluna ────────────────────
+  document.addEventListener('click', async e => {
+    const btn = e.target.closest('.kb-mais-cards');
+    if (!btn) return;
+    const zone = document.getElementById('drop-' + btn.dataset.colunaId);
+    if (!zone) return;
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Carregando...';
+    try {
+      const resp = await fetch(
+        `/kanban/coluna/${btn.dataset.colunaId}/cards/?offset=${btn.dataset.offset}`,
+        { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const d = await resp.json();
+      if (!resp.ok) throw new Error();
+      anexarCards(zone, d.html);
+      zone.dataset.total = d.total;
+      if (d.tem_mais) {
+        btn.dataset.offset = d.carregados;
+        btn.textContent = `Mostrar mais (${d.total - d.carregados} restantes)`;
+        btn.disabled = false;
+      } else {
+        btn.remove();
+      }
+      refreshCount(zone);
+    } catch {
+      btn.textContent = original;
+      btn.disabled = false;
+      M.toast({ html: 'Erro ao carregar mais cards', classes: 'red' });
+    }
+  });
 
   function removeEmpty(zone) {
     const empty = zone.querySelector('.kanban-empty');
@@ -3079,8 +3411,7 @@ window.kanbanUrl = function (url) {
       const div = document.createElement('div');
       div.className = 'kanban-empty';
       div.textContent = 'Nenhum ticket';
-      const addBtn = zone.querySelector('.add-card-btn');
-      zone.insertBefore(div, addBtn || null);
+      zone.appendChild(div);
     }
   }
 
@@ -3116,10 +3447,13 @@ window.kanbanUrl = function (url) {
     const meta = [t.cliente, t.situacao, t.responsavel].filter(Boolean).map(esc).join(' · ');
     return '<div class="kb-in-card" data-ticket="' + t.id + '">' +
       '<div class="kb-in-top">' +
-        '<a class="kb-in-id" href="/ticket/' + t.id + '/" target="_blank">#' + t.id + '</a>' +
+        // Abre o mesmo modal de preview usado nos cards do board. O href fica como
+        // fallback caso o JS falhe (o handler .js-ticket-preview dá preventDefault).
+        '<a class="kb-in-id js-ticket-preview" href="/ticket/' + t.id + '/" data-pk="' + t.id + '">#' + t.id + '</a>' +
         (t.prioridade ? '<span class="prio-chip prio-default">' + esc(t.prioridade) + '</span>' : '') +
       '</div>' +
-      '<div class="kb-in-tit">' + esc(t.titulo) + '</div>' +
+      '<div class="kb-in-tit js-ticket-preview" data-pk="' + t.id + '" title="Ver detalhes do ticket">' +
+        esc(t.titulo) + '</div>' +
       '<div class="kb-in-meta">' + meta + '</div>' +
       '<div class="kb-in-acoes">' +
         '<select class="kb-in-col browser-default">' + colunas + '</select>' +
@@ -3249,12 +3583,8 @@ window.kanbanUrl = function (url) {
           const zone = document.getElementById('drop-' + colunaId);
           if (zone) {
             removeEmpty(zone);
-            const addBtn = zone.querySelector('.add-card-btn');
-            if (addBtn) addBtn.insertAdjacentHTML('beforebegin', d.html);
-            else zone.insertAdjacentHTML('beforeend', d.html);
-            const novo = zone.querySelector('.ticket-card[data-pk="' + ticketId + '"]');
-            if (novo) bindDraggable(novo);
-            refreshCount(zone);
+            anexarCards(zone, d.html);
+            refreshCount(zone, +1);
           }
           fecharItem(card);
           M.toast({ html: 'Ticket #' + ticketId + ' aprovado', classes: 'green darken-2' });
@@ -3292,7 +3622,10 @@ window.kanbanUrl = function (url) {
   // ou com a aba em segundo plano, para não atrapalhar o que você está fazendo.
   const REFRESH_MS = 5000;
   function refreshOcupado() {
-    return document.hidden || draggingCard || inboxAberta() ||
+    // gravacoesPendentes: o movimento do card é otimista (a tela muda antes do
+    // servidor confirmar). Se o refresh rodasse no meio da gravação, ele traria
+    // o estado ANTIGO e o card pularia de volta. Espera a gravação terminar.
+    return document.hidden || draggingCard || inboxAberta() || gravacoesPendentes > 0 ||
            document.querySelector('.modal.open') || document.querySelector('.kb-pop');
   }
   async function atualizarCards() {
@@ -3307,7 +3640,16 @@ window.kanbanUrl = function (url) {
         const nova = zone.id ? doc.getElementById(zone.id) : null;
         if (!nova) return;
         zone.innerHTML = nova.innerHTML;
+        // total vem do servidor (a coluna é paginada: contar o DOM daria errado)
+        if (nova.dataset.total) zone.dataset.total = nova.dataset.total;
         zone.querySelectorAll('.ticket-card[draggable="true"]').forEach(bindDraggable);
+
+        // O "Mostrar mais" vive FORA da drop-zone: precisa ser ressincronizado à
+        // parte, senão o refresh volta a coluna para 50 cards e o botão fica com
+        // o offset antigo (pularia cards).
+        const wrap = document.getElementById('mais-wrap-' + zone.dataset.colunaId);
+        const wrapNovo = doc.getElementById('mais-wrap-' + zone.dataset.colunaId);
+        if (wrap && wrapNovo) wrap.innerHTML = wrapNovo.innerHTML;
       });
       board.querySelectorAll('.badge-count').forEach(b => {
         const nb = b.id ? doc.getElementById(b.id) : null;

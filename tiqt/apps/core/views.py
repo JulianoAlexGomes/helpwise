@@ -675,6 +675,74 @@ def card_permitido(user, card_id, qs=None):
     return card
 
 
+# Quantos cards cada coluna renderiza de cara. O resto vem no "Mostrar mais".
+CARDS_POR_COLUNA = 50
+
+
+def tickets_da_coluna_padrao(coluna, qs):
+    """Tickets de uma coluna do quadro padrão (por status, com override manual)."""
+    filtro = Q(kanban_coluna_id=coluna.id)
+    if coluna.status_associado is not None:
+        filtro |= Q(kanban_coluna__isnull=True, status=coluna.status_associado)
+    return qs.filter(filtro).order_by('kanban_ordem', '-id')
+
+
+class KanbanColunaCardsView(LoginRequiredMixin, View):
+    """Próxima leva de cards de uma coluna (paginação do 'Mostrar mais')."""
+
+    def get(self, request, pk):
+        from .models import KanbanColuna, KanbanCard
+        coluna = get_object_or_404(KanbanColuna.objects.select_related('quadro'), pk=pk)
+        quadro = checar_quadro(request.user, coluna.quadro)
+        try:
+            offset = max(0, int(request.GET.get('offset') or 0))
+        except ValueError:
+            offset = 0
+
+        done = coluna.status_associado == Ticket.ENCERRADO
+        partes = []
+
+        if quadro.is_padrao:
+            qs = Ticket.objects.select_related(
+                'cliente', 'cliente__cidade', 'cliente__uf',
+                'prioridade', 'responsavel', 'atendente', 'tipo')
+            base = tickets_da_coluna_padrao(coluna, qs)
+            total = base.count()
+            for ticket in base[offset:offset + CARDS_POR_COLUNA]:
+                partes.append(render_to_string('core/_kanban_card.html', {
+                    'ticket': ticket, 'draggable': not done, 'done': done,
+                }))
+        else:
+            base = (KanbanCard.objects.filter(coluna=coluna)
+                    .select_related('ticket', 'ticket__cliente',
+                                    'ticket__cliente__cidade', 'ticket__cliente__uf',
+                                    'ticket__prioridade', 'ticket__responsavel', 'ticket__tipo',
+                                    'nota', 'nota__categoria', 'nota__responsavel',
+                                    'cliente', 'cliente__cidade', 'cliente__uf',
+                                    'autor', 'responsavel', 'prioridade')
+                    .prefetch_related('etiquetas', 'membros', 'comentarios')
+                    .order_by('ordem', '-id'))
+            total = base.count()
+            for card in base[offset:offset + CARDS_POR_COLUNA]:
+                if card.ticket_id:
+                    tpl, ctx = 'core/_kanban_card.html', {
+                        'ticket': card.ticket, 'draggable': True, 'card_id': card.id,
+                        'card': card, 'etiquetas': card.etiquetas.all(), 'done': done}
+                elif card.nota_id:
+                    tpl, ctx = 'core/_kanban_nota_card.html', {'card': card, 'done': done}
+                else:
+                    tpl, ctx = 'core/_kanban_free_card.html', {'card': card, 'done': done}
+                partes.append(render_to_string(tpl, ctx))
+
+        carregados = offset + len(partes)
+        return JsonResponse({
+            'html': ''.join(partes),
+            'total': total,
+            'carregados': carregados,
+            'tem_mais': carregados < total,
+        })
+
+
 class KanbanView(LoginRequiredMixin, TemplateView):
     template_name = 'core/kanban.html'
 
@@ -686,7 +754,11 @@ class KanbanView(LoginRequiredMixin, TemplateView):
         atendente_id   = self.request.GET.get('atendente', '')
         tipo_id        = self.request.GET.get('tipo', '')
 
-        qs = Ticket.objects.select_related('cliente', 'prioridade', 'responsavel', 'atendente', 'tipo')
+        # cliente__cidade/uf: Cliente.__str__ monta "fantasia - cidade/uf", então sem
+        # isso cada cliente exibido dispara 2 queries extras (era o N+1 do kanban).
+        qs = Ticket.objects.select_related(
+            'cliente', 'cliente__cidade', 'cliente__uf',
+            'prioridade', 'responsavel', 'atendente', 'tipo')
         if responsavel_id:
             qs = qs.filter(responsavel_id=responsavel_id)
         if atendente_id:
@@ -711,14 +783,13 @@ class KanbanView(LoginRequiredMixin, TemplateView):
         if quadro_atual and quadro_atual.is_padrao:
             # Quadro padrão: tickets vêm do status (+ override em Ticket.kanban_coluna)
             for coluna in colunas:
-                filtro = Q(kanban_coluna_id=coluna.id)
-                if coluna.status_associado is not None:
-                    filtro |= Q(kanban_coluna__isnull=True, status=coluna.status_associado)
-                tickets = qs.filter(filtro).order_by('kanban_ordem', '-id')
-                if coluna.status_associado == Ticket.ENCERRADO:
-                    tickets = tickets[:30]
-                coluna.lista = list(tickets)
-                coluna.qtd = len(coluna.lista)
+                tickets = tickets_da_coluna_padrao(coluna, qs)
+                coluna.total = tickets.count()
+                coluna.lista = list(tickets[:CARDS_POR_COLUNA])
+                coluna.qtd = coluna.total
+                coluna.tem_mais = coluna.total > len(coluna.lista)
+                coluna.carregados = len(coluna.lista)
+                coluna.restantes = coluna.total - coluna.carregados
                 coluna.arrastavel = coluna.status_associado != Ticket.ENCERRADO
                 coluna.encerrada = coluna.status_associado == Ticket.ENCERRADO
         else:
@@ -726,8 +797,8 @@ class KanbanView(LoginRequiredMixin, TemplateView):
             tem_filtro = bool(responsavel_id or atendente_id or tipo_id)
             ids_permitidos = set(qs.values_list('id', flat=True)) if tem_filtro else None
 
-            def card_visivel(card):
-                """Aplica os filtros a um card de quadro personalizado.
+            def linha_visivel(ticket_id, nota_resp_id, nota_id, autor_id):
+                """Filtros do quadro personalizado, aplicados sobre uma linha leve.
 
                 Cards de ticket seguem o filtro completo. Notas e cards avulsos não têm
                 atendente nem tipo, então usam uma única "pessoa" — o responsável da nota
@@ -736,27 +807,58 @@ class KanbanView(LoginRequiredMixin, TemplateView):
                 """
                 if not tem_filtro:
                     return True
-                if card.ticket_id:
-                    return card.ticket_id in ids_permitidos
+                if ticket_id:
+                    return ticket_id in ids_permitidos
                 if tipo_id:
                     return False
-                pessoa_id = card.nota.responsavel_id if card.nota_id else card.autor_id
+                pessoa_id = nota_resp_id if nota_id else autor_id
                 if pessoa_id is None:
                     return False
                 # Cada filtro de pessoa ativo precisa bater, igual ao AND dos cards de ticket.
                 return all(str(pessoa_id) == f for f in (responsavel_id, atendente_id) if f)
 
+            # Duas etapas, para não carregar do banco o que não vai para a tela:
+            #  1) uma query LEVE (só ids) diz o total de cada coluna e QUAIS cards
+            #     entram nos primeiros CARDS_POR_COLUNA;
+            #  2) uma query pesada (com select_related/prefetch) carrega só esses.
+            # Sem isso, uma coluna com 600 cards carregava os 600 objetos + prefetches
+            # para renderizar 50.
+            from collections import defaultdict
+            leves = (KanbanCard.objects
+                     .filter(coluna__quadro=quadro_atual)
+                     .order_by('ordem', '-id')
+                     .values_list('id', 'coluna_id', 'ticket_id', 'nota_id',
+                                  'autor_id', 'nota__responsavel_id'))
+
+            totais = defaultdict(int)
+            ids_visiveis = defaultdict(list)
+            for cid, col_id, tk_id, nota_id, autor_id, nota_resp in leves:
+                if not linha_visivel(tk_id, nota_resp, nota_id, autor_id):
+                    continue
+                totais[col_id] += 1
+                if len(ids_visiveis[col_id]) < CARDS_POR_COLUNA:
+                    ids_visiveis[col_id].append(cid)
+
+            render_ids = [i for ids in ids_visiveis.values() for i in ids]
+            cards = (KanbanCard.objects
+                     .filter(id__in=render_ids)
+                     .select_related('ticket', 'ticket__cliente',
+                                     'ticket__cliente__cidade', 'ticket__cliente__uf',
+                                     'ticket__prioridade', 'ticket__responsavel', 'ticket__tipo',
+                                     'nota', 'nota__categoria', 'nota__responsavel',
+                                     'cliente', 'cliente__cidade', 'cliente__uf',
+                                     'autor', 'responsavel', 'prioridade')
+                     .prefetch_related('etiquetas', 'membros', 'comentarios')
+                     .order_by('ordem', '-id'))
+            por_id = {c.id: c for c in cards}
+
             for coluna in colunas:
-                cards = (KanbanCard.objects
-                         .filter(coluna=coluna)
-                         .select_related('ticket', 'ticket__cliente', 'ticket__prioridade',
-                                         'ticket__responsavel', 'ticket__tipo',
-                                         'nota', 'nota__categoria', 'nota__responsavel',
-                                         'cliente', 'autor')
-                         .prefetch_related('etiquetas', 'membros', 'comentarios')
-                         .order_by('ordem', '-id'))
-                coluna.lista = [card for card in cards if card_visivel(card)]
-                coluna.qtd = len(coluna.lista)
+                coluna.lista = [por_id[i] for i in ids_visiveis.get(coluna.id, []) if i in por_id]
+                coluna.total = totais.get(coluna.id, 0)
+                coluna.qtd = coluna.total
+                coluna.carregados = len(coluna.lista)
+                coluna.tem_mais = coluna.total > coluna.carregados
+                coluna.restantes = coluna.total - coluna.carregados
                 coluna.arrastavel = True
                 coluna.encerrada = coluna.status_associado == Ticket.ENCERRADO
 
@@ -1100,7 +1202,9 @@ def tickets_caixa_entrada(quadro):
                     status__in=[Ticket.ABERTO, Ticket.EM_ATENDIMENTO])
             .exclude(kanban_cards__coluna__quadro=quadro)
             .exclude(id__in=CaixaEntradaRecusa.objects.filter(quadro=quadro).values('ticket_id'))
-            .select_related('cliente', 'prioridade', 'tipo', 'situacao', 'responsavel')
+            # cidade/uf: Cliente.__str__ usa os dois — sem isso são 2 queries por item
+            .select_related('cliente', 'cliente__cidade', 'cliente__uf',
+                            'prioridade', 'tipo', 'situacao', 'responsavel')
             .order_by('-id'))
 
 
@@ -1291,6 +1395,12 @@ class KanbanCardAvulsoSalvarView(LoginRequiredMixin, View):
                 coluna=coluna, ticket=None, titulo=titulo, texto=texto, cliente_id=cliente_id,
                 responsavel_id=responsavel_id, prioridade_id=prioridade_id,
                 autor=request.user, ordem=0)
+            # Etiquetas escolhidas já na criação. Na edição não mexemos aqui: lá
+            # o popover aplica/remove na hora, pelo endpoint de toggle.
+            from .models import Etiqueta
+            etiquetas_ids = [e for e in request.POST.getlist('etiquetas')
+                             if Etiqueta.objects.filter(pk=e).exists()]
+            card.etiquetas.set(etiquetas_ids)
 
         card.membros.set(membros_ids)
 
@@ -1463,6 +1573,39 @@ class TicketEnviarMuralView(LoginRequiredMixin, View):
         return JsonResponse({'ok': True, 'nota_id': nota.pk})
 
 
+class KanbanCardsReordenarView(LoginRequiredMixin, View):
+    """Grava a ordem dos cards dentro de uma coluna (arrastar para reordenar).
+
+    Recebe a coluna e a sequência já na ordem final. Quadro personalizado manda
+    `card_ids` (KanbanCard.ordem); o quadro padrão manda `ticket_ids`
+    (Ticket.kanban_ordem)."""
+    def post(self, request):
+        from .models import KanbanColuna, KanbanCard
+        coluna = get_object_or_404(
+            KanbanColuna.objects.select_related('quadro'), pk=request.POST.get('coluna_id'))
+        checar_quadro(request.user, coluna.quadro)
+
+        # bulk_update grava tudo numa query só. Antes era um UPDATE POR CARD —
+        # mover um card numa coluna de 50 disparava 50 queries (o "delay").
+        card_ids = [i for i in (request.POST.get('card_ids') or '').split(',') if i]
+        if card_ids:
+            posicao = {str(cid): pos for pos, cid in enumerate(card_ids)}
+            cards = list(KanbanCard.objects.filter(pk__in=card_ids, coluna=coluna))
+            for card in cards:
+                card.ordem = posicao[str(card.pk)]
+            KanbanCard.objects.bulk_update(cards, ['ordem'])
+
+        ticket_ids = [i for i in (request.POST.get('ticket_ids') or '').split(',') if i]
+        if ticket_ids:
+            posicao = {str(tid): pos for pos, tid in enumerate(ticket_ids)}
+            tickets = list(Ticket.objects.filter(pk__in=ticket_ids))
+            for ticket in tickets:
+                ticket.kanban_ordem = posicao[str(ticket.pk)]
+            Ticket.objects.bulk_update(tickets, ['kanban_ordem'])
+
+        return JsonResponse({'ok': True})
+
+
 class KanbanCardRemoverView(LoginRequiredMixin, View):
     """Remove um card de um quadro personalizado (não apaga o ticket vinculado)."""
     def post(self, request):
@@ -1475,7 +1618,7 @@ class TicketBuscaAjaxView(LoginRequiredMixin, View):
     """Busca tickets por #id, título ou cliente (para adicionar cards a um quadro)."""
     def get(self, request):
         q = (request.GET.get('q') or '').strip()
-        base = Ticket.objects.select_related('cliente')
+        base = Ticket.objects.select_related('cliente', 'cliente__cidade', 'cliente__uf')
         # Aceita "#332", "332" ou texto (título/cliente), combinando número + texto
         num = q.lstrip('#').strip()
         filtros = Q()

@@ -436,11 +436,63 @@
   html.dark .kanban-filter label { color: var(--hw-text2) !important; }
   html.dark .kanban-filter .select-wrapper input.select-dropdown { background-color: var(--hw-input-bg) !important; border-color: var(--hw-border) !important; color: var(--hw-text) !important; }
 
-  /* ── Abas de quadros ─────────────────────────────── */
+  /* ── Seletor de quadro (dropdown) ─────────────────── */
   .kanban-tabs {
-    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    display: flex; align-items: center; gap: 8px;
     margin-bottom: 16px;
   }
+  /* No Modo Kanban os botões fixos (Caixa/Fundo/Sair) ficam no topo à direita —
+     reserva espaço para a barra nunca correr por baixo deles. */
+  body.kanban-trello .kanban-tabs { padding-right: 470px; }
+
+  .kb-switch { position: relative; }
+  .kb-switch-btn {
+    display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+    max-width: 320px; padding: 9px 14px; border: 1.5px solid transparent; border-radius: 10px;
+    background: #eef0f2; color: #2a2c30; font-size: 0.9rem; font-weight: 700;
+  }
+  .kb-switch-btn:hover { background: #e2e5e8; }
+  .kb-switch-nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .kb-switch-btn > i { font-size: 19px; color: var(--hw-brand, #00796b); flex-shrink: 0; }
+  .kb-switch-caret { margin-left: auto; transition: transform .18s; }
+  .kb-switch.open .kb-switch-caret { transform: rotate(180deg); }
+  html.dark .kb-switch-btn { background: var(--hw-surface); color: var(--hw-text); }
+  html.dark .kb-switch-btn:hover { background: var(--hw-surface2); }
+
+  .kb-switch-menu {
+    display: none; position: absolute; top: calc(100% + 6px); left: 0; z-index: 1150;
+    width: 290px; padding: 8px; border-radius: 12px;
+    background: #fff; border: 1px solid #e2e4e8; box-shadow: 0 10px 34px rgba(0,0,0,.20);
+  }
+  .kb-switch.open .kb-switch-menu { display: block; }
+  html.dark .kb-switch-menu { background: var(--hw-surface); border-color: var(--hw-border); }
+
+  /* A lista rola: com muitos quadros o menu não cresce sem fim */
+  .kb-switch-lista { max-height: 320px; overflow-y: auto; }
+  .kb-switch-lista::-webkit-scrollbar { width: 8px; }
+  .kb-switch-lista::-webkit-scrollbar-thumb { background: rgba(128,128,128,.35); border-radius: 8px; }
+
+  .kb-switch-item {
+    display: flex; align-items: center; gap: 9px; padding: 9px 10px; border-radius: 8px;
+    color: #44474c; font-size: 0.85rem; font-weight: 600; text-decoration: none;
+  }
+  .kb-switch-item:hover { background: rgba(0,121,107,.08); color: var(--hw-brand-2); }
+  .kb-switch-item.active { background: rgba(0,121,107,.13); color: var(--hw-brand-2); }
+  .kb-switch-item > i { font-size: 18px; color: #8a8f98; flex-shrink: 0; }
+  .kb-switch-item.active > i { color: var(--hw-brand); }
+  .kb-switch-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .kb-switch-check { color: var(--hw-brand) !important; }
+  html.dark .kb-switch-item { color: var(--hw-text2); }
+  html.dark .kb-switch-item:hover, html.dark .kb-switch-item.active { color: var(--hw-brand); }
+
+  .kb-switch-novo {
+    display: flex; align-items: center; justify-content: center; gap: 5px; width: 100%;
+    margin-top: 6px; padding: 9px; border: 1.5px dashed #cfd3d8; border-radius: 8px;
+    background: transparent; color: #6b7078; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+  }
+  .kb-switch-novo:hover { border-color: var(--hw-brand); color: var(--hw-brand); background: rgba(0,121,107,.06); }
+  .kb-switch-novo i { font-size: 17px; }
+  html.dark .kb-switch-novo { border-color: var(--hw-border); }
   .kanban-tab {
     display: inline-flex; align-items: center; gap: 5px;
     padding: 8px 16px; border-radius: 999px; font-size: 0.85rem; font-weight: 600;
@@ -1054,18 +1106,33 @@
 <div class="kanban-wrapper" data-fundo="{{ quadro_atual.fundo }}">
 <div class="container-fluid" style="padding:0;">
 
-  <!-- Abas de quadros -->
+  <!-- Seletor de quadro (recolhido num dropdown: a lista de abas estourava a tela) -->
   <div class="kanban-tabs">
-    {% for q in quadros %}
-      <a href="?quadro={{ q.id }}"
-         class="kanban-tab {% if quadro_atual and q.id == quadro_atual.id %}active{% endif %}">
-        {% if q.is_padrao %}<i class="material-icons tiny" translate="no">view_column</i>{% endif %}
-        {{ q.nome }}
-      </a>
-    {% endfor %}
-    <button id="btn-novo-quadro" class="kanban-tab kanban-tab-add" type="button">
-      <i class="material-icons tiny" translate="no">add</i> Novo quadro
-    </button>
+    <div class="kb-switch">
+      <button type="button" class="kb-switch-btn" id="kb-switch-btn">
+        <i class="material-icons" translate="no">view_column</i>
+        <span class="kb-switch-nome">{{ quadro_atual.nome|default:"Quadros" }}</span>
+        <i class="material-icons kb-switch-caret" translate="no">expand_more</i>
+      </button>
+      <div class="kb-switch-menu" id="kb-switch-menu">
+        <div class="kb-switch-lista">
+          {% for q in quadros %}
+            <a href="?quadro={{ q.id }}"
+               class="kb-switch-item {% if quadro_atual and q.id == quadro_atual.id %}active{% endif %}">
+              <i class="material-icons" translate="no">{% if q.is_padrao %}view_column{% else %}dashboard{% endif %}</i>
+              <span>{{ q.nome }}</span>
+              {% if quadro_atual and q.id == quadro_atual.id %}
+                <i class="material-icons kb-switch-check" translate="no">check</i>
+              {% endif %}
+            </a>
+          {% endfor %}
+        </div>
+        <button id="btn-novo-quadro" class="kb-switch-novo" type="button">
+          <i class="material-icons" translate="no">add</i> Novo quadro
+        </button>
+      </div>
+    </div>
+
     {% if quadro_atual and not quadro_atual.is_padrao %}
       <span class="kanban-tab-actions">
         <a href="#!" id="btn-editar-quadro" title="Editar quadro"
@@ -1498,9 +1565,10 @@ window.kanbanUrl = function (url) {
 
   document.body.classList.add('kanban-trello');
 
-  // Troca de quadro sem sair do modo: preserva board=1 nas abas.
-  document.querySelectorAll('.kanban-tabs a.kanban-tab').forEach(function (a) {
-    a.href = window.kanbanUrl(a.getAttribute('href'));
+  // Troca de quadro sem sair do modo: preserva board=1 nos links do seletor.
+  document.querySelectorAll('.kanban-tabs a[href]').forEach(function (a) {
+    const href = a.getAttribute('href');
+    if (href && href !== '#!') a.href = window.kanbanUrl(href);
   });
 
   // Sair: fecha a aba (aberta via target=_blank) ou, se o navegador não deixar,
@@ -1597,6 +1665,29 @@ window.kanbanUrl = function (url) {
     if (e.key !== 'Escape') return;
     if (fundoPop) { fecharFundo(); return; }   // Esc fecha o seletor antes de sair
     if (exit) exit.click();
+  });
+})();
+</script>
+<script>
+// ── Seletor de quadro (dropdown) ────────────────────────────────────────
+(function () {
+  const sw  = document.querySelector('.kb-switch');
+  const btn = document.getElementById('kb-switch-btn');
+  if (!sw || !btn) return;
+
+  btn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    sw.classList.toggle('open');
+  });
+  // "Novo quadro" está dentro do menu: não deixar o clique fechar antes de abrir o modal
+  const novo = document.getElementById('btn-novo-quadro');
+  if (novo) novo.addEventListener('click', () => sw.classList.remove('open'));
+
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.kb-switch')) sw.classList.remove('open');
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') sw.classList.remove('open');
   });
 })();
 </script>

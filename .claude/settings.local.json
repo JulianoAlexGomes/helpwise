@@ -29,7 +29,8 @@
       "Bash(python manage.py makemigrations mural)",
       "Bash(python manage.py migrate mural)",
       "Bash(python manage.py check)",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Bash(python \"C:/Users/sinos/AppData/Local/Temp/claude/c--projetos-sinos-helpwise/2eaa05fa-e792-4be7-a69e-b3dda36156ae/scratchpad/t11.py\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\sinos\\Downloads\\favicon_io"

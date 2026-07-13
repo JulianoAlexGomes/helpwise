@@ -698,7 +698,7 @@ class KanbanView(LoginRequiredMixin, TemplateView):
                                          'ticket__responsavel', 'ticket__tipo',
                                          'nota', 'nota__categoria', 'nota__responsavel',
                                          'cliente', 'autor')
-                         .prefetch_related('etiquetas', 'membros')
+                         .prefetch_related('etiquetas', 'membros', 'comentarios')
                          .order_by('ordem', '-id'))
                 coluna.lista = [card for card in cards if card_visivel(card)]
                 coluna.qtd = len(coluna.lista)
@@ -995,7 +995,7 @@ class KanbanCardAdicionarView(LoginRequiredMixin, View):
             return JsonResponse({'error': 'Este ticket já está neste quadro'}, status=400)
         card = KanbanCard.objects.create(ticket=ticket, coluna=coluna, ordem=0)
         html = render_to_string('core/_kanban_card.html', {
-            'ticket': ticket, 'draggable': True, 'card_id': card.id,
+            'ticket': ticket, 'draggable': True, 'card_id': card.id, 'card': card,
             'done': coluna.status_associado == Ticket.ENCERRADO,
         })
         return JsonResponse({'ok': True, 'html': html})
@@ -1223,6 +1223,19 @@ class EtiquetaExcluirView(LoginRequiredMixin, View):
         from .models import Etiqueta
         Etiqueta.objects.filter(pk=request.POST.get('etiqueta_id')).delete()
         return JsonResponse({'ok': True})
+
+
+class CardMembrosSalvarView(LoginRequiredMixin, View):
+    """Define os membros de um card do Kanban (serve para card de ticket, nota ou avulso).
+
+    É informação interna do Kanban: não altera o ticket nem a nota vinculados."""
+    def post(self, request):
+        from .models import KanbanCard
+        card = get_object_or_404(KanbanCard, pk=request.POST.get('card_id'))
+        ids = [m for m in request.POST.getlist('membros') if User.objects.filter(pk=m).exists()]
+        card.membros.set(ids)
+        html = render_to_string('core/_kanban_membros.html', {'membros': card.membros.all()})
+        return JsonResponse({'ok': True, 'html': html})
 
 
 class KanbanQuadroFundoView(LoginRequiredMixin, View):

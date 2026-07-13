@@ -79,6 +79,7 @@ urlpatterns = [
     path('kanban/etiqueta/excluir/', views.EtiquetaExcluirView.as_view(), name='kanban_etiqueta_excluir'),
     path('kanban/card/etiqueta/toggle/', views.CardEtiquetaToggleView.as_view(), name='kanban_card_etiqueta_toggle'),
     path('kanban/quadro/fundo/', views.KanbanQuadroFundoView.as_view(), name='kanban_quadro_fundo'),
+    path('kanban/card/membros/', views.CardMembrosSalvarView.as_view(), name='kanban_card_membros'),
 
     path('notifications/', include('tiqt.apps.notifications.urls')),
     path('', include('tiqt.apps.ia.urls')),

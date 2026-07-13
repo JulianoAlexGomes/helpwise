@@ -1,0 +1,9 @@
+{% comment %}Avatares dos membros de um card do Kanban.
+A inicial fica sempre no fundo; a foto (quando existe) é sobreposta. Se o arquivo
+da foto não carregar, o onerror remove o <img> e a inicial reaparece.{% endcomment %}
+{% for m in membros %}
+  <span class="fc-avatar" title="{{ m.get_full_name|default:m.username }}">
+    {{ m.get_full_name|default:m.username|first|upper }}
+    {% if m.foto %}<img src="{{ m.foto.url }}" alt="" onerror="this.remove()">{% endif %}
+  </span>
+{% endfor %}

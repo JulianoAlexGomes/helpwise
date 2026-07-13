@@ -53,6 +53,10 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(PROJECT_DIR, 'staticfiles')
 
 
+# Sem isto o Django usa o padrão '/accounts/login/', que não existe nas rotas
+# (o login é '/login/'), e o usuário deslogado via um erro em vez do redirect.
+LOGIN_URL = '/login/'
+
 LOGIN_REDIRECT_URL = '/'
 
 LOGOUT_REDIRECT_URL = '/login/'

@@ -5,12 +5,17 @@
      {% if card_id %}data-card-id="{{ card_id }}"{% endif %}
      data-status="{{ ticket.status }}">
   {% if card_id %}
-  <button class="card-remove-btn" type="button" title="Remover do quadro" data-card-id="{{ card_id }}">
-    <i class="material-icons" translate="no">close</i>
-  </button>
-  <button class="card-label-btn" type="button" title="Etiquetas" data-card-id="{{ card_id }}">
-    <i class="material-icons" translate="no">label</i>
-  </button>
+  <div class="card-actions">
+    <button class="card-kb-btn" type="button" title="Membros e comentários do Kanban" data-card-id="{{ card_id }}">
+      <i class="material-icons" translate="no">groups</i>
+    </button>
+    <button class="card-label-btn" type="button" title="Etiquetas" data-card-id="{{ card_id }}">
+      <i class="material-icons" translate="no">label</i>
+    </button>
+    <button class="card-remove-btn" type="button" title="Remover do quadro" data-card-id="{{ card_id }}">
+      <i class="material-icons" translate="no">close</i>
+    </button>
+  </div>
   {% endif %}
   <div class="card-content">
 
@@ -40,6 +45,18 @@
     </div>
 
     <p class="card-date">{{ ticket.criado_em|date:"d/m/Y H:i" }}</p>
+
+    {% if card %}
+    <div class="fc-card-foot">
+      <div class="fc-avatars" data-membros-for="{{ card.id }}">
+        {% include "core/_kanban_membros.html" with membros=card.membros.all %}
+      </div>
+      {% if card.comentarios.count %}
+      <div class="free-card-badge"><i class="material-icons" translate="no">forum</i>{{ card.comentarios.count }}</div>
+      {% endif %}
+    </div>
+    {% endif %}
+
     {% if done %}<div class="card-done-check"><i class="material-icons" translate="no">check_circle</i> Concluído</div>{% endif %}
   </div>
 </div>

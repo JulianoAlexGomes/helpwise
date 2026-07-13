@@ -390,25 +390,34 @@
   html.dark .add-card-btn:hover { background: rgba(255,255,255,.06); }
 
   /* Botão remover card do quadro */
-  .card-remove-btn {
-    position: absolute; top: 6px; right: 6px; display: none;
-    background: rgba(0,0,0,.04); border: none; border-radius: 50%;
-    width: 22px; height: 22px; line-height: 0; cursor: pointer; color: #9099a1;
+  /* Barra de ações do card: aparece no hover, sobreposta no canto (não muda o
+     tamanho do card). Fundo opaco para cobrir o chip de prioridade que fica
+     embaixo, em vez de ficar por cima dele meio transparente. */
+  .card-actions {
+    position: absolute; top: 4px; right: 4px; z-index: 3;
+    display: none; align-items: center; gap: 2px;
+    padding: 3px; border-radius: 20px;
+    background: #fff; box-shadow: 0 1px 8px rgba(0,0,0,.22);
   }
-  .card-remove-btn i { font-size: 16px; }
+  .ticket-card:hover .card-actions { display: inline-flex; }
+  html.dark .card-actions { background: var(--hw-surface2); box-shadow: 0 1px 8px rgba(0,0,0,.5); }
+
+  .card-remove-btn {
+    background: transparent; border: none; border-radius: 50%;
+    width: 28px; height: 28px; line-height: 0; cursor: pointer; color: #9099a1;
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .card-remove-btn i { font-size: 19px; }
   .card-remove-btn:hover { background: rgba(229,57,53,.12); color: #e53935; }
-  .ticket-card:hover .card-remove-btn { display: inline-flex; align-items: center; justify-content: center; }
 
   /* Botão de etiquetas do card (ao lado do X, aparece no hover) */
   .card-label-btn {
-    position: absolute; top: 6px; right: 32px; display: none;
-    background: rgba(0,0,0,.04); border: none; border-radius: 50%;
-    width: 22px; height: 22px; line-height: 0; cursor: pointer; color: #9099a1;
+    background: transparent; border: none; border-radius: 50%;
+    width: 28px; height: 28px; line-height: 0; cursor: pointer; color: #9099a1;
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
-  .card-label-btn i { font-size: 15px; }
+  .card-label-btn i { font-size: 18px; }
   .card-label-btn:hover { background: rgba(0,121,107,.12); color: var(--hw-brand); }
-  .ticket-card:hover .card-label-btn { display: inline-flex; align-items: center; justify-content: center; }
-  html.dark .card-label-btn, html.dark .card-remove-btn { background: rgba(255,255,255,.06); }
 
   /* Chips de etiqueta no card (estilo Trello) */
   .card-labels { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -510,14 +519,17 @@
   .fc-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
   .fc-card-foot:empty { display: none; }
   .fc-avatars { display: flex; }
+  .fc-avatars:empty { display: none; }
   .fc-avatar {
-    width: 24px; height: 24px; border-radius: 50%; margin-left: -6px;
+    position: relative; width: 24px; height: 24px; border-radius: 50%; margin-left: -6px;
     display: inline-flex; align-items: center; justify-content: center; overflow: hidden;
     background: linear-gradient(135deg, var(--hw-brand), var(--hw-brand-2));
     color: #fff; font-size: 0.66rem; font-weight: 700; border: 2px solid #fff;
   }
   .fc-avatar:first-child { margin-left: 0; }
-  .fc-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  /* A foto cobre a inicial; se o arquivo não carregar, o onerror remove o <img>
+     e a inicial (que está atrás) reaparece. */
+  .fc-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   html.dark .fc-avatar { border-color: var(--hw-surface); }
 
   /* Campos do modal avulso (prioridade / responsável / membros) */
@@ -525,8 +537,9 @@
   .fc-col { flex: 1; min-width: 0; }
   .fc-lbl { display: block; font-size: 12px; font-weight: 600; color: #44474c; margin-bottom: 4px; }
   html.dark .fc-lbl { color: var(--hw-text2); }
+  /* Sem scroll próprio: quem rola é o .modal-content (evita scroll dentro de scroll) */
   .fc-membros {
-    display: flex; flex-wrap: wrap; gap: 6px; max-height: 140px; overflow-y: auto;
+    display: flex; flex-wrap: wrap; gap: 6px;
     padding: 6px; border: 1px solid #e2e4e8; border-radius: 8px;
   }
   html.dark .fc-membros { border-color: var(--hw-border); }
@@ -534,11 +547,12 @@
     padding: 4px 10px 4px 4px; border-radius: 20px; border: 1.5px solid #e2e4e8; font-size: 12.5px; color: #44474c; }
   .fc-membro input { display: none; }
   .fc-membro-ava {
+    position: relative;
     width: 22px; height: 22px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
     display: inline-flex; align-items: center; justify-content: center;
-    background: linear-gradient(135deg, var(--hw-brand), var(--hw-brand-2)); color: #fff; font-size: 0.62rem; font-weight: 700;
+    background: linear-gradient(135deg, var(--hw-brand), var(--hw-brand-2)); color: #fff; font-size: 0.74rem; font-weight: 700;
   }
-  .fc-membro-ava img { width: 100%; height: 100%; object-fit: cover; }
+  .fc-membro-ava img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .fc-membro:has(input:checked) { background: rgba(0,121,107,.12); border-color: var(--hw-brand); color: var(--hw-brand-2); font-weight: 600; }
   html.dark .fc-membro { border-color: var(--hw-border); color: var(--hw-text2); }
   html.dark .fc-membro:has(input:checked) { color: var(--hw-brand); }
@@ -579,7 +593,6 @@
   .fc-side { display: none; }
   .fc-grid.two .fc-side {
     display: block; border-left: 1px solid #eef0f2; padding-left: 18px;
-    max-height: 52vh; overflow-y: auto;
   }
   .fc-grid.two .fc-side .tp-section-title { margin-top: 0; }
   html.dark .fc-grid.two .fc-side { border-left-color: var(--hw-border); }
@@ -602,7 +615,41 @@
   .fc-cliente-sel a:hover { color: #e53935; }
   html.dark .fc-cliente-sel { background: var(--hw-input-bg); border-color: var(--hw-border); color: var(--hw-text); }
 
-  #modal-add-card .modal-content { max-height: 65vh; overflow-y: auto; }
+  /* O Materialize já deixa o .modal com overflow-y:auto + max-height:70%. Somado
+     ao overflow do .modal-content, dava duas barras aninhadas (aquela barra gorda
+     por cima do modal). Aqui a casca não rola — quem rola é só o conteúdo. */
+  #modal-add-card,
+  #modal-card-kanban { max-height: 88vh; overflow: hidden; }
+  #modal-add-card .modal-content,
+  #modal-card-kanban .modal-content { max-height: calc(88vh - 72px); overflow-y: auto; }
+
+  /* Barra de rolagem fina, no tema (a padrão do Windows fica branca e larga) */
+  #modal-add-card .modal-content::-webkit-scrollbar,
+  #modal-card-kanban .modal-content::-webkit-scrollbar { width: 8px; }
+  #modal-add-card .modal-content::-webkit-scrollbar-track,
+  #modal-card-kanban .modal-content::-webkit-scrollbar-track { background: transparent; }
+  #modal-add-card .modal-content::-webkit-scrollbar-thumb,
+  #modal-card-kanban .modal-content::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,.18); border-radius: 8px;
+  }
+  html.dark #modal-add-card .modal-content::-webkit-scrollbar-thumb,
+  html.dark #modal-card-kanban .modal-content::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,.18);
+  }
+  #modal-add-card .modal-content,
+  #modal-card-kanban .modal-content { scrollbar-width: thin; scrollbar-color: rgba(128,128,128,.45) transparent; }
+
+  /* Botão "Membros e comentários do Kanban" no card (ao lado do de etiquetas) */
+  .card-kb-btn {
+    background: transparent; border: none; border-radius: 50%;
+    width: 28px; height: 28px; line-height: 0; cursor: pointer; color: #9099a1;
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .card-kb-btn i { font-size: 18px; }
+  .card-kb-btn:hover { background: rgba(0,121,107,.12); color: var(--hw-brand); }
+  #modal-card-kanban { border-radius: 12px; max-width: 840px; width: 92%; }
+  html.dark #modal-card-kanban { background-color: var(--hw-surface) !important; color: var(--hw-text) !important; }
+  html.dark #modal-card-kanban .modal-footer { background-color: var(--hw-surface) !important; }
 
   /* Toggle ticket/avulso */
   .add-card-toggle { display: inline-flex; background: #eef0f2; border-radius: 8px; padding: 3px; margin-bottom: 14px; gap: 2px; }
@@ -981,7 +1028,7 @@
         {% else %}
           {% for card in coluna.lista %}
             {% if card.ticket %}
-              {% include "core/_kanban_card.html" with ticket=card.ticket draggable=True card_id=card.id done=coluna.encerrada etiquetas=card.etiquetas.all %}
+              {% include "core/_kanban_card.html" with ticket=card.ticket draggable=True card_id=card.id done=coluna.encerrada etiquetas=card.etiquetas.all card=card %}
             {% elif card.nota %}
               {% include "core/_kanban_nota_card.html" with card=card done=coluna.encerrada %}
             {% else %}
@@ -1138,7 +1185,10 @@
             {% for u in usuarios %}
               <label class="fc-membro">
                 <input type="checkbox" value="{{ u.id }}">
-                <span class="fc-membro-ava">{% if u.foto %}<img src="{{ u.foto.url }}" alt="">{% else %}{{ u.get_full_name|default:u.username|first|upper }}{% endif %}</span>
+                <span class="fc-membro-ava">
+                  {{ u.get_full_name|default:u.username|first|upper }}
+                  {% if u.foto %}<img src="{{ u.foto.url }}" alt="" onerror="this.remove()">{% endif %}
+                </span>
                 <span class="fc-membro-nome">{{ u.get_full_name|default:u.username }}</span>
               </label>
             {% endfor %}
@@ -1165,6 +1215,49 @@
       <button id="btn-salvar-avulso" class="btn teal darken-1" type="button" style="border-radius:6px; display:none;">
         <i class="material-icons left">save</i>Salvar
       </button>
+    </div>
+  </div>
+
+  <!-- ── Modal: Kanban do card (ticket/nota) — membros + comentários internos ── -->
+  <div id="modal-card-kanban" class="modal">
+    <div class="modal-content">
+      <h5 id="kbc-titulo" style="margin:0 0 4px; font-size:1.05rem; font-weight:700;">Kanban do card</h5>
+      <p style="margin:0 0 14px; font-size:0.8rem; color:#8a8f98;">
+        Membros e comentários internos do Kanban. Não altera o ticket nem a nota vinculados.
+      </p>
+      <input type="hidden" id="kbc-card-id" value="">
+      <div class="fc-grid two">
+        <div class="fc-main">
+          <label class="fc-lbl">Membros</label>
+          <div class="fc-membros" id="kbc-membros">
+            {% for u in usuarios %}
+              <label class="fc-membro">
+                <input type="checkbox" value="{{ u.id }}">
+                <span class="fc-membro-ava">
+                  {{ u.get_full_name|default:u.username|first|upper }}
+                  {% if u.foto %}<img src="{{ u.foto.url }}" alt="" onerror="this.remove()">{% endif %}
+                </span>
+                <span class="fc-membro-nome">{{ u.get_full_name|default:u.username }}</span>
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="fc-side">
+          <h6 class="tp-section-title"><i class="material-icons tiny">forum</i> Comentários</h6>
+          <form class="tp-comment-form" id="kbc-comment-form">
+            <textarea id="kbc-comment-text" placeholder="Escreva um comentário..." maxlength="2000"></textarea>
+            <div class="tp-comment-actions">
+              <button type="submit" class="btn teal darken-1" style="border-radius:6px;">
+                <i class="material-icons left">send</i>Comentar
+              </button>
+            </div>
+          </form>
+          <div id="kbc-comment-list"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <a href="#!" class="modal-close btn-flat grey-text">Fechar</a>
     </div>
   </div>
 
@@ -1564,6 +1657,93 @@ window.kanbanUrl = function (url) {
   });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && pop) fechar();
+  });
+})();
+</script>
+<script>
+// ── Kanban do card (ticket/nota): membros + comentários internos ────────
+(function () {
+  const modalEl = document.getElementById('modal-card-kanban');
+  if (!modalEl) return;
+  const inst      = M.Modal.init(modalEl, {});
+  const cardIdEl  = document.getElementById('kbc-card-id');
+  const membrosEl = document.getElementById('kbc-membros');
+  const listaEl   = document.getElementById('kbc-comment-list');
+  const formEl    = document.getElementById('kbc-comment-form');
+  const textoEl   = document.getElementById('kbc-comment-text');
+
+  function csrf() {
+    const m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? m[1] : '';
+  }
+  async function post(url, body) {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrf(), 'X-Requested-With': 'XMLHttpRequest' },
+      body,
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data.error || 'Erro');
+    return data;
+  }
+
+  // Reflete os avatares no card do board após mudar os membros.
+  function pintarMembros(cardId, html) {
+    const alvo = document.querySelector('.fc-avatars[data-membros-for="' + cardId + '"]');
+    if (alvo) alvo.innerHTML = html;
+  }
+
+  async function abrir(cardId) {
+    cardIdEl.value = cardId;
+    membrosEl.querySelectorAll('input[type=checkbox]').forEach(c => { c.checked = false; });
+    listaEl.innerHTML = '<p class="tp-empty">Carregando...</p>';
+    inst.open();
+    try {
+      const resp = await fetch('/kanban/card/detalhe/?card_id=' + cardId,
+                               { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const d = await resp.json().catch(() => ({}));
+      if (!resp.ok) { M.toast({ html: 'Erro ao carregar card', classes: 'red' }); return; }
+      const ids = new Set((d.membros || []).map(m => String(m.id)));
+      membrosEl.querySelectorAll('input[type=checkbox]').forEach(c => { c.checked = ids.has(c.value); });
+      listaEl.innerHTML = d.comentarios_html || '<p class="tp-empty">Nenhum comentário.</p>';
+    } catch {
+      M.toast({ html: 'Erro de rede', classes: 'red' });
+    }
+  }
+
+  // Membros salvam sozinhos ao marcar/desmarcar (sem botão de salvar).
+  membrosEl.addEventListener('change', async function () {
+    const cardId = cardIdEl.value;
+    if (!cardId) return;
+    const body = new URLSearchParams();
+    body.set('card_id', cardId);
+    membrosEl.querySelectorAll('input[type=checkbox]:checked')
+      .forEach(c => body.append('membros', c.value));
+    try {
+      const d = await post('/kanban/card/membros/', body);
+      pintarMembros(cardId, d.html);
+    } catch (e) { M.toast({ html: e.message, classes: 'red' }); }
+  });
+
+  formEl.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const texto = textoEl.value.trim();
+    if (!texto) return;
+    const body = new URLSearchParams({ card_id: cardIdEl.value, texto });
+    try {
+      const d = await post('/kanban/card/comentar/', body);
+      const vazio = listaEl.querySelector('.tp-empty');
+      if (vazio) vazio.remove();
+      listaEl.insertAdjacentHTML('afterbegin', d.html);
+      textoEl.value = '';
+    } catch (e) { M.toast({ html: e.message, classes: 'red' }); }
+  });
+
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.card-kb-btn');
+    if (!btn) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    abrir(btn.dataset.cardId);
   });
 })();
 </script>

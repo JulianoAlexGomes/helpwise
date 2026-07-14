@@ -2625,7 +2625,9 @@ window.kanbanUrl = function (url) {
     btn.textContent = 'Encerrando...';
 
     try {
-      const body = new URLSearchParams({ solucao });
+      // coluna_id: o backend precisa saber de QUAL quadro veio o encerramento —
+      // um ticket que está no quadro de Desenvolvimento só pode ser encerrado por lá.
+      const body = new URLSearchParams({ solucao, coluna_id: pendingColunaId || '' });
       const resp = await fetch(CLOSE_URL(pendingPk), {
         method: 'POST',
         headers: {

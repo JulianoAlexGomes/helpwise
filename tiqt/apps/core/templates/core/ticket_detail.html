@@ -568,14 +568,18 @@
 <div class="fixed-action-btn">
   <a class="btn-floating btn-large red {% if object.encerrado_em or object.cancelado %}disabled{% endif %}" href="{% url 'ticket_update' object.id %}"><i class="material-icons large">edit</i></a>
   <ul>
-    {% if not object.cancelado and not object.encerrado_em %}
+    {% comment %}pode_cancelar: se o ticket está no quadro de Desenvolvimento, só o
+    time de dev (quem tem acesso ao quadro) pode cancelar.{% endcomment %}
+    {% if not object.cancelado and not object.encerrado_em and pode_cancelar %}
       <li><a class="btn-floating teal" href="{% url 'ticket_cancel' object.id %}" title="Cancelar"
              onclick="return confirm('Tem certeza que deseja cancelar este ticket?');"><i class="material-icons">cancel</i></a></li>
     {% endif %}
     {% if not object.cancelado and not object.iniciado_em %}
       <li><a class="btn-floating teal" href="{% url 'ticket_accept' object.id %}" title="Iniciar atendimento"><i class="material-icons">playlist_add</i></a></li>
     {% endif %}
-    {% if object.responsavel and not object.encerrado_em and not object.cancelado and object.iniciado_em %}
+    {% comment %}bloqueado_dev: ticket que virou card no quadro de Desenvolvimento é
+    encerrado pelo time de dev, no quadro deles — o botão nem aparece aqui.{% endcomment %}
+    {% if object.responsavel and not object.encerrado_em and not object.cancelado and object.iniciado_em and not bloqueado_dev %}
       <li><a class="btn-floating teal" href="{% url 'ticket_close' object.id %}" title="Encerrar"><i class="material-icons">check</i></a></li>
     {% endif %}
   </ul>

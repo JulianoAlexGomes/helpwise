@@ -1,0 +1,15 @@
+{% comment %}Grupo: cards que andam juntos pelo quadro (ex.: mesma branch). O wrapper
+é que arrasta — os cards de dentro não são arrastáveis individualmente.{% endcomment %}
+<div class="card-grupo" draggable="true" data-grupo-id="{{ grupo.id }}">
+  <div class="grupo-tag">
+    <i class="material-icons" translate="no">layers</i>
+    <span class="grupo-nome">{{ grupo.nome|default:"Grupo" }}</span>
+    <span class="grupo-qtd">{{ cards|length }}</span>
+    <button class="grupo-desfazer" type="button" title="Desfazer grupo" data-grupo-id="{{ grupo.id }}">
+      <i class="material-icons" translate="no">layers_clear</i>
+    </button>
+  </div>
+  {% for card in cards %}
+    {% include "core/_kanban_card_any.html" with card=card done=done draggable=False %}
+  {% endfor %}
+</div>

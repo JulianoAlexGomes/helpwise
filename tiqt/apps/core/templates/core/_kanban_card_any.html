@@ -1,0 +1,10 @@
+{% comment %}Renderiza um KanbanCard do jeito certo conforme o tipo (ticket, nota ou avulso).
+`draggable` é False quando o card está dentro de um grupo — lá quem arrasta é o
+wrapper do grupo, com todos os cards juntos.{% endcomment %}
+{% if card.ticket_id %}
+  {% include "core/_kanban_card.html" with ticket=card.ticket draggable=draggable card_id=card.id done=done etiquetas=card.etiquetas.all card=card %}
+{% elif card.nota_id %}
+  {% include "core/_kanban_nota_card.html" with card=card done=done draggable=draggable %}
+{% else %}
+  {% include "core/_kanban_free_card.html" with card=card done=done draggable=draggable %}
+{% endif %}

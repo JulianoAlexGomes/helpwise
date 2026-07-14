@@ -1,6 +1,8 @@
 {% with nota=card.nota %}
-<div class="card ticket-card nota-card z-depth-1 {% if done %}card-done{% endif %}"
-     draggable="true" data-card-id="{{ card.id }}" data-nota-id="{{ nota.id }}">
+<div class="card ticket-card nota-card z-depth-1 {% if done or card.concluido %}card-done{% endif %}"
+     {% if draggable %}draggable="true"{% endif %}
+     data-card-id="{{ card.id }}" data-nota-id="{{ nota.id }}"
+     data-concluido="{% if card.concluido %}1{% else %}0{% endif %}">
   <div class="card-actions">
     <button class="card-kb-btn" type="button" title="Membros e comentários do Kanban" data-card-id="{{ card.id }}">
       <i class="material-icons" translate="no">groups</i>
@@ -25,7 +27,10 @@
       {% endif %}
     </div>
 
-    <p class="card-title">{{ nota.titulo|truncatechars:60 }}</p>
+    <div class="card-title-row">
+      {% include "core/_kanban_done_btn.html" with card=card done=done %}
+      <p class="card-title">{{ nota.titulo|truncatechars:60 }}</p>
+    </div>
 
     {% if nota.responsavel %}
     <div class="card-meta">
@@ -50,8 +55,6 @@
       <div class="free-card-badge"><i class="material-icons" translate="no">forum</i>{{ card.comentarios.count }}</div>
       {% endif %}
     </div>
-
-    {% if done %}<div class="card-done-check"><i class="material-icons" translate="no">check_circle</i> Concluído</div>{% endif %}
   </div>
 </div>
 {% endwith %}

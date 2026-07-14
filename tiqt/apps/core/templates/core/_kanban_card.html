@@ -1,8 +1,9 @@
 {% with prio=ticket.prioridade.descricao|default:"" %}
-<div class="card ticket-card z-depth-1 {% if ticket.status == 2 %}ticket-card-closed{% endif %} {% if done %}card-done{% endif %}"
+<div class="card ticket-card z-depth-1 {% if ticket.status == 2 %}ticket-card-closed{% endif %} {% if done or card.concluido %}card-done{% endif %}"
      {% if draggable %}draggable="true"{% endif %}
      data-pk="{{ ticket.pk }}"
      {% if card_id %}data-card-id="{{ card_id }}"{% endif %}
+     data-concluido="{% if card.concluido %}1{% else %}0{% endif %}"
      data-status="{{ ticket.status }}">
   {% if card_id %}
   <div class="card-actions">
@@ -32,7 +33,12 @@
       </span>
     </div>
 
-    <p class="card-title">{{ ticket.titulo|default:"(sem título)"|truncatechars:60 }}</p>
+    <div class="card-title-row">
+      {% if card_id %}
+      {% include "core/_kanban_done_btn.html" with card=card card_id=card_id done=done %}
+      {% endif %}
+      <p class="card-title">{{ ticket.titulo|default:"(sem título)"|truncatechars:60 }}</p>
+    </div>
 
     <div class="card-meta">
       <i class="material-icons">business</i>
@@ -64,8 +70,6 @@
       {% endif %}
     </div>
     {% endif %}
-
-    {% if done %}<div class="card-done-check"><i class="material-icons" translate="no">check_circle</i> Concluído</div>{% endif %}
   </div>
 </div>
 {% endwith %}

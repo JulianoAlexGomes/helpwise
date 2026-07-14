@@ -81,7 +81,7 @@
   /* Coluna = painel translúcido compacto que abraça o conteúdo (estilo Trello):
      largura fixa, encaixa na altura dos cards em vez de esticar até o rodapé. */
   body.kanban-trello .kanban-col {
-    flex: 0 0 272px; min-width: 272px; max-width: 272px;
+    flex: 0 0 286px; min-width: 286px; max-width: 286px;
     align-self: flex-start;
     background: rgba(255,255,255,.055);
     border-radius: 12px;
@@ -258,7 +258,7 @@
 
   .kanban-col {
     flex: 1 1 0;
-    min-width: 280px;
+    min-width: 292px;
   }
 
   .kanban-col-header {
@@ -366,15 +366,100 @@
   .ticket-card[draggable="true"]:active { cursor: grabbing; }
   .ticket-card.dragging { opacity: 0.45; }
 
-  /* Card em coluna Encerrado: levemente apagado + selo verde de concluído (estilo Trello) */
+  /* Card concluído (marcado à mão ou em coluna Encerrado): levemente apagado.
+     O check verde ao lado do título já diz o resto — nada de selo no rodapé. */
   .ticket-card.card-done { opacity: 0.62; }
   .ticket-card.card-done:hover { opacity: 0.9; }
-  .card-done-check {
-    display: inline-flex; align-items: center; gap: 4px; margin-top: 10px;
-    font-size: 0.7rem; font-weight: 700; color: #43a047; letter-spacing: .02em;
+
+  /* ── Grupo de cards (andam juntos pelo quadro, ex.: mesma branch) ───── */
+  .card-grupo {
+    position: relative;
+    border: 2px solid var(--hw-brand, #00796b);
+    border-radius: 10px;
+    background: rgba(0,121,107,.05);
+    padding: 6px 6px 2px;
+    margin-bottom: 10px;
+    cursor: grab;
   }
-  .card-done-check i { font-size: 16px; }
-  html.dark .card-done-check { color: #66bb6a; }
+  .card-grupo:active { cursor: grabbing; }
+  .card-grupo.dragging { opacity: 0.45; }
+  html.dark .card-grupo { border-color: #4db6ac; background: rgba(77,182,172,.07); }
+  /* Os cards de dentro colam um no outro e não têm sombra de hover própria */
+  .card-grupo .ticket-card { margin-bottom: 6px !important; cursor: grab; }
+  .grupo-tag {
+    display: flex; align-items: center; gap: 5px;
+    margin: -2px 0 6px; padding: 0 2px;
+    font-size: 0.72rem; font-weight: 700; letter-spacing: .02em;
+    color: var(--hw-brand, #00796b);
+  }
+  html.dark .grupo-tag { color: #4db6ac; }
+  .grupo-tag i { font-size: 15px; }
+  .grupo-nome { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .grupo-qtd {
+    background: var(--hw-brand, #00796b); color: #fff;
+    border-radius: 10px; padding: 0 6px; font-size: 0.66rem;
+  }
+  html.dark .grupo-qtd { background: #4db6ac; color: #0b1114; }
+  .grupo-desfazer {
+    background: transparent; border: none; padding: 0; cursor: pointer;
+    width: 20px; height: 20px; color: #9099a1; opacity: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .grupo-desfazer i { font-size: 16px; }
+  .card-grupo:hover .grupo-desfazer { opacity: 1; }
+  .grupo-desfazer:hover { color: #e53935; }
+
+  /* Card selecionado (Ctrl+clique) para agrupar */
+  .ticket-card.card-sel {
+    box-shadow: 0 0 0 2px #1e88e5, 0 6px 16px rgba(0,0,0,.13) !important;
+  }
+
+  /* Barra flutuante da seleção */
+  .kb-sel-bar {
+    display: none;
+    position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
+    z-index: 1100;
+    align-items: center; gap: 12px;
+    padding: 10px 14px; border-radius: 10px;
+    background: #263238; color: #fff; box-shadow: 0 8px 26px rgba(0,0,0,.35);
+    font-size: 0.85rem;
+  }
+  .kb-sel-bar.ativo { display: flex; }
+  .kb-sel-bar button {
+    border: none; border-radius: 7px; padding: 6px 12px; cursor: pointer;
+    font-size: 0.8rem; font-weight: 600;
+  }
+  .kb-sel-agrupar { background: var(--hw-brand, #00796b); color: #fff; }
+  .kb-sel-agrupar:disabled { opacity: .5; cursor: default; }
+  .kb-sel-limpar { background: rgba(255,255,255,.14); color: #fff; }
+
+  /* Círculo de "concluído" à esquerda do título (estilo Trello). Sempre visível. */
+  .card-title-row { display: flex; align-items: flex-start; gap: 6px; }
+  .card-done-btn {
+    background: transparent; border: none; padding: 0; margin-top: 5px;
+    width: 18px; height: 18px; flex-shrink: 0; cursor: pointer; color: #9099a1;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: color .15s;
+  }
+  .card-done-btn i { font-size: 18px; }
+  .card-done-btn:hover { color: #43a047; }
+  .card-done-btn.marcado { color: #43a047; }
+  /* Na coluna de encerrado o botão só reflete a coluna — não é clicável */
+  .card-done-btn:disabled { cursor: default; color: #43a047; }
+
+  /* O Materialize pinta QUALQUER <button>:focus de teal (aquele quadrado feio que
+     aparecia no clique). Os botões dos cards são só ícones: sem fundo no foco. */
+  .card-done-btn:focus,
+  .card-remove-btn:focus,
+  .card-label-btn:focus,
+  .card-kb-btn:focus,
+  .grupo-desfazer:focus {
+    background-color: transparent;
+    outline: none;
+  }
+  /* No card avulso o título está numa linha flex própria (com o chip de
+     prioridade), então o botão fica centralizado e não precisa do recuo. */
+  .free-card .card-done-btn { margin-top: 0; }
 
   .ticket-card .card-content { padding: 12px 14px !important; }
 
@@ -1359,14 +1444,8 @@ por pixel fixo (right: 16/210/320), o que não escala ao acrescentar botões.{% 
             <div class="kanban-empty">Nenhum ticket</div>
           {% endfor %}
         {% else %}
-          {% for card in coluna.lista %}
-            {% if card.ticket %}
-              {% include "core/_kanban_card.html" with ticket=card.ticket draggable=True card_id=card.id done=coluna.encerrada etiquetas=card.etiquetas.all card=card %}
-            {% elif card.nota %}
-              {% include "core/_kanban_nota_card.html" with card=card done=coluna.encerrada %}
-            {% else %}
-              {% include "core/_kanban_free_card.html" with card=card done=coluna.encerrada %}
-            {% endif %}
+          {% for bloco in coluna.blocos %}
+            {% include "core/_kanban_bloco.html" with bloco=bloco done=coluna.encerrada %}
           {% endfor %}
           <button class="add-card-btn" type="button" data-coluna-id="{{ coluna.id }}">
             <i class="material-icons" translate="no">add</i> Adicionar card
@@ -1392,6 +1471,15 @@ por pixel fixo (right: 16/210/320), o que não escala ao acrescentar botões.{% 
     </div>
 
   </div><!-- /kanban-board -->
+
+  {# Barra da seleção múltipla (Ctrl+clique nos cards) para agrupar #}
+  <div id="kb-sel-bar" class="kb-sel-bar">
+    <span id="kb-sel-msg">0 cards selecionados</span>
+    <button type="button" class="kb-sel-agrupar" id="kb-sel-agrupar">
+      <i class="material-icons left" translate="no" style="font-size:16px; margin-right:4px;">layers</i>Agrupar
+    </button>
+    <button type="button" class="kb-sel-limpar" id="kb-sel-limpar">Limpar</button>
+  </div>
 
   <!-- ── Modal: Criar / editar coluna ────────────────── -->
   <div id="modal-coluna" class="modal">
@@ -2256,6 +2344,10 @@ window.kanbanUrl = function (url) {
   const CARD_MOVER_URL  = '/kanban/card/mover/';
   const CARDS_REORDENAR_URL = '/kanban/cards/reordenar/';
   const REMOVE_CARD_URL = '/kanban/card/remover/';
+  const CARD_CONCLUIR_URL = '/kanban/card/concluir/';
+  const GRUPO_CRIAR_URL    = '/kanban/grupo/criar/';
+  const GRUPO_DESFAZER_URL = '/kanban/grupo/desfazer/';
+  const GRUPO_MOVER_URL    = '/kanban/grupo/mover/';
   const BUSCA_URL       = '/ticket/busca-ajax/';
   const CLIENTE_BUSCA_URL = '/api/clientes/busca/';
   const NOTA_BUSCA_URL  = '/nota/busca-ajax/';
@@ -2276,6 +2368,7 @@ window.kanbanUrl = function (url) {
   let pendingColunaId = null;   // coluna destino do encerramento
   let pendingZone = null;       // drop-zone destino
   let pendingSourceZone = null; // drop-zone origem
+  let pendingGrupo = null;      // wrapper do grupo, quando é o grupo inteiro que está sendo encerrado
 
   // ── Pré-visualização do ticket ──────────────────────
   const PREVIEW_URL = (pk) => `/ticket/${pk}/preview-ajax/`;
@@ -2427,7 +2520,7 @@ window.kanbanUrl = function (url) {
     zone.insertBefore(ph, ref);
   }
 
-  document.querySelectorAll('.ticket-card[draggable="true"]').forEach(bindDraggable);
+  document.querySelectorAll('.ticket-card[draggable="true"], .card-grupo').forEach(bindDraggable);
 
   document.querySelectorAll('.kanban-drop-zone').forEach(zone => {
     zone.addEventListener('dragover', e => {
@@ -2450,6 +2543,7 @@ window.kanbanUrl = function (url) {
 
       const pk        = draggingCard.dataset.pk;          // undefined em card avulso
       const cardId    = draggingCard.dataset.cardId;      // definido em quadros personalizados
+      const grupoId   = draggingCard.dataset.grupoId;     // definido quando arrasta um grupo
       const colStatus = zone.dataset.status;              // '' (livre) ou '0'/'1'/'2'/'3'
       const colunaId  = zone.dataset.colunaId;
       const card      = draggingCard;
@@ -2465,6 +2559,29 @@ window.kanbanUrl = function (url) {
       if (sourceZone === zone) {
         inserirCard(zone, card, alvo);
         await salvarOrdem(zone);
+        return;
+      }
+
+      // ── Grupo: todos os cards vão juntos ────────────────────────────────
+      if (grupoId) {
+        const tickets = ticketsDoGrupo(card);
+        // Encerrado: uma única solução vale para todos os tickets do grupo.
+        if (colStatus === '2' && tickets.length) {
+          pendingGrupo      = card;
+          pendingPk         = null;
+          pendingCard       = null;
+          pendingCardId     = null;
+          pendingColunaId   = colunaId;
+          pendingZone       = zone;
+          pendingSourceZone = sourceZone;
+          document.getElementById('modal-ticket-id').textContent =
+            tickets.map(c => `#${c.dataset.pk}`).join(', ');
+          document.getElementById('modal-solucao-text').value = '';
+          document.getElementById('modal-solucao-error').style.display = 'none';
+          modalInst.open();
+          return;
+        }
+        await moverGrupoServer(zone, card, sourceZone, alvo);
         return;
       }
 
@@ -2493,11 +2610,19 @@ window.kanbanUrl = function (url) {
   });
 
   // ── Reordenar cards dentro da coluna (arrastar, estilo Trello) ─────────
-  // Descobre antes de qual card soltar: o primeiro cuja metade de cima está
+  // O que a coluna reordena são os ITENS de primeiro nível: cards soltos e
+  // grupos. Os cards de dentro de um grupo não contam — eles vêm junto com ele.
+  function itensDaZona(zone, ignorarArrastado) {
+    const sel = ignorarArrastado
+      ? ':scope > .ticket-card:not(.dragging), :scope > .card-grupo:not(.dragging)'
+      : ':scope > .ticket-card, :scope > .card-grupo';
+    return Array.from(zone.querySelectorAll(sel));
+  }
+
+  // Descobre antes de qual item soltar: o primeiro cuja metade de cima está
   // abaixo do cursor. Null = vai para o fim da coluna.
   function posicaoDeInsercao(zone, y) {
-    const cards = Array.from(zone.querySelectorAll('.ticket-card:not(.dragging)'));
-    return cards.find(c => {
+    return itensDaZona(zone, true).find(c => {
       const r = c.getBoundingClientRect();
       return y < r.top + r.height / 2;
     }) || null;
@@ -2514,13 +2639,17 @@ window.kanbanUrl = function (url) {
     const addBtn = zone.querySelector('.add-card-btn');
     if (addBtn) addBtn.insertAdjacentHTML('beforebegin', html);
     else zone.insertAdjacentHTML('beforeend', html);
-    zone.querySelectorAll('.ticket-card[draggable="true"]').forEach(bindDraggable);
+    zone.querySelectorAll('.ticket-card[draggable="true"], .card-grupo').forEach(bindDraggable);
   }
 
   // Persiste a ordem da coluna inteira (quadro personalizado usa card_id,
-  // o quadro padrão usa o ticket).
+  // o quadro padrão usa o ticket). Um grupo entra como os seus cards em
+  // sequência — é isso que os mantém contíguos em `ordem` no banco.
   async function salvarOrdem(zone) {
-    const cards = Array.from(zone.querySelectorAll('.ticket-card'));
+    const cards = itensDaZona(zone).flatMap(
+      item => item.classList.contains('card-grupo')
+        ? Array.from(item.querySelectorAll('.ticket-card'))
+        : [item]);
     const body = new URLSearchParams({ coluna_id: zone.dataset.colunaId });
     const cardIds   = cards.map(c => c.dataset.cardId).filter(Boolean);
     const ticketIds = cards.filter(c => !c.dataset.cardId).map(c => c.dataset.pk).filter(Boolean);
@@ -2583,27 +2712,99 @@ window.kanbanUrl = function (url) {
       salvarOrdem(zone);
       if (sourceZone) salvarOrdem(sourceZone);
 
-      if (data.status !== null && typeof data.status !== 'undefined') {
-        card.dataset.status = data.status;
-        if (data.status === 1 && data.responsavel) {
-          const respEl = card.querySelector('.responsavel-name');
-          if (respEl) respEl.textContent = data.responsavel;
-          const respRow = card.querySelector('.responsavel-row');
-          if (respRow) respRow.style.display = 'flex';
-        }
-      }
-      // Nota do mural: reflete o novo status no chip
-      if (data.nota_status) {
-        const chip = card.querySelector('.nota-status');
-        if (chip) {
-          chip.textContent = data.nota_status;
-          chip.style.background = data.nota_cor;
-        }
-      }
+      aplicarDadosCard(card, data);
       M.toast({ html: pk ? `Ticket #${pk} movido!` : 'Card movido!', classes: 'teal darken-1' });
     } catch {
       desfazer();   // caiu a rede: devolve o card para a coluna de origem
       M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
+    } finally {
+      gravacoesPendentes--;
+    }
+  }
+
+  // Reflete no card o que o servidor devolveu depois do move (status do ticket,
+  // responsável de quem iniciou o atendimento, status da nota).
+  function aplicarDadosCard(card, data) {
+    if (!data) return;
+    if (data.status !== null && typeof data.status !== 'undefined') {
+      card.dataset.status = data.status;
+      if (data.status === 1 && data.responsavel) {
+        const respEl = card.querySelector('.responsavel-name');
+        if (respEl) respEl.textContent = data.responsavel;
+        const respRow = card.querySelector('.responsavel-row');
+        if (respRow) respRow.style.display = 'flex';
+      }
+    }
+    // Nota do mural: reflete o novo status no chip
+    if (data.nota_status) {
+      const chip = card.querySelector('.nota-status');
+      if (chip) {
+        chip.textContent = data.nota_status;
+        chip.style.background = data.nota_cor;
+      }
+    }
+  }
+
+  // ── Grupos: cards que andam juntos ────────────────────────────────────
+  function cardsDoGrupo(grupo) {
+    return Array.from(grupo.querySelectorAll('.ticket-card'));
+  }
+  // Só os cards de ticket (os que precisam de solução para encerrar)
+  function ticketsDoGrupo(grupo) {
+    return cardsDoGrupo(grupo).filter(c => c.dataset.pk);
+  }
+
+  // Move o grupo inteiro para outra coluna: otimista na tela, e volta atrás se
+  // o servidor recusar (a view move todos os cards numa transação só).
+  async function moverGrupoServer(zone, grupo, sourceZone, alvo) {
+    const irmaoOriginal = grupo.nextElementSibling;
+    const cards = cardsDoGrupo(grupo);
+    const n = cards.length;
+
+    inserirCard(zone, grupo, alvo);
+    removeEmpty(zone);
+    addEmptyIfNeeded(sourceZone);
+    refreshCount(zone, +n);
+    refreshCount(sourceZone, -n);
+    cards.forEach(c => aplicarDone(c, zone.dataset.status === '2'));
+
+    function desfazer() {
+      sourceZone.insertBefore(grupo, irmaoOriginal || null);
+      removeEmpty(sourceZone);
+      addEmptyIfNeeded(zone);
+      refreshCount(zone, -n);
+      refreshCount(sourceZone, +n);
+      cards.forEach(c => aplicarDone(c, sourceZone.dataset.status === '2'));
+    }
+
+    gravacoesPendentes++;
+    try {
+      const resp = await fetch(GRUPO_MOVER_URL, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCsrf(),
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({ grupo_id: grupo.dataset.grupoId, coluna_id: zone.dataset.colunaId }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        desfazer();
+        M.toast({ html: data.error === 'needs_solution'
+          ? 'Encerre pelo fluxo (arraste para uma coluna Encerrado).'
+          : (data.error || 'Erro ao mover o grupo'), classes: 'red' });
+        return false;
+      }
+      salvarOrdem(zone);
+      if (sourceZone) salvarOrdem(sourceZone);
+      cards.forEach(c => aplicarDadosCard(c, (data.cards || {})[c.dataset.cardId]));
+      M.toast({ html: `Grupo movido (${n} cards)!`, classes: 'teal darken-1' });
+      return true;
+    } catch {
+      desfazer();
+      M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
+      return false;
     } finally {
       gravacoesPendentes--;
     }
@@ -2625,6 +2826,13 @@ window.kanbanUrl = function (url) {
     btn.textContent = 'Encerrando...';
 
     try {
+      // Grupo indo para o Encerrado: a mesma solução encerra todos os tickets
+      // dele, um a um (mesmo endpoint de sempre), e só então o grupo se move.
+      if (pendingGrupo) {
+        await encerrarGrupo(solucao, btn);
+        return;
+      }
+
       // coluna_id: o backend precisa saber de QUAL quadro veio o encerramento —
       // um ticket que está no quadro de Desenvolvimento só pode ser encerrado por lá.
       const body = new URLSearchParams({ solucao, coluna_id: pendingColunaId || '' });
@@ -2682,8 +2890,44 @@ window.kanbanUrl = function (url) {
       btn.disabled = false;
       btn.innerHTML = '<i class="material-icons left">check</i>Encerrar';
       pendingPk = pendingCard = pendingCardId = pendingColunaId = pendingZone = pendingSourceZone = null;
+      pendingGrupo = null;
     }
   });
+
+  // Encerra todos os tickets do grupo com a mesma solução e depois move o grupo.
+  // Se um ticket for barrado (permissão, p.ex.), para por ali: o grupo não se move
+  // e os que já foram encerrados continuam encerrados — o F5 mostra a verdade.
+  async function encerrarGrupo(solucao, btn) {
+    const grupo = pendingGrupo;
+    const zone = pendingZone;
+    const sourceZone = pendingSourceZone;
+    const tickets = ticketsDoGrupo(grupo);
+
+    for (const card of tickets) {
+      if (card.dataset.status === '2') continue;   // já estava encerrado
+      const resp = await fetch(CLOSE_URL(card.dataset.pk), {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCsrf(),
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({ solucao, coluna_id: pendingColunaId || '' }),
+      });
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({}));
+        M.toast({ html: data.error || `Erro ao encerrar o ticket #${card.dataset.pk}`, classes: 'red' });
+        return;
+      }
+      card.dataset.status = '2';
+      card.classList.add('ticket-card-closed');
+    }
+
+    modalInst.close();
+    // Agora o move não esbarra mais no "needs_solution": os tickets já estão encerrados.
+    const ok = await moverGrupoServer(zone, grupo, sourceZone, null);
+    if (ok) M.toast({ html: `Grupo encerrado (${tickets.length} tickets)!`, classes: 'green darken-2' });
+  }
 
   // ── Reordenar colunas (arrastar o header) ────────────
   const board = document.getElementById('kanban-board');
@@ -3060,6 +3304,10 @@ window.kanbanUrl = function (url) {
     }
     const rmBtn = e.target.closest('.card-remove-btn');
     if (rmBtn) { e.preventDefault(); e.stopPropagation(); removerCard(rmBtn); return; }
+    const doneBtn = e.target.closest('.card-done-btn');
+    if (doneBtn) { e.preventDefault(); e.stopPropagation(); toggleConcluido(doneBtn); return; }
+    const ungroupBtn = e.target.closest('.grupo-desfazer');
+    if (ungroupBtn) { e.preventDefault(); e.stopPropagation(); desfazerGrupo(ungroupBtn); return; }
     const freeContent = e.target.closest('.free-card-content');
     if (freeContent) { abrirEdicaoAvulso(freeContent.dataset.cardId); }
   });
@@ -3344,6 +3592,144 @@ window.kanbanUrl = function (url) {
     }
   }
 
+  // Marca/desmarca o selo de concluído do card. É só visual: o ticket/nota
+  // vinculado não muda de status e o card não sai da coluna.
+  // Marca na hora (otimista) e só volta atrás se o servidor recusar — esperar a
+  // resposta para pintar o círculo dava a sensação de clique lento.
+  async function toggleConcluido(btn) {
+    const card = btn.closest('.ticket-card');
+    const naColunaDone = zonaDoCard(card).dataset.status === '2';
+    const marcar = !btn.classList.contains('marcado');
+    const antes = card.dataset.concluido;
+
+    card.dataset.concluido = marcar ? '1' : '0';
+    aplicarDone(card, naColunaDone);
+
+    function desfazer() {
+      card.dataset.concluido = antes;
+      aplicarDone(card, naColunaDone);
+    }
+
+    gravacoesPendentes++;   // segura o auto-refresh enquanto a gravação está em voo
+    try {
+      const resp = await fetch(CARD_CONCLUIR_URL, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCsrf(),
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({ card_id: btn.dataset.cardId, concluido: marcar ? '1' : '0' }),
+      });
+      if (!resp.ok) {
+        desfazer();
+        M.toast({ html: 'Erro ao marcar o card', classes: 'red' });
+      }
+    } catch {
+      desfazer();
+      M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
+    } finally {
+      gravacoesPendentes--;
+    }
+  }
+
+  // ── Seleção múltipla (Ctrl+clique) para agrupar cards ──────────────────
+  const selBar     = document.getElementById('kb-sel-bar');
+  const selMsg     = document.getElementById('kb-sel-msg');
+  const btnAgrupar = document.getElementById('kb-sel-agrupar');
+
+  function cardsSelecionados() {
+    return Array.from(document.querySelectorAll('.ticket-card.card-sel'));
+  }
+
+  function atualizarBarraSel() {
+    const cards = cardsSelecionados();
+    selBar.classList.toggle('ativo', cards.length > 0);
+    const colunas = new Set(cards.map(c => c.closest('.kanban-drop-zone').dataset.colunaId));
+    const mesmaColuna = colunas.size <= 1;
+    selMsg.textContent = mesmaColuna
+      ? `${cards.length} card${cards.length === 1 ? '' : 's'} selecionado${cards.length === 1 ? '' : 's'}`
+      : 'Selecione cards de uma coluna só';
+    btnAgrupar.disabled = cards.length < 2 || !mesmaColuna;
+  }
+
+  function limparSelecao() {
+    cardsSelecionados().forEach(c => c.classList.remove('card-sel'));
+    atualizarBarraSel();
+  }
+
+  // Captura: precisa vir antes dos cliques normais do card (abrir modal, etc.)
+  document.addEventListener('click', e => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    const card = e.target.closest('.ticket-card[data-card-id]');
+    if (!card) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    card.classList.toggle('card-sel');
+    atualizarBarraSel();
+  }, true);
+
+  document.getElementById('kb-sel-limpar').addEventListener('click', limparSelecao);
+
+  btnAgrupar.addEventListener('click', async () => {
+    const cards = cardsSelecionados();
+    if (cards.length < 2) return;
+    const nome = prompt('Nome do grupo (ex.: a branch). Pode deixar em branco:', '');
+    if (nome === null) return;   // cancelou
+    btnAgrupar.disabled = true;
+    try {
+      const resp = await fetch(GRUPO_CRIAR_URL, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCsrf(),
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          card_ids: cards.map(c => c.dataset.cardId).join(','),
+          nome: nome.trim(),
+        }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) { M.toast({ html: data.error || 'Erro ao agrupar', classes: 'red' }); return; }
+      // Recarrega: o servidor é quem monta o grupo (borda, ordem e contigüidade).
+      M.toast({ html: 'Cards agrupados!', classes: 'teal darken-1' });
+      location.reload();
+    } catch {
+      M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
+    } finally {
+      btnAgrupar.disabled = false;
+    }
+  });
+
+  // Desfazer grupo: os cards ficam onde estão, só voltam a ser soltos.
+  async function desfazerGrupo(btn) {
+    const grupo = btn.closest('.card-grupo');
+    const zone = grupo.parentElement;
+    try {
+      const resp = await fetch(GRUPO_DESFAZER_URL, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCsrf(),
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({ grupo_id: grupo.dataset.grupoId }),
+      });
+      if (!resp.ok) { M.toast({ html: 'Erro ao desfazer o grupo', classes: 'red' }); return; }
+      cardsDoGrupo(grupo).forEach(card => {
+        zone.insertBefore(card, grupo);
+        card.setAttribute('draggable', 'true');
+        bindDraggable(card);
+      });
+      grupo.remove();
+      salvarOrdem(zone);
+      M.toast({ html: 'Grupo desfeito', classes: 'grey darken-1' });
+    } catch {
+      M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
+    }
+  }
+
   async function removerCard(btn) {
     if (!confirm('Remover este card do quadro? Um ticket vinculado não será apagado.')) return;
     try {
@@ -3358,8 +3744,24 @@ window.kanbanUrl = function (url) {
       });
       if (!resp.ok) { M.toast({ html: 'Erro ao remover card', classes: 'red' }); return; }
       const card = btn.closest('.ticket-card');
-      const zone = card.parentElement;
+      const grupo = card.closest('.card-grupo');
+      const zone = grupo ? grupo.parentElement : card.parentElement;
       card.remove();
+      // Grupo com um card só não existe (o servidor já o dissolveu): tira a borda.
+      if (grupo) {
+        const restantes = cardsDoGrupo(grupo);
+        if (restantes.length < 2) {
+          restantes.forEach(c => {
+            zone.insertBefore(c, grupo);
+            c.setAttribute('draggable', 'true');
+            bindDraggable(c);
+          });
+          grupo.remove();
+        } else {
+          const qtd = grupo.querySelector('.grupo-qtd');
+          if (qtd) qtd.textContent = restantes.length;
+        }
+      }
       refreshCount(zone, -1);
       M.toast({ html: 'Card removido do quadro', classes: 'grey darken-1' });
     } catch {
@@ -3459,20 +3861,26 @@ window.kanbanUrl = function (url) {
     if (empty) empty.remove();
   }
 
-  // Aplica/remove o visual "Concluído" (apagado + selo verde) num card
-  function aplicarDone(card, isDone) {
-    card.classList.toggle('card-done', !!isDone);
-    const content = card.querySelector('.card-content');
-    if (!content) return;
-    let chip = content.querySelector('.card-done-check');
-    if (isDone && !chip) {
-      chip = document.createElement('div');
-      chip.className = 'card-done-check';
-      chip.innerHTML = '<i class="material-icons" translate="no">check_circle</i> Concluído';
-      content.appendChild(chip);
-    } else if (!isDone && chip) {
-      chip.remove();
-    }
+  // A coluna do card: um card dentro de um grupo tem o wrapper como pai.
+  function zonaDoCard(card) {
+    return card.closest('.kanban-drop-zone');
+  }
+
+  // Aplica/remove o visual "Concluído" (card apagado + círculo marcado).
+  // `naColunaDone` = a coluna tem status de encerrado: ali o card está concluído
+  // por definição, e o botão fica marcado e desabilitado. Fora dela, vale a
+  // marcação manual do card.
+  function aplicarDone(card, naColunaDone) {
+    const done = !!naColunaDone || card.dataset.concluido === '1';
+    card.classList.toggle('card-done', done);
+    const btn = card.querySelector('.card-done-btn');
+    if (!btn) return;
+    btn.classList.toggle('marcado', done);
+    btn.querySelector('i').textContent = done ? 'check_circle' : 'radio_button_unchecked';
+    btn.disabled = !!naColunaDone;
+    btn.title = naColunaDone ? 'Concluído: o card está numa coluna de encerrado'
+              : done ? 'Marcar como não concluído'
+              : 'Marcar como concluído';
   }
 
   function addEmptyIfNeeded(zone) {
@@ -3714,7 +4122,7 @@ window.kanbanUrl = function (url) {
         zone.innerHTML = nova.innerHTML;
         // total vem do servidor (a coluna é paginada: contar o DOM daria errado)
         if (nova.dataset.total) zone.dataset.total = nova.dataset.total;
-        zone.querySelectorAll('.ticket-card[draggable="true"]').forEach(bindDraggable);
+        zone.querySelectorAll('.ticket-card[draggable="true"], .card-grupo').forEach(bindDraggable);
 
         // O "Mostrar mais" vive FORA da drop-zone: precisa ser ressincronizado à
         // parte, senão o refresh volta a coluna para 50 cards e o botão fica com

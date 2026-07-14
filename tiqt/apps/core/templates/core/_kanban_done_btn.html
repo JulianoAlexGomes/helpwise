@@ -1,0 +1,10 @@
+{% comment %}Círculo de concluído do card. Numa coluna com status de encerrado (`done`)
+ele já vem marcado e desabilitado: ali quem diz que o card está concluído é a coluna,
+não a marcação manual.{% endcomment %}
+<button class="card-done-btn {% if done or card.concluido %}marcado{% endif %}" type="button"
+        data-card-id="{{ card_id|default:card.id }}"
+        {% if done %}disabled title="Concluído: o card está numa coluna de encerrado"
+        {% elif card.concluido %}title="Marcar como não concluído"
+        {% else %}title="Marcar como concluído"{% endif %}>
+  <i class="material-icons" translate="no">{% if done or card.concluido %}check_circle{% else %}radio_button_unchecked{% endif %}</i>
+</button>

@@ -44,6 +44,14 @@
       <span class="responsavel-name">{{ ticket.responsavel.get_full_name|default:"" }}</span>
     </div>
 
+    {% comment %}headset_mic, e não support_agent: a fonte Material Icons do
+    Materialize é antiga e não tem os glifos lançados depois de ~2019 (viram "tofu").{% endcomment %}
+    <div class="card-meta atendente-row" {% if not ticket.atendente %}style="display:none"{% endif %}
+         title="Atendente">
+      <i class="material-icons">headset_mic</i>
+      <span class="atendente-name">{{ ticket.atendente.get_full_name|default:"" }}</span>
+    </div>
+
     <p class="card-date">{{ ticket.criado_em|date:"d/m/Y H:i" }}</p>
 
     {% if card %}

@@ -166,6 +166,29 @@ class Ticket(models.Model):
         self.cancelado_em = timezone.localtime()
         self.save()
 
+    def reabrir(self, user, novo_status=None):
+        """Reabre um ticket encerrado ou cancelado.
+
+        Limpa as datas/autoria do fechamento, senão o ticket volta a ficar ativo
+        carregando um `encerrado_em` antigo — e o guard "já está encerrado" das views
+        continuaria barrando um novo encerramento.
+
+        As Soluções antigas são mantidas (é histórico); ao encerrar de novo, uma nova
+        é criada e passa a ser a mais recente."""
+        if novo_status is None:
+            novo_status = self.EM_ATENDIMENTO
+        self.status = novo_status
+        self.encerrado_em = None
+        self.cancelado_em = None
+        self.cancelado = None
+        # Voltando para "Em atendimento" sem responsável, assume quem reabriu.
+        if novo_status == self.EM_ATENDIMENTO:
+            if not self.responsavel_id:
+                self.responsavel = user
+            if not self.iniciado_em:
+                self.iniciado_em = timezone.localtime()
+        self.save()
+
     def get_absolute_url(self):
         from django.shortcuts import reverse
         return reverse("ticket_detail", kwargs={"pk": self.pk})

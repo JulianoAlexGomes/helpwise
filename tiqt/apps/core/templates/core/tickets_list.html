@@ -358,7 +358,23 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('btn-lote-encerrar').addEventListener('click', function () {
     const sel = marcados();
     if (!sel.length) return;
-    lista.innerHTML = sel.map(function (c) {
+
+    // Ticket que já virou card no quadro de Desenvolvimento não pode ser encerrado
+    // por aqui — quem encerra é o time de dev. (O backend também barra; isto é só
+    // para avisar antes de abrir o modal.)
+    const bloqueados = sel.filter(function (c) { return linhaDe(c).dataset.dev === '1'; });
+    const permitidos = sel.filter(function (c) { return linhaDe(c).dataset.dev !== '1'; });
+
+    if (bloqueados.length) {
+      const ids = bloqueados.map(function (c) { return '#' + linhaDe(c).dataset.ticketId; }).join(', ');
+      M.toast({
+        html: bloqueados.length + ' no quadro de Desenvolvimento — encerre por lá: ' + ids,
+        classes: 'orange darken-2', displayLength: 6000,
+      });
+    }
+    if (!permitidos.length) return;
+
+    lista.innerHTML = permitidos.map(function (c) {
       const tr = linhaDe(c);
       const id = tr.dataset.ticketId;
       // Aberto (0) ainda não foi iniciado: será assumido em seu nome ao encerrar

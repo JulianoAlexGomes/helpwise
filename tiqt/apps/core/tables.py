@@ -63,4 +63,8 @@ class MeusTicketsTable(TicketTable):
             'data-ticket-id': lambda record: record.pk,
             'data-status': lambda record: record.status,
             'data-titulo': lambda record: record.titulo or '(sem título)',
+            # data-dev: ticket que JÁ É CARD num quadro de Desenvolvimento não pode
+            # ser encerrado por aqui (quem encerra é o time de dev). Vem da anotação
+            # `no_quadro_dev` (Exists) na MyTicketsView. O backend também barra.
+            'data-dev': lambda record: '1' if getattr(record, 'no_quadro_dev', False) else '0',
         }

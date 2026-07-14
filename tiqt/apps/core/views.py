@@ -22,7 +22,7 @@ from .forms import TicketForm, ClienteForm, TicketCloseForm, ComentarioForm
 from .models import Cliente, Ticket, Solucao, ComentarioArquivo, ComentarioImagem, CertificadoCliente, User, Departamento, Prioridade, Cidade, Uf, Tributacao
 from datetime import datetime, timedelta, time
 import tiqt.settings as settings
-from django.db.models import Q
+from django.db.models import Q, Exists, OuterRef
 from django.db.models.deletion import ProtectedError
 from django.core.exceptions import PermissionDenied
 from channels.layers import get_channel_layer
@@ -51,6 +51,80 @@ import json
 from collections import Counter
 
 User = get_user_model()
+
+
+# ── Regra do Desenvolvimento ───────────────────────────────────────────────
+#
+# Um ticket que virou card num quadro de Desenvolvimento passa a ser encerrado
+# PELO TIME DE DEV, no quadro dele. Em qualquer outro caminho (detalhe do ticket,
+# lote de "Meus tickets", quadro padrão) o encerramento é bloqueado.
+#
+# "Quadro de dev" = quadro cujo `departamento_entrada` é Desenvolvimento — o mesmo
+# campo que já configura a Caixa de entrada. Sem id hardcoded: se amanhã houver
+# outro quadro de dev, ele entra na regra sozinho.
+
+DEPTO_DEV = 'desenvolvimento'
+
+
+def quadro_e_de_dev(quadro):
+    if not quadro or not quadro.departamento_entrada_id:
+        return False
+    return (quadro.departamento_entrada.descricao or '').strip().lower() == DEPTO_DEV
+
+
+def cards_em_quadro_dev(ticket_ids=None):
+    """Cards de ticket que estão num quadro de Desenvolvimento."""
+    from .models import KanbanCard
+    qs = KanbanCard.objects.filter(
+        ticket__isnull=False,
+        coluna__quadro__departamento_entrada__descricao__iexact=DEPTO_DEV,
+    )
+    if ticket_ids is not None:
+        qs = qs.filter(ticket_id__in=ticket_ids)
+    return qs
+
+
+def esta_no_quadro_dev(ticket):
+    return cards_em_quadro_dev([ticket.pk]).exists()
+
+
+def reabrir_ticket(ticket, user, status_destino):
+    """Reabre um ticket fechado e deixa rastro na timeline.
+
+    Sem isto, arrastar um card de "Concluído" para "Em andamento" só mexia no card:
+    o ticket continuava ENCERRADO no banco e o encerramento seguinte era barrado com
+    "Ticket já está encerrado"."""
+    from .models import Comentario
+    antes = ticket.get_status_display()
+    ticket.reabrir(user, status_destino)
+    Comentario.objects.create(
+        ticket=ticket,
+        autor=user,
+        tipo=None,   # o campo tem default=1 + PROTECT; nulo é mais seguro
+        texto='Ticket reaberto (estava %s).' % antes,
+    )
+
+
+def quadros_dev_do_ticket(ticket):
+    """Os quadros de dev em que este ticket é card."""
+    from .models import KanbanQuadro
+    return KanbanQuadro.objects.filter(
+        colunas__cards__ticket=ticket,
+        departamento_entrada__descricao__iexact=DEPTO_DEV,
+    ).prefetch_related('grupos').distinct()
+
+
+def pode_cancelar(user, ticket):
+    """Quem pode cancelar o ticket.
+
+    Se ele virou card num quadro de Desenvolvimento, só cancela quem é do time de
+    dev — ou seja, quem tem acesso àquele quadro (está num dos grupos dele).
+    Reusa `pode_ver_quadro`, que é a mesma regra de permissão do Kanban."""
+    quadros = list(quadros_dev_do_ticket(ticket))
+    if not quadros:
+        return True   # não é do dev: qualquer um cancela, como sempre foi
+    return any(pode_ver_quadro(user, q) for q in quadros)
+
 
 @login_required
 def HomeView(request):
@@ -258,7 +332,14 @@ class MyTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
         user = self.request.user
         queryset = Ticket.objects.filter(
             Q(status=Ticket.ABERTO) | Q(status=Ticket.EM_ATENDIMENTO)
-        ).select_related('cliente', 'responsavel', 'atendente', 'tipo', 'prioridade', 'situacao')
+        ).select_related('cliente', 'responsavel', 'atendente', 'tipo',
+                         'prioridade', 'situacao')
+
+        # Marca quem já é card num quadro de Desenvolvimento — esses não podem ser
+        # encerrados em lote. Exists() resolve numa subquery, sem query por linha.
+        queryset = queryset.annotate(
+            no_quadro_dev=Exists(cards_em_quadro_dev().filter(ticket=OuterRef('pk')))
+        )
 
         form = MeusTicketsFilterForm(self.request.GET)
         papel = form.cleaned_data.get('papel') if form.is_valid() else ''
@@ -578,6 +659,10 @@ class TicketDetailView(LoginRequiredMixin, View):
             'kanban_cards': ticket.kanban_cards.select_related('coluna__quadro'),
             'quadros_kanban': quadros,
             'categorias_mural': CategoriaNota.objects.filter(ativo=True),
+            # No quadro de dev: "Encerrar" some (quem encerra é o time de dev, pelo
+            # quadro dele) e "Cancelar" só aparece para quem é do time de dev.
+            'bloqueado_dev': esta_no_quadro_dev(ticket),
+            'pode_cancelar': pode_cancelar(self.request.user, ticket),
         }
 
     def get(self, request, pk):
@@ -623,10 +708,16 @@ class TicketAcceptView(LoginRequiredMixin, View):
         ticket.iniciar_atendimento(request.user)
         return HttpResponseRedirect(reverse("ticket_detail", kwargs={"pk": pk}))
 
+ERRO_CANCELAR_DEV = 'Este ticket está no quadro de Desenvolvimento — só o time de dev pode cancelar.'
+
+
 class TicketCancelView(LoginRequiredMixin, View):
 
     def get(self, request, pk):
         ticket = Ticket.objects.get(pk=pk)
+        if not pode_cancelar(request.user, ticket):
+            messages.error(request, ERRO_CANCELAR_DEV)
+            return HttpResponseRedirect(reverse("ticket_detail", kwargs={"pk": pk}))
         ticket.cancelar_atendimento(request.user)
         return HttpResponseRedirect(reverse("ticket_detail", kwargs={"pk": pk}))
 
@@ -968,12 +1059,38 @@ class TicketAcceptAjaxView(LoginRequiredMixin, View):
         return JsonResponse({'ok': True, 'responsavel': request.user.get_full_name()})
 
 
+ERRO_ENCERRAR_DEV = 'Este ticket está no quadro de Desenvolvimento — encerre por lá.'
+
+
+def bloqueado_para_encerrar(ticket, coluna=None):
+    """Um ticket que virou card no quadro de Desenvolvimento só pode ser encerrado
+    A PARTIR de um quadro de dev — é o time de dev que encerra.
+
+    `coluna` é a coluna de destino do encerramento (quando vem do Kanban). Se ela é
+    de um quadro de dev, libera. Sem coluna (detalhe do ticket, lote), bloqueia."""
+    if not esta_no_quadro_dev(ticket):
+        return False
+    if coluna is not None and quadro_e_de_dev(coluna.quadro):
+        return False   # veio do próprio quadro de dev: pode
+    return True
+
+
 class TicketCloseAjaxView(LoginRequiredMixin, View):
 
     def post(self, request, pk):
+        from .models import KanbanColuna
         ticket = get_object_or_404(Ticket, pk=pk)
         if ticket.status == Ticket.ENCERRADO:
             return JsonResponse({'error': 'Ticket já está encerrado'}, status=400)
+
+        # De qual coluna/quadro veio o encerramento (o Kanban manda; outros não)
+        coluna = None
+        coluna_id = (request.POST.get('coluna_id') or '').strip()
+        if coluna_id.isdigit():
+            coluna = KanbanColuna.objects.select_related('quadro').filter(pk=coluna_id).first()
+        if bloqueado_para_encerrar(ticket, coluna):
+            return JsonResponse({'error': ERRO_ENCERRAR_DEV}, status=400)
+
         solucao_texto = request.POST.get('solucao', '').strip()
         if not solucao_texto:
             return JsonResponse({'error': 'Informe a solução antes de encerrar'}, status=400)
@@ -1124,7 +1241,12 @@ class TicketMoverColunaView(LoginRequiredMixin, View):
         status_destino = coluna.status_associado
 
         if status_destino is not None and status_destino != ticket.status:
-            if status_destino == Ticket.EM_ATENDIMENTO and ticket.status == Ticket.ABERTO:
+            fechado = ticket.status in (Ticket.ENCERRADO, Ticket.CANCELADO)
+            if fechado and status_destino in (Ticket.ABERTO, Ticket.EM_ATENDIMENTO):
+                # Voltando de Encerrado/Cancelado: REABRE de verdade (limpa as datas
+                # de fechamento), senão o próximo encerramento seria barrado.
+                reabrir_ticket(ticket, request.user, status_destino)
+            elif status_destino == Ticket.EM_ATENDIMENTO and ticket.status == Ticket.ABERTO:
                 ticket.iniciar_atendimento(request.user)
             elif status_destino == Ticket.ENCERRADO:
                 # Encerrar exige solução — tratado pelo modal (close-ajax) antes de mover
@@ -1161,7 +1283,12 @@ class KanbanCardMoverView(LoginRequiredMixin, View):
         status_destino = coluna.status_associado
 
         if ticket and status_destino is not None and status_destino != ticket.status:
-            if status_destino == Ticket.EM_ATENDIMENTO and ticket.status == Ticket.ABERTO:
+            fechado = ticket.status in (Ticket.ENCERRADO, Ticket.CANCELADO)
+            if fechado and status_destino in (Ticket.ABERTO, Ticket.EM_ATENDIMENTO):
+                # Voltando de Encerrado/Cancelado: REABRE de verdade (limpa as datas
+                # de fechamento), senão o próximo encerramento seria barrado.
+                reabrir_ticket(ticket, request.user, status_destino)
+            elif status_destino == Ticket.EM_ATENDIMENTO and ticket.status == Ticket.ABERTO:
                 ticket.iniciar_atendimento(request.user)
             elif status_destino == Ticket.ENCERRADO:
                 return JsonResponse({'error': 'needs_solution'}, status=400)
@@ -1687,11 +1814,18 @@ class CloseTicketView(LoginRequiredMixin, View):
 
     def get(self, request, pk):
         ticket = Ticket.objects.get(pk=pk)
+        # No quadro de dev: quem encerra é o time de dev, pelo quadro dele.
+        if bloqueado_para_encerrar(ticket):
+            messages.error(request, ERRO_ENCERRAR_DEV)
+            return redirect(reverse('ticket_detail', kwargs={'pk': pk}))
         form = TicketCloseForm()
         return render(request, 'core/ticket_close_form.html', {'form': form, 'ticket': ticket})
 
     def post(self, request, pk):
         ticket = Ticket.objects.get(pk=pk)
+        if bloqueado_para_encerrar(ticket):
+            messages.error(request, ERRO_ENCERRAR_DEV)
+            return redirect(reverse('ticket_detail', kwargs={'pk': pk}))
         form = TicketCloseForm(request.POST)
         if form.is_valid():
             solucao_texto = form.cleaned_data['solucao']
@@ -1715,6 +1849,11 @@ def _meus_tickets_por_id(user, ids):
     return {t.pk: t for t in tickets}
 
 
+def ids_vinculados_ao_dev(ticket_ids):
+    """Numa query: quais destes tickets já viraram card num quadro de dev."""
+    return set(cards_em_quadro_dev(ticket_ids).values_list('ticket_id', flat=True))
+
+
 class TicketLoteEncerrarView(LoginRequiredMixin, View):
     """Encerra vários tickets de uma vez, cada um com a sua solução.
 
@@ -1736,6 +1875,8 @@ class TicketLoteEncerrarView(LoginRequiredMixin, View):
             solucoes[str(tid)] = texto
 
         por_id = _meus_tickets_por_id(request.user, ids)
+        # Uma query só: quem já está no quadro de dev não pode ser encerrado aqui.
+        no_quadro_dev = ids_vinculados_ao_dev(list(por_id.keys()))
         encerrados, ignorados = [], []
 
         for tid in ids:
@@ -1745,6 +1886,10 @@ class TicketLoteEncerrarView(LoginRequiredMixin, View):
                 continue
             if ticket.status in (Ticket.ENCERRADO, Ticket.CANCELADO):
                 ignorados.append({'id': tid, 'motivo': 'já %s' % ticket.get_status_display().lower()})
+                continue
+            # Já é card no quadro de Desenvolvimento: quem encerra é o time de dev.
+            if ticket.pk in no_quadro_dev:
+                ignorados.append({'id': tid, 'motivo': 'está no quadro de Desenvolvimento'})
                 continue
 
             # Aberto: assume o atendimento antes de encerrar (senão ficaria um
@@ -1781,6 +1926,10 @@ class TicketLoteCancelarView(LoginRequiredMixin, View):
                 continue
             if ticket.status in (Ticket.ENCERRADO, Ticket.CANCELADO):
                 ignorados.append({'id': tid, 'motivo': 'já %s' % ticket.get_status_display().lower()})
+                continue
+            # No quadro de dev: só o time de dev cancela.
+            if not pode_cancelar(request.user, ticket):
+                ignorados.append({'id': tid, 'motivo': 'só o time de Desenvolvimento pode cancelar'})
                 continue
             ticket.cancelar_atendimento(request.user)
             cancelados.append(ticket.pk)

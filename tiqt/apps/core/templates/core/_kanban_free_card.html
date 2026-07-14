@@ -1,4 +1,6 @@
-<div class="card ticket-card free-card z-depth-1 {% if done %}card-done{% endif %}" draggable="true" data-card-id="{{ card.id }}">
+<div class="card ticket-card free-card z-depth-1 {% if done or card.concluido %}card-done{% endif %}"
+     {% if draggable %}draggable="true"{% endif %}
+     data-card-id="{{ card.id }}" data-concluido="{% if card.concluido %}1{% else %}0{% endif %}">
   <div class="card-actions">
     <button class="card-label-btn" type="button" title="Etiquetas" data-card-id="{{ card.id }}">
       <i class="material-icons" translate="no">label</i>
@@ -11,6 +13,7 @@
     <div class="card-labels">{% include "core/_kanban_etiquetas.html" with etiquetas=card.etiquetas.all %}</div>
 
     <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+      {% include "core/_kanban_done_btn.html" with card=card done=done %}
       <p class="card-title free-card-title" style="flex:1;">{{ card.titulo }}</p>
       {% if card.prioridade %}
         {% with prio=card.prioridade.descricao|default:"" %}
@@ -44,7 +47,5 @@
       {% if card.comentarios.count %}
       <div class="free-card-badge"><i class="material-icons" translate="no">forum</i>{{ card.comentarios.count }}</div>
       {% endif %}
-    </div>
-    {% if done %}<div class="card-done-check"><i class="material-icons" translate="no">check_circle</i> Concluído</div>{% endif %}
-  </div>
+    </div>  </div>
 </div>

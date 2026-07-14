@@ -22,6 +22,7 @@ from .forms import TicketForm, ClienteForm, TicketCloseForm, ComentarioForm
 from .models import Cliente, Ticket, Solucao, ComentarioArquivo, ComentarioImagem, CertificadoCliente, User, Departamento, Prioridade, Cidade, Uf, Tributacao
 from datetime import datetime, timedelta, time
 import tiqt.settings as settings
+from django.db import transaction
 from django.db.models import Q, Exists, OuterRef
 from django.db.models.deletion import ProtectedError
 from django.core.exceptions import PermissionDenied
@@ -771,6 +772,23 @@ def card_permitido(user, card_id, qs=None):
 CARDS_POR_COLUNA = 50
 
 
+def blocos_de_cards(cards):
+    """Fatia a lista de cards (já na ordem da coluna) em blocos para renderizar.
+
+    Cards do mesmo grupo são contíguos em `ordem` — a ordem é gravada a partir da
+    tela, onde eles vivem dentro do mesmo wrapper —, então basta juntar as
+    sequências de cards com o mesmo grupo. Devolve [{'grupo': g|None, 'cards': [...]}].
+    """
+    blocos = []
+    for card in cards:
+        anterior = blocos[-1] if blocos else None
+        if card.grupo_id and anterior and anterior['grupo'] and anterior['grupo'].id == card.grupo_id:
+            anterior['cards'].append(card)
+        else:
+            blocos.append({'grupo': card.grupo if card.grupo_id else None, 'cards': [card]})
+    return blocos
+
+
 def tickets_da_coluna_padrao(coluna, qs):
     """Tickets de uma coluna do quadro padrão (por status, com override manual)."""
     filtro = Q(kanban_coluna_id=coluna.id)
@@ -793,6 +811,7 @@ class KanbanColunaCardsView(LoginRequiredMixin, View):
 
         done = coluna.status_associado == Ticket.ENCERRADO
         partes = []
+        n_cards = 0
 
         if quadro.is_padrao:
             qs = Ticket.objects.select_related(
@@ -804,6 +823,7 @@ class KanbanColunaCardsView(LoginRequiredMixin, View):
                 partes.append(render_to_string('core/_kanban_card.html', {
                     'ticket': ticket, 'draggable': not done, 'done': done,
                 }))
+                n_cards += 1
         else:
             base = (KanbanCard.objects.filter(coluna=coluna)
                     .select_related('ticket', 'ticket__cliente',
@@ -811,22 +831,16 @@ class KanbanColunaCardsView(LoginRequiredMixin, View):
                                     'ticket__prioridade', 'ticket__responsavel', 'ticket__atendente', 'ticket__tipo',
                                     'nota', 'nota__categoria', 'nota__responsavel',
                                     'cliente', 'cliente__cidade', 'cliente__uf',
-                                    'autor', 'responsavel', 'prioridade')
+                                    'autor', 'responsavel', 'prioridade', 'grupo')
                     .prefetch_related('etiquetas', 'membros', 'comentarios')
                     .order_by('ordem', '-id'))
             total = base.count()
-            for card in base[offset:offset + CARDS_POR_COLUNA]:
-                if card.ticket_id:
-                    tpl, ctx = 'core/_kanban_card.html', {
-                        'ticket': card.ticket, 'draggable': True, 'card_id': card.id,
-                        'card': card, 'etiquetas': card.etiquetas.all(), 'done': done}
-                elif card.nota_id:
-                    tpl, ctx = 'core/_kanban_nota_card.html', {'card': card, 'done': done}
-                else:
-                    tpl, ctx = 'core/_kanban_free_card.html', {'card': card, 'done': done}
-                partes.append(render_to_string(tpl, ctx))
+            for bloco in blocos_de_cards(base[offset:offset + CARDS_POR_COLUNA]):
+                partes.append(render_to_string('core/_kanban_bloco.html',
+                                               {'bloco': bloco, 'done': done}))
+                n_cards += len(bloco['cards'])
 
-        carregados = offset + len(partes)
+        carregados = offset + n_cards
         return JsonResponse({
             'html': ''.join(partes),
             'total': total,
@@ -948,13 +962,14 @@ class KanbanView(LoginRequiredMixin, TemplateView):
                                      'ticket__prioridade', 'ticket__responsavel', 'ticket__atendente', 'ticket__tipo',
                                      'nota', 'nota__categoria', 'nota__responsavel',
                                      'cliente', 'cliente__cidade', 'cliente__uf',
-                                     'autor', 'responsavel', 'prioridade')
+                                     'autor', 'responsavel', 'prioridade', 'grupo')
                      .prefetch_related('etiquetas', 'membros', 'comentarios')
                      .order_by('ordem', '-id'))
             por_id = {c.id: c for c in cards}
 
             for coluna in colunas:
                 coluna.lista = [por_id[i] for i in ids_visiveis.get(coluna.id, []) if i in por_id]
+                coluna.blocos = blocos_de_cards(coluna.lista)
                 coluna.total = totais.get(coluna.id, 0)
                 coluna.qtd = coluna.total
                 coluna.carregados = len(coluna.lista)
@@ -1265,6 +1280,47 @@ class TicketMoverColunaView(LoginRequiredMixin, View):
         })
 
 
+class SolucaoObrigatoria(Exception):
+    """Encerrar um ticket exige solução — o front abre o modal e refaz o movimento."""
+
+
+def mover_card(card, coluna, user):
+    """Move um card para outra coluna do mesmo quadro, aplicando a regra de status.
+
+    Usado tanto pelo move de um card só quanto pelo move de um grupo inteiro.
+    Devolve o que o front precisa para atualizar o card na tela.
+    """
+    ticket = card.ticket
+    nota = card.nota
+    status_destino = coluna.status_associado
+
+    if ticket and status_destino is not None and status_destino != ticket.status:
+        fechado = ticket.status in (Ticket.ENCERRADO, Ticket.CANCELADO)
+        if fechado and status_destino in (Ticket.ABERTO, Ticket.EM_ATENDIMENTO):
+            # Voltando de Encerrado/Cancelado: REABRE de verdade (limpa as datas
+            # de fechamento), senão o próximo encerramento seria barrado.
+            reabrir_ticket(ticket, user, status_destino)
+        elif status_destino == Ticket.EM_ATENDIMENTO and ticket.status == Ticket.ABERTO:
+            ticket.iniciar_atendimento(user)
+        elif status_destino == Ticket.ENCERRADO:
+            raise SolucaoObrigatoria
+
+    # Nota do mural: status usa os mesmos inteiros (0..3), aplica direto
+    if nota and status_destino is not None and status_destino != nota.status:
+        nota.status = status_destino
+        nota.save(update_fields=['status'])
+
+    card.coluna = coluna
+    card.ordem = 0
+    card.save(update_fields=['coluna', 'ordem'])
+    return {
+        'status': ticket.status if ticket else None,
+        'responsavel': ticket.responsavel.get_full_name() if ticket and ticket.responsavel else '',
+        'nota_status': nota.get_status_display() if nota else None,
+        'nota_cor': nota.cor_status if nota else None,
+    }
+
+
 class KanbanCardMoverView(LoginRequiredMixin, View):
     """Move um card (ticket ou avulso) entre colunas de um quadro personalizado."""
     def post(self, request):
@@ -1278,36 +1334,11 @@ class KanbanCardMoverView(LoginRequiredMixin, View):
         if coluna.quadro_id != card.coluna.quadro_id:
             return JsonResponse({'error': 'Coluna de outro quadro'}, status=400)
 
-        ticket = card.ticket
-        nota = card.nota
-        status_destino = coluna.status_associado
-
-        if ticket and status_destino is not None and status_destino != ticket.status:
-            fechado = ticket.status in (Ticket.ENCERRADO, Ticket.CANCELADO)
-            if fechado and status_destino in (Ticket.ABERTO, Ticket.EM_ATENDIMENTO):
-                # Voltando de Encerrado/Cancelado: REABRE de verdade (limpa as datas
-                # de fechamento), senão o próximo encerramento seria barrado.
-                reabrir_ticket(ticket, request.user, status_destino)
-            elif status_destino == Ticket.EM_ATENDIMENTO and ticket.status == Ticket.ABERTO:
-                ticket.iniciar_atendimento(request.user)
-            elif status_destino == Ticket.ENCERRADO:
-                return JsonResponse({'error': 'needs_solution'}, status=400)
-
-        # Nota do mural: status usa os mesmos inteiros (0..3), aplica direto
-        if nota and status_destino is not None and status_destino != nota.status:
-            nota.status = status_destino
-            nota.save(update_fields=['status'])
-
-        card.coluna = coluna
-        card.ordem = 0
-        card.save(update_fields=['coluna', 'ordem'])
-        return JsonResponse({
-            'ok': True,
-            'status': ticket.status if ticket else None,
-            'responsavel': ticket.responsavel.get_full_name() if ticket and ticket.responsavel else '',
-            'nota_status': nota.get_status_display() if nota else None,
-            'nota_cor': nota.cor_status if nota else None,
-        })
+        try:
+            dados = mover_card(card, coluna, request.user)
+        except SolucaoObrigatoria:
+            return JsonResponse({'error': 'needs_solution'}, status=400)
+        return JsonResponse({'ok': True, **dados})
 
 
 class KanbanCardAdicionarView(LoginRequiredMixin, View):
@@ -1465,7 +1496,8 @@ class KanbanCardAdicionarNotaView(LoginRequiredMixin, View):
 
         card = KanbanCard.objects.create(nota=nota, coluna=coluna, ordem=0)
         html = render_to_string('core/_kanban_nota_card.html', {
-            'card': card, 'done': coluna.status_associado == Ticket.ENCERRADO,
+            'card': card, 'draggable': True,
+            'done': coluna.status_associado == Ticket.ENCERRADO,
         })
         return JsonResponse({'ok': True, 'html': html})
 
@@ -1555,7 +1587,9 @@ class KanbanCardAvulsoSalvarView(LoginRequiredMixin, View):
                 .prefetch_related('membros', 'etiquetas')
                 .get(pk=card.id))
         html = render_to_string('core/_kanban_free_card.html', {
-            'card': card, 'done': card.coluna.status_associado == Ticket.ENCERRADO,
+            # Card dentro de um grupo não arrasta sozinho — quem arrasta é o grupo.
+            'card': card, 'draggable': card.grupo_id is None,
+            'done': card.coluna.status_associado == Ticket.ENCERRADO,
         })
         return JsonResponse({'ok': True, 'id': card.id, 'html': html})
 
@@ -1756,8 +1790,101 @@ class KanbanCardRemoverView(LoginRequiredMixin, View):
     """Remove um card de um quadro personalizado (não apaga o ticket vinculado)."""
     def post(self, request):
         card = card_permitido(request.user, request.POST.get('card_id'))
+        grupo = card.grupo
         card.delete()
+        dissolver_se_sozinho(grupo)
         return JsonResponse({'ok': True})
+
+
+# ── Grupos de cards (cards que andam juntos, ex.: mesma branch) ────────────
+
+def dissolver_se_sozinho(grupo):
+    """Grupo com menos de 2 cards não faz sentido: solta o que sobrou e some."""
+    if grupo is None:
+        return
+    cards = list(grupo.cards.all())
+    if len(cards) < 2:
+        for card in cards:
+            card.grupo = None
+            card.save(update_fields=['grupo'])
+        grupo.delete()
+
+
+class KanbanGrupoCriarView(LoginRequiredMixin, View):
+    """Agrupa os cards selecionados (todos da mesma coluna).
+
+    Se a seleção já contém cards de UM grupo, os soltos entram nesse grupo em vez
+    de criar outro — é como se adiciona card a um grupo existente."""
+    def post(self, request):
+        from .models import KanbanCard, KanbanGrupo
+        ids = [i for i in (request.POST.get('card_ids') or '').split(',') if i]
+        cards = [card_permitido(request.user, i) for i in ids]
+        if len(cards) < 2:
+            return JsonResponse({'error': 'Selecione ao menos 2 cards'}, status=400)
+        if len({c.coluna_id for c in cards}) > 1:
+            return JsonResponse({'error': 'Só dá para agrupar cards da mesma coluna'}, status=400)
+
+        grupos = {c.grupo_id for c in cards if c.grupo_id}
+        if len(grupos) > 1:
+            return JsonResponse({'error': 'A seleção mistura dois grupos. Desfaça um deles antes.'},
+                                status=400)
+
+        nome = (request.POST.get('nome') or '').strip()[:80]
+        if grupos:
+            grupo = KanbanGrupo.objects.get(pk=grupos.pop())
+            if nome and nome != grupo.nome:
+                grupo.nome = nome
+                grupo.save(update_fields=['nome'])
+        else:
+            grupo = KanbanGrupo.objects.create(quadro=cards[0].coluna.quadro, nome=nome)
+
+        KanbanCard.objects.filter(pk__in=[c.pk for c in cards]).update(grupo=grupo)
+        return JsonResponse({'ok': True, 'grupo_id': grupo.pk, 'nome': grupo.nome,
+                             'coluna_id': cards[0].coluna_id})
+
+
+class KanbanGrupoDesfazerView(LoginRequiredMixin, View):
+    """Desfaz o grupo: os cards continuam onde estão, só voltam a ser soltos."""
+    def post(self, request):
+        from .models import KanbanGrupo
+        grupo = get_object_or_404(KanbanGrupo.objects.select_related('quadro'),
+                                  pk=request.POST.get('grupo_id'))
+        checar_quadro(request.user, grupo.quadro)
+        coluna_id = grupo.cards.values_list('coluna_id', flat=True).first()
+        grupo.cards.update(grupo=None)
+        grupo.delete()
+        return JsonResponse({'ok': True, 'coluna_id': coluna_id})
+
+
+class KanbanGrupoMoverView(LoginRequiredMixin, View):
+    """Move todos os cards de um grupo para outra coluna, de uma vez."""
+    def post(self, request):
+        from .models import KanbanColuna, KanbanGrupo
+        grupo = get_object_or_404(KanbanGrupo.objects.select_related('quadro'),
+                                  pk=request.POST.get('grupo_id'))
+        checar_quadro(request.user, grupo.quadro)
+        coluna = get_object_or_404(KanbanColuna.objects.select_related('quadro'),
+                                   pk=request.POST.get('coluna_id'))
+        if coluna.quadro_id != grupo.quadro_id:
+            return JsonResponse({'error': 'Coluna de outro quadro'}, status=400)
+
+        cards = list(grupo.cards.select_related('ticket', 'nota').order_by('ordem', '-id'))
+        try:
+            with transaction.atomic():
+                # O grupo é atômico: se um ticket exigir solução, nenhum card se move.
+                dados = {str(card.pk): mover_card(card, coluna, request.user) for card in cards}
+        except SolucaoObrigatoria:
+            return JsonResponse({'error': 'needs_solution'}, status=400)
+        return JsonResponse({'ok': True, 'cards': dados})
+
+
+class KanbanCardConcluirView(LoginRequiredMixin, View):
+    """Marca/desmarca o selo de concluído do card (visual — não mexe no ticket)."""
+    def post(self, request):
+        card = card_permitido(request.user, request.POST.get('card_id'))
+        card.concluido = request.POST.get('concluido') == '1'
+        card.save(update_fields=['concluido'])
+        return JsonResponse({'ok': True, 'concluido': card.concluido})
 
 
 class TicketBuscaAjaxView(LoginRequiredMixin, View):

@@ -260,6 +260,22 @@ class KanbanColuna(models.Model):
         return self.nome
 
 
+class KanbanGrupo(models.Model):
+    """Cards que andam juntos pelo quadro (ex.: todos os tickets da mesma branch).
+
+    Os cards de um grupo ficam sempre na MESMA coluna e contíguos em `ordem` —
+    arrastar o grupo move todos de uma vez. Grupo que fica com um card só é
+    desfeito (o card sobrevive, solto)."""
+
+    # 'card_grupos' porque KanbanQuadro.grupos já é o dos grupos de permissão
+    quadro = models.ForeignKey(KanbanQuadro, on_delete=models.CASCADE, related_name='card_grupos')
+    nome = models.CharField(max_length=80, blank=True, default='')
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.nome or f"Grupo #{self.pk}"
+
+
 class KanbanCard(models.Model):
     """Card numa coluna de um quadro personalizado.
 
@@ -285,6 +301,11 @@ class KanbanCard(models.Model):
     responsavel = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
     membros = models.ManyToManyField(User, blank=True, related_name='+')
     prioridade = models.ForeignKey(Prioridade, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    # Selo "concluído" do card (estilo Trello). É só visual: não muda o status do
+    # ticket/nota vinculado nem move o card de coluna.
+    concluido = models.BooleanField(default=False)
+    grupo = models.ForeignKey(KanbanGrupo, on_delete=models.SET_NULL, null=True, blank=True,
+                              related_name='cards')
     ordem = models.PositiveIntegerField(default=0)
     criado_em = models.DateTimeField(auto_now_add=True)
 

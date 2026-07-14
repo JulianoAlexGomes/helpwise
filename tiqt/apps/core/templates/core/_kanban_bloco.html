@@ -1,0 +1,6 @@
+{# Um bloco da coluna: ou um grupo de cards, ou um card solto (ver blocos_de_cards). #}
+{% if bloco.grupo %}
+  {% include "core/_kanban_grupo.html" with grupo=bloco.grupo cards=bloco.cards done=done %}
+{% else %}
+  {% include "core/_kanban_card_any.html" with card=bloco.cards.0 done=done draggable=True %}
+{% endif %}

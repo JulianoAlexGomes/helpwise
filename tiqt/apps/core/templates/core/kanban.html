@@ -409,10 +409,25 @@
   .card-grupo:hover .grupo-desfazer { opacity: 1; }
   .grupo-desfazer:hover { color: #e53935; }
 
-  /* Card selecionado (Ctrl+clique) para agrupar */
+  /* Card selecionado (Ctrl+clique) para agrupar: anel + fundo + selo de check,
+     para não restar dúvida de qual card entra no grupo. */
   .ticket-card.card-sel {
-    box-shadow: 0 0 0 2px #1e88e5, 0 6px 16px rgba(0,0,0,.13) !important;
+    box-shadow: inset 0 0 0 2px #1e88e5, 0 4px 12px rgba(0,0,0,.16) !important;
+    background: #e3f2fd !important;
   }
+  html.dark .ticket-card.card-sel { background: #17334c !important; }
+  /* O selo fica DENTRO do card: pendurado para fora, ele estourava a coluna
+     (que rola) e aparecia uma barra de rolagem horizontal. */
+  .ticket-card.card-sel::after {
+    content: 'check';
+    font-family: 'Material Icons'; font-size: 14px; line-height: 1;
+    position: absolute; top: 6px; right: 6px; z-index: 3;
+    width: 19px; height: 19px; border-radius: 50%;
+    background: #1e88e5; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+  }
+  /* Selecionado: some com os botões de ação, que ficam no mesmo canto do selo */
+  .ticket-card.card-sel .card-actions { display: none !important; }
 
   /* Barra flutuante da seleção */
   .kb-sel-bar {
@@ -3638,8 +3653,21 @@ window.kanbanUrl = function (url) {
   const selMsg     = document.getElementById('kb-sel-msg');
   const btnAgrupar = document.getElementById('kb-sel-agrupar');
 
+  // A seleção mora AQUI, nos ids — e não só na classe do card. O auto-refresh
+  // troca o innerHTML das colunas, o que apagava a classe e, com ela, a seleção:
+  // o "Agrupar" virava um clique morto. Com os ids guardados, dá para repintar.
+  const selecionados = new Set();
+
   function cardsSelecionados() {
     return Array.from(document.querySelectorAll('.ticket-card.card-sel'));
+  }
+
+  // Repinta a seleção depois que o refresh trocou os cards da tela.
+  function reaplicarSelecao() {
+    document.querySelectorAll('.ticket-card[data-card-id]').forEach(card => {
+      card.classList.toggle('card-sel', selecionados.has(card.dataset.cardId));
+    });
+    atualizarBarraSel();
   }
 
   function atualizarBarraSel() {
@@ -3654,6 +3682,7 @@ window.kanbanUrl = function (url) {
   }
 
   function limparSelecao() {
+    selecionados.clear();
     cardsSelecionados().forEach(c => c.classList.remove('card-sel'));
     atualizarBarraSel();
   }
@@ -3665,9 +3694,23 @@ window.kanbanUrl = function (url) {
     if (!card) return;
     e.preventDefault();
     e.stopImmediatePropagation();
-    card.classList.toggle('card-sel');
+    const marcado = card.classList.toggle('card-sel');
+    if (marcado) selecionados.add(card.dataset.cardId);
+    else selecionados.delete(card.dataset.cardId);
     atualizarBarraSel();
   }, true);
+
+  // Clique solto em qualquer lugar (sem Ctrl) larga a seleção — só a barra
+  // (Agrupar/Limpar) não conta, senão o clique no botão se perderia.
+  document.addEventListener('click', e => {
+    if (e.ctrlKey || e.metaKey || !selecionados.size) return;
+    if (e.target.closest('.kb-sel-bar')) return;
+    limparSelecao();
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && selecionados.size) limparSelecao();
+  });
 
   document.getElementById('kb-sel-limpar').addEventListener('click', limparSelecao);
 
@@ -4105,7 +4148,10 @@ window.kanbanUrl = function (url) {
     // gravacoesPendentes: o movimento do card é otimista (a tela muda antes do
     // servidor confirmar). Se o refresh rodasse no meio da gravação, ele traria
     // o estado ANTIGO e o card pularia de volta. Espera a gravação terminar.
+    // selecionados: enquanto o usuário escolhe os cards para agrupar, o refresh
+    // fica quieto — ele repinta as colunas e a seleção se perderia no meio.
     return document.hidden || draggingCard || inboxAberta() || gravacoesPendentes > 0 ||
+           selecionados.size > 0 ||
            document.querySelector('.modal.open') || document.querySelector('.kb-pop');
   }
   async function atualizarCards() {
@@ -4139,6 +4185,8 @@ window.kanbanUrl = function (url) {
       // da caixa de entrada (tickets novos que chegaram no departamento).
       const novoBadge = doc.getElementById('kb-inbox-badge');
       if (inboxBadge && novoBadge) setBadge(parseInt(novoBadge.textContent, 10) || 0);
+
+      reaplicarSelecao();   // os cards são novos: repinta o que estava selecionado
     } catch (e) {}
   }
   setInterval(atualizarCards, REFRESH_MS);

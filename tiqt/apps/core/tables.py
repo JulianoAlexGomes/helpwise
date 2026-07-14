@@ -1,4 +1,4 @@
-from django_tables2 import Table, LinkColumn, A, tables
+from django_tables2 import Table, LinkColumn, A, tables, CheckBoxColumn
 from django.utils.html import format_html
 from .models import Ticket, User
 from django.urls import reverse
@@ -34,3 +34,33 @@ class TicketTable(Table):
         fields = ('id', 'atendente', 'titulo', 'tipo', 'prioridade', 'cliente', 'responsavel', 'status')
         attrs = {'class': 'hw-table'}
         paginate_by = None
+
+
+class MeusTicketsTable(TicketTable):
+    """Tabela de 'Meus tickets': igual à padrão, mais a coluna de seleção em lote.
+
+    É uma subclasse justamente para os checkboxes NÃO vazarem para as outras 6
+    listagens (Encerrados, Cancelados, Todos...), que compartilham a TicketTable.
+    """
+
+    selecao = CheckBoxColumn(
+        accessor='pk',
+        verbose_name='',
+        orderable=False,
+        attrs={
+            'th__input': {'class': 'js-sel-todos', 'title': 'Selecionar todos'},
+            'td__input': {'class': 'js-sel-ticket'},
+        },
+    )
+
+    class Meta(TicketTable.Meta):
+        fields = ('selecao',) + TicketTable.Meta.fields
+        sequence = ('selecao', '...')
+        # O <tr> carrega id/status/título: o JS monta o modal de encerramento a
+        # partir da linha, e precisa saber quem está Aberto (0) — esses serão
+        # iniciados em seu nome antes de encerrar.
+        row_attrs = {
+            'data-ticket-id': lambda record: record.pk,
+            'data-status': lambda record: record.status,
+            'data-titulo': lambda record: record.titulo or '(sem título)',
+        }

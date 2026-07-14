@@ -17,7 +17,7 @@ from django.http import HttpResponseRedirect, HttpResponse, Http404, FileRespons
 from django.urls import reverse_lazy
 from django_tables2 import SingleTableMixin
 from tiqt.apps.core.models import Ticket, Comentario
-from tiqt.apps.core.tables import TicketTable
+from tiqt.apps.core.tables import TicketTable, MeusTicketsTable
 from .forms import TicketForm, ClienteForm, TicketCloseForm, ComentarioForm
 from .models import Cliente, Ticket, Solucao, ComentarioArquivo, ComentarioImagem, CertificadoCliente, User, Departamento, Prioridade, Cidade, Uf, Tributacao
 from datetime import datetime, timedelta, time
@@ -248,7 +248,8 @@ def download_certificado(request, cliente_id):
 
 class MyTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
     template_name = 'core/tickets_list.html'
-    table_class = TicketTable
+    # Tabela própria: é a única listagem com seleção em lote (ver tables.py)
+    table_class = MeusTicketsTable
     # table_pagination = {
     #     'per_page': 10
     # }
@@ -716,7 +717,7 @@ class KanbanColunaCardsView(LoginRequiredMixin, View):
             base = (KanbanCard.objects.filter(coluna=coluna)
                     .select_related('ticket', 'ticket__cliente',
                                     'ticket__cliente__cidade', 'ticket__cliente__uf',
-                                    'ticket__prioridade', 'ticket__responsavel', 'ticket__tipo',
+                                    'ticket__prioridade', 'ticket__responsavel', 'ticket__atendente', 'ticket__tipo',
                                     'nota', 'nota__categoria', 'nota__responsavel',
                                     'cliente', 'cliente__cidade', 'cliente__uf',
                                     'autor', 'responsavel', 'prioridade')
@@ -750,15 +751,21 @@ class KanbanView(LoginRequiredMixin, TemplateView):
         from .models import Tipo, KanbanColuna, KanbanQuadro, KanbanCard
         from .models import Prioridade, Situacao
         context = super().get_context_data(**kwargs)
+        usuario        = self.request.user
         responsavel_id = self.request.GET.get('responsavel', '')
         atendente_id   = self.request.GET.get('atendente', '')
         tipo_id        = self.request.GET.get('tipo', '')
+        # "Meus tickets": onde eu sou responsável OU atendente (mesma semântica do
+        # MeusTicketsFilterForm, em forms.py).
+        meus           = self.request.GET.get('meus') == '1'
 
         # cliente__cidade/uf: Cliente.__str__ monta "fantasia - cidade/uf", então sem
         # isso cada cliente exibido dispara 2 queries extras (era o N+1 do kanban).
         qs = Ticket.objects.select_related(
             'cliente', 'cliente__cidade', 'cliente__uf',
             'prioridade', 'responsavel', 'atendente', 'tipo')
+        if meus:
+            qs = qs.filter(Q(responsavel=usuario) | Q(atendente=usuario))
         if responsavel_id:
             qs = qs.filter(responsavel_id=responsavel_id)
         if atendente_id:
@@ -794,16 +801,17 @@ class KanbanView(LoginRequiredMixin, TemplateView):
                 coluna.encerrada = coluna.status_associado == Ticket.ENCERRADO
         else:
             # Quadro personalizado: cards explicitamente adicionados (tickets, notas ou avulsos)
-            tem_filtro = bool(responsavel_id or atendente_id or tipo_id)
+            tem_filtro = bool(responsavel_id or atendente_id or tipo_id or meus)
             ids_permitidos = set(qs.values_list('id', flat=True)) if tem_filtro else None
 
             def linha_visivel(ticket_id, nota_resp_id, nota_id, autor_id):
                 """Filtros do quadro personalizado, aplicados sobre uma linha leve.
 
-                Cards de ticket seguem o filtro completo. Notas e cards avulsos não têm
-                atendente nem tipo, então usam uma única "pessoa" — o responsável da nota
-                ou quem criou o card — comparada tanto ao filtro de responsável quanto ao
-                de atendente. O filtro de tipo, que eles não têm como satisfazer, os esconde.
+                Cards de ticket seguem o filtro completo (o `qs` já foi filtrado, então
+                basta olhar `ids_permitidos`). Notas e cards avulsos não têm atendente nem
+                tipo, então usam uma única "pessoa" — o responsável da nota ou quem criou o
+                card — comparada tanto ao filtro de responsável quanto ao de atendente, e
+                ao "Meus tickets". O filtro de tipo, que eles não têm como satisfazer, os esconde.
                 """
                 if not tem_filtro:
                     return True
@@ -813,6 +821,8 @@ class KanbanView(LoginRequiredMixin, TemplateView):
                     return False
                 pessoa_id = nota_resp_id if nota_id else autor_id
                 if pessoa_id is None:
+                    return False
+                if meus and pessoa_id != usuario.id:
                     return False
                 # Cada filtro de pessoa ativo precisa bater, igual ao AND dos cards de ticket.
                 return all(str(pessoa_id) == f for f in (responsavel_id, atendente_id) if f)
@@ -844,7 +854,7 @@ class KanbanView(LoginRequiredMixin, TemplateView):
                      .filter(id__in=render_ids)
                      .select_related('ticket', 'ticket__cliente',
                                      'ticket__cliente__cidade', 'ticket__cliente__uf',
-                                     'ticket__prioridade', 'ticket__responsavel', 'ticket__tipo',
+                                     'ticket__prioridade', 'ticket__responsavel', 'ticket__atendente', 'ticket__tipo',
                                      'nota', 'nota__categoria', 'nota__responsavel',
                                      'cliente', 'cliente__cidade', 'cliente__uf',
                                      'autor', 'responsavel', 'prioridade')
@@ -876,6 +886,15 @@ class KanbanView(LoginRequiredMixin, TemplateView):
         context['grupos']                 = Group.objects.all().order_by('name')
         context['grupos_do_quadro']       = list(
             quadro_atual.grupos.values_list('id', flat=True)) if quadro_atual else []
+        context['meus_selecionado']        = meus
+        # Querystring que LIGA/DESLIGA o "Meus tickets" preservando o resto
+        # (quadro, board=1 do Modo Kanban e os demais filtros).
+        params = self.request.GET.copy()
+        if meus:
+            params.pop('meus', None)
+        else:
+            params['meus'] = '1'
+        context['qs_meus']                 = params.urlencode()
         context['responsavel_selecionado'] = responsavel_id
         context['atendente_selecionado']   = atendente_id
         context['tipo_selecionado']        = tipo_id
@@ -1173,7 +1192,7 @@ class KanbanCardAdicionarView(LoginRequiredMixin, View):
         if coluna.quadro.is_padrao:
             return JsonResponse({'error': 'O quadro padrão é preenchido automaticamente'}, status=400)
         ticket = get_object_or_404(
-            Ticket.objects.select_related('cliente', 'prioridade', 'responsavel', 'tipo'),
+            Ticket.objects.select_related('cliente', 'prioridade', 'responsavel', 'atendente', 'tipo'),
             pk=request.POST.get('ticket_id'),
         )
         if KanbanCard.objects.filter(ticket=ticket, coluna__quadro=coluna.quadro).exists():
@@ -1682,6 +1701,96 @@ class CloseTicketView(LoginRequiredMixin, View):
         return render(request, 'core/ticket_close_form.html', {'form': form, 'ticket': ticket})
 
 
+# ── Ações em lote (tela "Meus tickets") ────────────────────────────────────
+#
+# Os endpoints recebem ids soltos do cliente, então SÓ agem em tickets do próprio
+# usuário (responsável ou atendente). Sem isso, viraria um endpoint de
+# encerramento/cancelamento em massa de qualquer ticket do sistema.
+
+def _meus_tickets_por_id(user, ids):
+    """Tickets do usuário, indexados por id. Os que não são dele ficam de fora."""
+    tickets = (Ticket.objects
+               .filter(Q(responsavel=user) | Q(atendente=user))
+               .filter(pk__in=[i for i in ids if str(i).isdigit()]))
+    return {t.pk: t for t in tickets}
+
+
+class TicketLoteEncerrarView(LoginRequiredMixin, View):
+    """Encerra vários tickets de uma vez, cada um com a sua solução.
+
+    Ticket ABERTO é iniciado em nome do usuário antes de encerrar — o mesmo que já
+    acontece ao arrastar de Aberto para Encerrado no Kanban."""
+
+    def post(self, request):
+        ids = request.POST.getlist('ids')
+        if not ids:
+            return JsonResponse({'error': 'Nenhum ticket selecionado'}, status=400)
+
+        # Uma solução por ticket: vem como solucao_<id>
+        solucoes = {}
+        for tid in ids:
+            texto = (request.POST.get('solucao_%s' % tid) or '').strip()
+            if not texto:
+                return JsonResponse(
+                    {'error': 'Informe a solução do ticket #%s' % tid}, status=400)
+            solucoes[str(tid)] = texto
+
+        por_id = _meus_tickets_por_id(request.user, ids)
+        encerrados, ignorados = [], []
+
+        for tid in ids:
+            ticket = por_id.get(int(tid)) if str(tid).isdigit() else None
+            if ticket is None:
+                ignorados.append({'id': tid, 'motivo': 'não é um ticket seu'})
+                continue
+            if ticket.status in (Ticket.ENCERRADO, Ticket.CANCELADO):
+                ignorados.append({'id': tid, 'motivo': 'já %s' % ticket.get_status_display().lower()})
+                continue
+
+            # Aberto: assume o atendimento antes de encerrar (senão ficaria um
+            # ticket encerrado que nunca foi iniciado).
+            if ticket.status == Ticket.ABERTO:
+                ticket.iniciar_atendimento(request.user)
+
+            Solucao.objects.create(ticket=ticket, texto=solucoes[str(tid)], autor=request.user)
+            ticket.encerrar_atendimento()
+            encerrados.append(ticket.pk)
+
+        return JsonResponse({
+            'ok': True, 'processados': len(encerrados),
+            'ids': encerrados, 'ignorados': ignorados,
+        })
+
+
+class TicketLoteCancelarView(LoginRequiredMixin, View):
+    """Cancela vários tickets de uma vez. Não exige motivo nem solução —
+    é o mesmo comportamento do cancelamento individual."""
+
+    def post(self, request):
+        ids = request.POST.getlist('ids')
+        if not ids:
+            return JsonResponse({'error': 'Nenhum ticket selecionado'}, status=400)
+
+        por_id = _meus_tickets_por_id(request.user, ids)
+        cancelados, ignorados = [], []
+
+        for tid in ids:
+            ticket = por_id.get(int(tid)) if str(tid).isdigit() else None
+            if ticket is None:
+                ignorados.append({'id': tid, 'motivo': 'não é um ticket seu'})
+                continue
+            if ticket.status in (Ticket.ENCERRADO, Ticket.CANCELADO):
+                ignorados.append({'id': tid, 'motivo': 'já %s' % ticket.get_status_display().lower()})
+                continue
+            ticket.cancelar_atendimento(request.user)
+            cancelados.append(ticket.pk)
+
+        return JsonResponse({
+            'ok': True, 'processados': len(cancelados),
+            'ids': cancelados, 'ignorados': ignorados,
+        })
+
+
 class CommentView(LoginRequiredMixin, View):
 
     # def post(self, request, ticket_pk):
@@ -2169,4 +2278,9 @@ class QuickTicketCreateView(LoginRequiredMixin, View):
 
         notificar_atribuicao(ticket, ator=request.user, notificar_ator=False)
 
-        return JsonResponse({'redirect': reverse('ticket_detail', kwargs={'pk': ticket.pk})})
+        # `id`: quem abre o modal a partir do Kanban não navega para o detalhe —
+        # usa o id para avisar "Ticket #123 criado" e continuar no quadro.
+        return JsonResponse({
+            'id': ticket.pk,
+            'redirect': reverse('ticket_detail', kwargs={'pk': ticket.pk}),
+        })

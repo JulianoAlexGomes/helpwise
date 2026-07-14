@@ -69,6 +69,77 @@
 
   .tkl-empty { text-align: center; color: #9ca3af; font-size: 14px; padding: 40px 0; }
 
+  /* ── Seleção em lote (só em "Meus tickets") ── */
+  /* O Materialize joga o checkbox nativo para fora da tela (position:absolute;
+     opacity:0) e desenha um falso no ::before do <span>. Como aqui o checkbox é
+     gerado pelo django_tables2 (sem <span> ao lado), basta trazer o nativo de volta. */
+  table.hw-table input[type="checkbox"] {
+    position: static !important; opacity: 1 !important; pointer-events: auto !important;
+    width: 17px; height: 17px; margin: 0 !important;
+    accent-color: var(--hw-brand, #00796b); cursor: pointer;
+  }
+  /* No tema escuro o checkbox nativo desmarcado fica branco e berrante.
+     `color-scheme: dark` faz o próprio navegador desenhar a versão escura dele. */
+  html.dark table.hw-table input[type="checkbox"] {
+    color-scheme: dark;
+    accent-color: var(--hw-brand, #00897b);
+  }
+  table.hw-table th:first-child, table.hw-table td:first-child { width: 40px; text-align: center; }
+  table.hw-table tr.tkl-sel td { background: rgba(0,121,107,.07); }
+  html.dark table.hw-table tr.tkl-sel td { background: rgba(0,150,136,.12) !important; }
+
+  .tkl-lote {
+    display: none; align-items: center; gap: 12px; flex-wrap: wrap;
+    margin-bottom: 14px; padding: 12px 18px;
+    background: #fff; border: 1px solid #ececef; border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  }
+  .tkl-lote.show { display: flex; }
+  .tkl-lote-count { font-size: 13.5px; color: #44474c; }
+  .tkl-lote-count b { color: var(--hw-brand-2); font-size: 15px; }
+  .tkl-lote-sep { flex: 1; }
+  .tkl-lote-btn {
+    border-radius: 9px; text-transform: none; font-weight: 600; box-shadow: none !important;
+    padding: 0 18px;
+  }
+  .tkl-lote-btn.encerrar { background: #2e7d32 !important; }
+  .tkl-lote-btn.encerrar:hover { background: #1b5e20 !important; }
+  .tkl-lote-btn.cancelar { background: #e53935 !important; }
+  .tkl-lote-btn.cancelar:hover { background: #c62828 !important; }
+  .tkl-lote-limpar { color: #6b7280 !important; font-size: 13px; font-weight: 600; }
+  .tkl-lote-limpar:hover { color: #e53935 !important; }
+  html.dark .tkl-lote { background: var(--hw-surface) !important; border-color: var(--hw-border) !important; box-shadow: none !important; }
+  html.dark .tkl-lote-count { color: var(--hw-text2); }
+
+  /* Modal de encerramento em lote */
+  #modal-lote-encerrar { border-radius: 14px; max-width: 640px; width: 92%; max-height: 86%; overflow: hidden; }
+  #modal-lote-encerrar .modal-content { max-height: calc(86vh - 72px); overflow-y: auto; padding: 24px 26px 8px; }
+  #modal-lote-encerrar h5 { margin: 0; font-size: 19px; font-weight: 700; color: #1c1d1f; }
+  .tkl-modal-sub { color: #8a8f98; font-size: 13.5px; margin: 6px 0 18px; }
+  #modal-lote-encerrar .modal-footer {
+    display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+    height: auto; padding: 12px 20px; border-top: 1px solid #eee; border-radius: 0 0 14px 14px;
+    background: #fff;
+  }
+  .lote-item { margin-bottom: 16px; }
+  .lote-item-tit { font-size: 13.5px; font-weight: 600; color: #1c1d1f; margin-bottom: 6px; }
+  .lote-item-tit .lote-id { color: var(--hw-brand-2); font-weight: 700; }
+  .lote-item-tit .lote-aviso {
+    display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 10px;
+    background: rgba(245,124,0,.14); color: #ef6c00; font-size: 11px; font-weight: 700;
+  }
+  .lote-item textarea {
+    width: 100%; box-sizing: border-box; min-height: 68px; padding: 10px 12px; margin: 0;
+    border: 1.5px solid #e2e4e8 !important; border-radius: 9px; resize: vertical;
+    font-size: 13.5px; background: #fff; color: #1c1d1f;
+  }
+  .lote-item textarea:focus { border-color: var(--hw-brand) !important; box-shadow: 0 0 0 3px rgba(0,121,107,.13); }
+  .lote-item textarea.erro { border-color: #e53935 !important; }
+  html.dark #modal-lote-encerrar { background: var(--hw-surface) !important; }
+  html.dark #modal-lote-encerrar h5, html.dark .lote-item-tit { color: var(--hw-text) !important; }
+  html.dark #modal-lote-encerrar .modal-footer { background: var(--hw-surface) !important; border-top-color: var(--hw-border) !important; }
+  html.dark .lote-item textarea { background: var(--hw-input-bg); color: var(--hw-text); border-color: var(--hw-border) !important; }
+
   /* Paginação */
   .hw-table-wrap .pagination { display: flex; justify-content: center; gap: 4px; margin: 14px 0; padding: 0; }
   .hw-table-wrap .pagination li { list-style: none; }
@@ -137,10 +208,46 @@
   </form>
   {% endif %}
 
+  {% if is_meus_tickets %}
+  {% comment %}Barra de ações em lote. Aparece só quando há algo marcado.
+  Não é um <form>: a tabela fica fora do form de filtros (GET) e aninhar forms
+  quebra — os ids são coletados por JS e enviados via fetch com CSRF.{% endcomment %}
+  <div class="tkl-lote" id="tkl-lote">
+    <span class="tkl-lote-count"><b id="tkl-count">0</b> selecionado(s)</span>
+    <span class="tkl-lote-sep"></span>
+    <button type="button" class="btn tkl-lote-btn encerrar" id="btn-lote-encerrar">
+      <i class="material-icons left">check</i>Encerrar
+    </button>
+    <button type="button" class="btn tkl-lote-btn cancelar" id="btn-lote-cancelar">
+      <i class="material-icons left">cancel</i>Cancelar
+    </button>
+    <a href="#!" class="tkl-lote-limpar" id="btn-lote-limpar">Limpar seleção</a>
+  </div>
+  {% endif %}
+
   <div class="hw-table-wrap">
     {% render_table table %}
   </div>
 </div>
+
+{% if is_meus_tickets %}
+<!-- Encerrar em lote: uma solução por ticket -->
+<div id="modal-lote-encerrar" class="modal">
+  <div class="modal-content">
+    <h5>Encerrar tickets</h5>
+    <p class="tkl-modal-sub">
+      Escreva a solução de cada ticket. Todos os campos são obrigatórios.
+    </p>
+    <div id="lote-encerrar-lista"></div>
+  </div>
+  <div class="modal-footer">
+    <a href="#!" class="modal-close btn-flat">Voltar</a>
+    <button class="btn tkl-lote-btn encerrar" id="btn-lote-encerrar-confirmar" type="button">
+      <i class="material-icons left">check</i>Encerrar tickets
+    </button>
+  </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
@@ -157,4 +264,150 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 </script>
+
+{% if is_meus_tickets %}
+<script>
+// ── Ações em lote: encerrar / cancelar vários tickets ─────────────────────
+(function () {
+  const barra   = document.getElementById('tkl-lote');
+  const contEl  = document.getElementById('tkl-count');
+  const tabela  = document.querySelector('table.hw-table');
+  if (!barra || !tabela) return;
+
+  const modalEl = document.getElementById('modal-lote-encerrar');
+  const lista   = document.getElementById('lote-encerrar-lista');
+  let modalInst = null;
+
+  function csrf() {
+    const m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? m[1] : '';
+  }
+  function marcados() {
+    return Array.from(tabela.querySelectorAll('.js-sel-ticket:checked'));
+  }
+  // O <tr> carrega id/status/título (row_attrs em tables.py)
+  function linhaDe(chk) { return chk.closest('tr'); }
+
+  function pintar() {
+    const sel = marcados();
+    contEl.textContent = sel.length;
+    barra.classList.toggle('show', sel.length > 0);
+    tabela.querySelectorAll('.js-sel-ticket').forEach(function (c) {
+      linhaDe(c).classList.toggle('tkl-sel', c.checked);
+    });
+    const todos = tabela.querySelector('.js-sel-todos');
+    const total = tabela.querySelectorAll('.js-sel-ticket').length;
+    if (todos) {
+      todos.checked = total > 0 && sel.length === total;
+      todos.indeterminate = sel.length > 0 && sel.length < total;
+    }
+  }
+
+  tabela.addEventListener('change', function (e) {
+    if (e.target.classList.contains('js-sel-todos')) {
+      tabela.querySelectorAll('.js-sel-ticket').forEach(function (c) {
+        c.checked = e.target.checked;
+      });
+    }
+    if (e.target.classList.contains('js-sel-ticket') ||
+        e.target.classList.contains('js-sel-todos')) pintar();
+  });
+
+  document.getElementById('btn-lote-limpar').addEventListener('click', function (e) {
+    e.preventDefault();
+    tabela.querySelectorAll('.js-sel-ticket, .js-sel-todos').forEach(function (c) { c.checked = false; });
+    pintar();
+  });
+
+  async function enviar(url, body, btn, rotulo) {
+    btn.disabled = true;
+    const original = btn.innerHTML;
+    btn.innerHTML = '<i class="material-icons left">hourglass_empty</i>' + rotulo;
+    try {
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrf(), 'X-Requested-With': 'XMLHttpRequest' },
+        body: body,
+      });
+      const d = await resp.json().catch(function () { return {}; });
+      if (!resp.ok) {
+        M.toast({ html: d.error || 'Erro ao processar', classes: 'red' });
+        return null;
+      }
+      return d;
+    } catch (e) {
+      M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
+      return null;
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = original;
+    }
+  }
+
+  function relatar(d, verbo) {
+    let msg = d.processados + ' ticket(s) ' + verbo;
+    if (d.ignorados && d.ignorados.length) {
+      msg += ' · ' + d.ignorados.length + ' ignorado(s)';
+      console.warn('Ignorados:', d.ignorados);
+    }
+    M.toast({ html: msg, classes: 'green darken-2' });
+    setTimeout(function () { location.reload(); }, 900);
+  }
+
+  // ── Encerrar: abre o modal com um campo de solução por ticket ──
+  document.getElementById('btn-lote-encerrar').addEventListener('click', function () {
+    const sel = marcados();
+    if (!sel.length) return;
+    lista.innerHTML = sel.map(function (c) {
+      const tr = linhaDe(c);
+      const id = tr.dataset.ticketId;
+      // Aberto (0) ainda não foi iniciado: será assumido em seu nome ao encerrar
+      const aviso = tr.dataset.status === '0'
+        ? '<span class="lote-aviso">será iniciado em seu nome</span>' : '';
+      const tit = (tr.dataset.titulo || '').replace(/[<>&]/g, '');
+      return '<div class="lote-item">' +
+        '<div class="lote-item-tit"><span class="lote-id">#' + id + '</span> ' + tit + aviso + '</div>' +
+        '<textarea data-id="' + id + '" placeholder="O que foi feito para resolver?"></textarea>' +
+      '</div>';
+    }).join('');
+    if (!modalInst) modalInst = M.Modal.init(modalEl, {});
+    modalInst.open();
+  });
+
+  document.getElementById('btn-lote-encerrar-confirmar').addEventListener('click', async function () {
+    const areas = Array.from(lista.querySelectorAll('textarea'));
+    let faltou = false;
+    areas.forEach(function (a) {
+      const vazio = !a.value.trim();
+      a.classList.toggle('erro', vazio);
+      if (vazio) faltou = true;
+    });
+    if (faltou) {
+      M.toast({ html: 'Escreva a solução de todos os tickets', classes: 'red' });
+      return;
+    }
+    const body = new URLSearchParams();
+    areas.forEach(function (a) {
+      body.append('ids', a.dataset.id);
+      body.set('solucao_' + a.dataset.id, a.value.trim());
+    });
+    const d = await enviar('/ticket/lote/encerrar/', body, this, 'Encerrando...');
+    if (d) { modalInst.close(); relatar(d, 'encerrado(s)'); }
+  });
+
+  // ── Cancelar: confirmação simples (não exige motivo, como no ticket avulso) ──
+  document.getElementById('btn-lote-cancelar').addEventListener('click', async function () {
+    const sel = marcados();
+    if (!sel.length) return;
+    if (!confirm('Cancelar ' + sel.length + ' ticket(s)? Esta ação não pede motivo.')) return;
+    const body = new URLSearchParams();
+    sel.forEach(function (c) { body.append('ids', linhaDe(c).dataset.ticketId); });
+    const d = await enviar('/ticket/lote/cancelar/', body, this, 'Cancelando...');
+    if (d) relatar(d, 'cancelado(s)');
+  });
+
+  pintar();
+})();
+</script>
+{% endif %}
 {% endblock %}

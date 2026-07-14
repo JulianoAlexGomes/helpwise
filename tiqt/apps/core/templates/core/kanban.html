@@ -28,10 +28,15 @@
   }
 
   /* Botão "Modo Kanban" — abre o quadro em nova aba, estilo Trello */
+  /* Ações da barra, empurradas para a direita como um bloco só. Antes cada botão
+     tinha margin-left:auto, o que abria um vão entre eles. */
+  .kanban-filter-acoes {
+    margin-left: auto; display: flex; align-items: flex-end; gap: 8px;
+  }
+
   .kanban-fs-btn {
-    margin-left: auto;
-    display: inline-flex; align-items: center; gap: 6px;
-    height: 42px; padding: 0 16px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    height: 42px; padding: 0 16px; box-sizing: border-box; white-space: nowrap;
     border: 1.5px solid #e2e4e8; border-radius: 9px;
     background: #fff; color: #44474c; font-size: 13.5px; font-weight: 600;
     cursor: pointer; text-decoration: none; transition: all .15s;
@@ -40,6 +45,15 @@
   .kanban-fs-btn i { font-size: 19px; }
   html.dark .kanban-fs-btn { background: var(--hw-surface); border-color: var(--hw-border); color: var(--hw-text2); }
   html.dark .kanban-fs-btn:hover { color: var(--hw-brand) !important; }
+
+  /* "Novo ticket" é a ação principal da tela */
+  .kanban-fs-btn.primario {
+    background: var(--hw-brand, #00796b); border-color: var(--hw-brand, #00796b); color: #fff;
+  }
+  .kanban-fs-btn.primario:hover {
+    background: var(--hw-brand-2, #00897b); border-color: var(--hw-brand-2, #00897b); color: #fff !important;
+  }
+  html.dark .kanban-fs-btn.primario { background: var(--hw-brand); border-color: var(--hw-brand); color: #fff; }
 
   /* ── Modo Kanban (aba dedicada, ?board=1) ─────────────────────────────
      Esconde topbar + sidebar (ambos dentro do <header>) e deixa as colunas
@@ -85,20 +99,25 @@
     padding: 0 2px;
   }
 
-  /* Botão flutuante para sair do modo Kanban (fecha a aba) */
-  .kanban-exit-fab {
+  /* Barra de botões flutuantes do Modo Kanban. Um flex cuida do espaçamento —
+     antes cada botão tinha um `right:` em pixel, que não escalava. */
+  .kanban-fabs {
     display: none; position: fixed; top: 14px; right: 16px; z-index: 1000;
-    align-items: center; gap: 6px; height: 38px; padding: 0 14px;
-    border: none; border-radius: 9px; cursor: pointer;
+    align-items: center; gap: 8px;
+  }
+  body.kanban-trello .kanban-fabs { display: flex; }
+
+  .kanban-exit-fab {
+    display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px;
+    border: none; border-radius: 9px; cursor: pointer; text-decoration: none; white-space: nowrap;
     background: rgba(0,0,0,.55); color: #fff; font-size: 13px; font-weight: 600;
     backdrop-filter: blur(4px); transition: background .15s;
   }
-  .kanban-exit-fab:hover { background: rgba(0,0,0,.75); }
+  .kanban-exit-fab:hover { background: rgba(0,0,0,.75); color: #fff; }
   .kanban-exit-fab i { font-size: 18px; }
-  body.kanban-trello .kanban-exit-fab { display: inline-flex; }
-  /* Botão "Fundo" fica à esquerda do "Sair"; a Caixa de entrada à esquerda dele */
-  .kanban-fundo-fab { right: 210px; }
-  .kanban-inbox-fab { right: 320px; }
+  /* "Meus tickets" ligado */
+  .kanban-exit-fab.ativo { background: var(--hw-brand, #00796b); }
+  .kanban-exit-fab.ativo:hover { background: var(--hw-brand-2, #00897b); }
   .kb-inbox-badge {
     display: inline-flex; align-items: center; justify-content: center;
     min-width: 20px; height: 20px; padding: 0 6px; margin-left: 2px;
@@ -1141,22 +1160,38 @@
 {% endblock %}
 
 {% block content %}
-{% if quadro_atual.departamento_entrada %}
-<button type="button" id="btn-kanban-inbox" class="kanban-exit-fab kanban-inbox-fab"
-        title="Caixa de entrada — tickets de {{ quadro_atual.departamento_entrada }} aguardando triagem"
-        data-quadro-id="{{ quadro_atual.id }}">
-  <i class="material-icons" translate="no">inbox</i> Caixa de entrada
-  <span class="kb-inbox-badge" id="kb-inbox-badge" {% if not caixa_count %}style="display:none"{% endif %}>{{ caixa_count }}</span>
-</button>
-{% endif %}
-<button type="button" id="btn-kanban-fundo" class="kanban-exit-fab kanban-fundo-fab"
-        title="Mudar fundo do quadro"
-        data-quadro-id="{{ quadro_atual.id }}" data-fundo="{{ quadro_atual.fundo }}">
-  <i class="material-icons" translate="no">wallpaper</i> Fundo
-</button>
-<button type="button" id="btn-kanban-exit" class="kanban-exit-fab" title="Sair do modo Kanban">
-  <i class="material-icons" translate="no">close</i> Sair do modo Kanban
-</button>
+{% comment %}Botões flutuantes do Modo Kanban, num flex: antes eram posicionados
+por pixel fixo (right: 16/210/320), o que não escala ao acrescentar botões.{% endcomment %}
+<div class="kanban-fabs">
+  <button type="button" id="btn-kanban-novo" class="kanban-exit-fab" title="Abrir um novo ticket">
+    <i class="material-icons" translate="no">add</i> Novo ticket
+  </button>
+
+  <a id="btn-kanban-meus" class="kanban-exit-fab {% if meus_selecionado %}ativo{% endif %}"
+     href="?{{ qs_meus }}" title="Mostrar só os tickets em que sou responsável ou atendente">
+    <i class="material-icons" translate="no">{% if meus_selecionado %}check_box{% else %}check_box_outline_blank{% endif %}</i>
+    Meus tickets
+  </a>
+
+  {% if quadro_atual.departamento_entrada %}
+  <button type="button" id="btn-kanban-inbox" class="kanban-exit-fab"
+          title="Caixa de entrada — tickets de {{ quadro_atual.departamento_entrada }} aguardando triagem"
+          data-quadro-id="{{ quadro_atual.id }}">
+    <i class="material-icons" translate="no">inbox</i> Caixa de entrada
+    <span class="kb-inbox-badge" id="kb-inbox-badge" {% if not caixa_count %}style="display:none"{% endif %}>{{ caixa_count }}</span>
+  </button>
+  {% endif %}
+
+  <button type="button" id="btn-kanban-fundo" class="kanban-exit-fab"
+          title="Mudar fundo do quadro"
+          data-quadro-id="{{ quadro_atual.id }}" data-fundo="{{ quadro_atual.fundo }}">
+    <i class="material-icons" translate="no">wallpaper</i> Fundo
+  </button>
+
+  <button type="button" id="btn-kanban-exit" class="kanban-exit-fab" title="Sair do modo Kanban">
+    <i class="material-icons" translate="no">close</i> Sair do modo Kanban
+  </button>
+</div>
 
 <!-- Gaveta lateral: triagem dos tickets que chegaram no departamento do quadro -->
 <div class="kb-inbox" id="kb-inbox">
@@ -1272,17 +1307,24 @@
       </select>
     </div>
 
-    {% if responsavel_selecionado or atendente_selecionado or tipo_selecionado %}
+    {% if meus_selecionado or responsavel_selecionado or atendente_selecionado or tipo_selecionado %}
       <a href="?quadro={{ quadro_atual.id }}" class="kanban-clear">
         <i class="material-icons" translate="no">close</i> Limpar filtros
       </a>
     {% endif %}
 
-    <a id="btn-kanban-fs" class="kanban-fs-btn" target="_blank" rel="noopener"
-       href="?quadro={{ quadro_atual.id }}&board=1" title="Abre o quadro em nova aba, estilo Trello">
-      <i class="material-icons" translate="no">open_in_new</i>
-      <span>Modo Kanban</span>
-    </a>
+    <div class="kanban-filter-acoes">
+      <button type="button" id="btn-novo-ticket" class="kanban-fs-btn primario" title="Abrir um novo ticket">
+        <i class="material-icons" translate="no">add</i>
+        <span>Novo ticket</span>
+      </button>
+
+      <a id="btn-kanban-fs" class="kanban-fs-btn" target="_blank" rel="noopener"
+         href="?quadro={{ quadro_atual.id }}&board=1" title="Abre o quadro em nova aba, estilo Trello">
+        <i class="material-icons" translate="no">open_in_new</i>
+        <span>Modo Kanban</span>
+      </a>
+    </div>
   </form>
 
   <!-- Board -->
@@ -1759,10 +1801,32 @@ window.kanbanUrl = function (url) {
     if (fundoPop && !e.target.closest('.kb-fundo-pop') && !e.target.closest('#btn-kanban-fundo')) fecharFundo();
   });
 
+  // Esc fecha só o seletor de fundo. NÃO sai do Modo Kanban — sair é só pelo
+  // botão, senão um Esc distraído fecha o quadro inteiro.
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
-    if (fundoPop) { fecharFundo(); return; }   // Esc fecha o seletor antes de sair
-    if (exit) exit.click();
+    if (fundoPop) fecharFundo();
+  });
+})();
+</script>
+<script>
+// ── Novo ticket a partir do Kanban ──────────────────────────────────────
+// Reusa o modal de ticket rápido do base.html (o mesmo da tecla N). Passando um
+// callback, ele NÃO redireciona para o detalhe — fica no quadro.
+(function () {
+  function abrir() {
+    if (!window.abrirModalTicket) return;
+    window.abrirModalTicket({
+      aoSalvar: function (data) {
+        M.toast({ html: 'Ticket #' + data.id + ' criado!', classes: 'green darken-2' });
+        // No quadro padrão ele entra sozinho na coluna "Aberto" no próximo
+        // ciclo do auto-refresh (5s).
+      },
+    });
+  }
+  ['btn-novo-ticket', 'btn-kanban-novo'].forEach(function (id) {
+    const b = document.getElementById(id);
+    if (b) b.addEventListener('click', function (e) { e.preventDefault(); abrir(); });
   });
 })();
 </script>
@@ -2291,6 +2355,12 @@ window.kanbanUrl = function (url) {
         if (respEl && data.responsavel) respEl.textContent = data.responsavel === '—' ? '' : data.responsavel;
         const respRow = card.querySelector('.responsavel-row');
         if (respRow) respRow.style.display = data.responsavel && data.responsavel !== '—' ? 'flex' : 'none';
+
+        // Atendente (o preview já devolve data.atendente)
+        const atEl = card.querySelector('.atendente-name');
+        if (atEl && data.atendente) atEl.textContent = data.atendente === '—' ? '' : data.atendente;
+        const atRow = card.querySelector('.atendente-row');
+        if (atRow) atRow.style.display = data.atendente && data.atendente !== '—' ? 'flex' : 'none';
 
         const chip = card.querySelector('.prio-chip');
         if (chip && data.prioridade) {

@@ -1598,6 +1598,10 @@
     var inputCliente, dropdownEl, clienteIdEl, clienteTagEl, clienteNomeEl;
     var debounceTimer = null;
     var focusIndex = -1;
+    // Callback opcional de quem abriu o modal. Se existir, ao salvar NÃO navega
+    // para o detalhe do ticket — chama esta função. É o que deixa o Kanban criar
+    // um ticket sem sair do quadro.
+    var aoSalvar = null;
 
     // ── Inicializa ────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
@@ -1634,7 +1638,8 @@
       }
     });
 
-    function abrirModal() {
+    function abrirModal(opts) {
+      aoSalvar = (opts && typeof opts.aoSalvar === 'function') ? opts.aoSalvar : null;
       if (!modalInst) modalInst = M.Modal.getInstance(modalEl);
       resetModal();
       modalInst.open();
@@ -1642,6 +1647,10 @@
         document.getElementById('qt-cliente-input').focus();
       }, 180);
     }
+    // Exposto para o Kanban abrir o modal por botão (mesmo padrão do
+    // window.abrirBuscaTicket, mais abaixo). Sem opts, mantém o comportamento
+    // antigo: ao salvar, vai para o detalhe do ticket.
+    window.abrirModalTicket = abrirModal;
 
     // ── Setup ao abrir modal ──────────────────────────────────────────────────
     function onModalOpen() {
@@ -1826,7 +1835,17 @@
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (data.redirect) {
-          window.location.href = data.redirect;
+          btn.disabled = false;
+          btn.innerHTML = '<i class="material-icons left">add</i>Abrir Ticket';
+          if (aoSalvar) {
+            // Aberto pelo Kanban: fecha o modal e devolve o controle, sem sair da tela.
+            var cb = aoSalvar;
+            aoSalvar = null;
+            modalInst.close();
+            cb(data);
+          } else {
+            window.location.href = data.redirect;
+          }
         } else {
           mostrarErro(data.error || 'Erro ao abrir ticket.');
           btn.disabled = false;

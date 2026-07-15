@@ -360,9 +360,13 @@ class CaixaEntradaRecusa(models.Model):
 class Etiqueta(models.Model):
     """Etiqueta colorida aplicável a cards do Kanban (estilo Trello).
 
-    Conjunto global e compartilhado; o nome é opcional (etiqueta só-cor, como no
-    Trello). Relaciona-se a KanbanCard via M2M (KanbanCard.etiquetas)."""
+    Vive dentro de um quadro: cada quadro tem o seu próprio conjunto (antes eram
+    globais e compartilhadas). O nome é opcional (etiqueta só-cor, como no Trello).
+    Relaciona-se a KanbanCard via M2M (KanbanCard.etiquetas). O `quadro` é nulo só
+    em etiquetas órfãs herdadas da época global que não estavam em nenhum card."""
 
+    quadro = models.ForeignKey(KanbanQuadro, on_delete=models.CASCADE,
+                               related_name='etiquetas', null=True, blank=True)
     nome = models.CharField(max_length=40, blank=True, default='')
     cor = models.CharField(max_length=7, default='#61bd4f')  # hex
     criado_em = models.DateTimeField(auto_now_add=True)

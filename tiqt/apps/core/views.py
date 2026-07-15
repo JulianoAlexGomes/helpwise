@@ -1633,13 +1633,13 @@ class KanbanCardComentarView(LoginRequiredMixin, View):
 
 # ── Etiquetas do Kanban (estilo Trello) ────────────────────────────────────
 
-def _etiquetas_payload(card=None):
-    """Lista todas as etiquetas; marca quais estão aplicadas ao card (se dado)."""
+def _etiquetas_payload(quadro, card=None):
+    """Etiquetas do quadro; marca quais estão aplicadas ao card (se dado)."""
     from .models import Etiqueta
     aplicadas = set(card.etiquetas.values_list('id', flat=True)) if card else set()
     return [{
         'id': e.id, 'nome': e.nome, 'cor': e.cor, 'aplicada': e.id in aplicadas,
-    } for e in Etiqueta.objects.all()]
+    } for e in Etiqueta.objects.filter(quadro=quadro)]
 
 
 def _card_etiquetas_html(card):
@@ -1647,33 +1647,55 @@ def _card_etiquetas_html(card):
     return render_to_string('core/_kanban_etiquetas.html', {'etiquetas': card.etiquetas.all()})
 
 
+def _etiqueta_permitida(user, etiqueta_id):
+    """Busca uma etiqueta validando o acesso ao quadro dela."""
+    from .models import Etiqueta
+    etiqueta = get_object_or_404(Etiqueta.objects.select_related('quadro'), pk=etiqueta_id)
+    if etiqueta.quadro_id:
+        checar_quadro(user, etiqueta.quadro)
+    return etiqueta
+
+
+def _quadro_do_request(user, request, card=None):
+    """Descobre de qual quadro é a operação de etiqueta: do card ou do quadro_id."""
+    from .models import KanbanQuadro
+    if card is not None:
+        return checar_quadro(user, card.coluna.quadro)
+    quadro = get_object_or_404(KanbanQuadro, pk=request.POST.get('quadro_id') or request.GET.get('quadro_id'))
+    return checar_quadro(user, quadro)
+
+
 class EtiquetaListView(LoginRequiredMixin, View):
-    """Todas as etiquetas; com ?card_id=, indica quais estão no card."""
+    """Etiquetas de um quadro; com ?card_id=, indica quais estão no card.
+
+    Passe ?card_id= (o quadro vem do card) ou ?quadro_id= (criação de card, quando
+    ainda não há card)."""
     def get(self, request):
         card = None
         card_id = request.GET.get('card_id')
         if card_id:
-            card = card_permitido(request.user, card_id)
-        return JsonResponse({'etiquetas': _etiquetas_payload(card)})
+            card = card_permitido(request.user, card_id)   # já faz select_related('coluna__quadro')
+        quadro = _quadro_do_request(request.user, request, card)
+        return JsonResponse({'etiquetas': _etiquetas_payload(quadro, card)})
 
 
 class EtiquetaCriarView(LoginRequiredMixin, View):
-    """Cria uma etiqueta nova (nome opcional + cor)."""
+    """Cria uma etiqueta nova (nome opcional + cor) dentro de um quadro."""
     def post(self, request):
         from .models import Etiqueta
+        quadro = _quadro_do_request(request.user, request)
         cor = (request.POST.get('cor') or '').strip()
         if not cor:
             return JsonResponse({'error': 'Escolha uma cor'}, status=400)
         etiqueta = Etiqueta.objects.create(
-            nome=(request.POST.get('nome') or '').strip()[:40], cor=cor[:7])
+            quadro=quadro, nome=(request.POST.get('nome') or '').strip()[:40], cor=cor[:7])
         return JsonResponse({'ok': True, 'id': etiqueta.id, 'nome': etiqueta.nome, 'cor': etiqueta.cor})
 
 
 class EtiquetaEditarView(LoginRequiredMixin, View):
-    """Renomeia/recolore uma etiqueta (afeta todos os cards que a usam)."""
+    """Renomeia/recolore uma etiqueta (afeta os cards do quadro que a usam)."""
     def post(self, request):
-        from .models import Etiqueta
-        etiqueta = get_object_or_404(Etiqueta, pk=request.POST.get('etiqueta_id'))
+        etiqueta = _etiqueta_permitida(request.user, request.POST.get('etiqueta_id'))
         cor = (request.POST.get('cor') or '').strip()
         if cor:
             etiqueta.cor = cor[:7]
@@ -1683,10 +1705,10 @@ class EtiquetaEditarView(LoginRequiredMixin, View):
 
 
 class EtiquetaExcluirView(LoginRequiredMixin, View):
-    """Exclui uma etiqueta do sistema (remove de todos os cards)."""
+    """Exclui uma etiqueta do quadro (remove dos cards daquele quadro)."""
     def post(self, request):
-        from .models import Etiqueta
-        Etiqueta.objects.filter(pk=request.POST.get('etiqueta_id')).delete()
+        etiqueta = _etiqueta_permitida(request.user, request.POST.get('etiqueta_id'))
+        etiqueta.delete()
         return JsonResponse({'ok': True})
 
 
@@ -1719,6 +1741,9 @@ class CardEtiquetaToggleView(LoginRequiredMixin, View):
         from .models import Etiqueta
         card = card_permitido(request.user, request.POST.get('card_id'))
         etiqueta = get_object_or_404(Etiqueta, pk=request.POST.get('etiqueta_id'))
+        # A etiqueta tem de ser do mesmo quadro do card (etiquetas são por quadro).
+        if etiqueta.quadro_id != card.coluna.quadro_id:
+            return JsonResponse({'error': 'Etiqueta de outro quadro'}, status=400)
         if card.etiquetas.filter(pk=etiqueta.pk).exists():
             card.etiquetas.remove(etiqueta)
             aplicada = False

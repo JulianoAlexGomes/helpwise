@@ -2105,7 +2105,8 @@ window.kanbanUrl = function (url) {
           await post('/kanban/etiqueta/editar/', { etiqueta_id: et.id, nome: input.value, cor });
           location.reload();  // a cor/nome muda em todos os cards
         } else {
-          const d = await post('/kanban/etiqueta/criar/', { nome: input.value, cor });
+          const qId = document.getElementById('kanban-board').dataset.quadroId;
+          const d = await post('/kanban/etiqueta/criar/', { nome: input.value, cor, quadro_id: qId });
           if (selLocal) {
             // Criação do card: só marca a etiqueta nova na seleção local
             selLocal.set.add(String(d.id));
@@ -2130,7 +2131,7 @@ window.kanbanUrl = function (url) {
       excluir.className = 'kb-pop-btn secundario';
       excluir.textContent = 'Excluir etiqueta';
       excluir.addEventListener('click', async () => {
-        if (!confirm('Excluir esta etiqueta de todos os cards?')) return;
+        if (!confirm('Excluir esta etiqueta deste quadro?')) return;
         try { await post('/kanban/etiqueta/excluir/', { etiqueta_id: et.id }); location.reload(); }
         catch (e) { M.toast({ html: e.message, classes: 'red' }); }
       });
@@ -2168,8 +2169,10 @@ window.kanbanUrl = function (url) {
     pop.querySelector('.kb-pop-close').addEventListener('click', fechar);
 
     try {
-      // Sem card (criação) busca só a lista; a marcação vem do Set local.
-      const data = await post_get('/kanban/etiquetas/' + (id ? '?card_id=' + id : ''));
+      // Com card, o quadro vem do card; sem card (criação), passa o quadro atual
+      // — etiquetas são por quadro. A marcação, na criação, vem do Set local.
+      const qId = document.getElementById('kanban-board').dataset.quadroId;
+      const data = await post_get('/kanban/etiquetas/' + (id ? '?card_id=' + id : '?quadro_id=' + qId));
       if (selLocal) {
         data.etiquetas.forEach(et => { et.aplicada = selLocal.set.has(String(et.id)); });
       }

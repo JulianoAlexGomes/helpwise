@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+{% load ticket_extras %}
+
+{% block title %}Relatórios · HelpWise{% endblock %}
+
+{% block extra_css %}
+<style>
+  body { background: #eef1f4; }
+  .rel-wrap { max-width: 1280px; margin: 0 auto; }
+
+  .rel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 2px 0 18px; }
+  .rel-head h1 { font-size: 21px; font-weight: 700; color: #1c1d1f; margin: 0; letter-spacing: -.3px; }
+  .rel-head p { font-size: 13px; color: #8a8f98; margin: 3px 0 0; }
+  .rel-actions { display: flex; gap: 8px; }
+  .rel-btn-exp {
+    display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 16px;
+    border-radius: 9px; font-size: 13.5px; font-weight: 600; text-transform: none;
+    border: 1.5px solid #e2e4e8; background: #fff; color: #44474c; box-shadow: none;
+  }
+  .rel-btn-exp:hover { border-color: var(--hw-brand); color: var(--hw-brand); }
+  .rel-btn-exp i { font-size: 18px; }
+
+  .rel-card { background: #fff; border: 1px solid #ececef; border-radius: 14px; padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,.05); margin-bottom: 18px; }
+  .rel-card h2 { font-size: 14px; font-weight: 700; color: #1c1d1f; margin: 0 0 14px; display: flex; align-items: center; gap: 8px; }
+  .rel-card h2 i { font-size: 19px; color: var(--hw-brand); }
+
+  /* Filtros: mesmo padrão da Home */
+  .rel-filters { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; align-items: end; }
+  @media only screen and (max-width: 1200px) { .rel-filters { grid-template-columns: repeat(3, 1fr); } }
+  @media only screen and (max-width: 700px) { .rel-filters { grid-template-columns: repeat(2, 1fr); } }
+  .rel-lbl { display: block; font-size: 12px; font-weight: 600; color: #44474c; margin-bottom: 5px; }
+  .rel-card input[type=date],
+  .rel-card .select-wrapper input.select-dropdown {
+    border: 1.5px solid #e2e4e8 !important; border-radius: 9px !important; height: 42px !important;
+    padding: 0 12px !important; box-sizing: border-box !important; box-shadow: none !important;
+    background-color: #fff !important; color: #1c1d1f !important; font-size: 13.5px !important;
+    margin: 0 !important; width: 100% !important;
+  }
+  .rel-card .select-wrapper { margin: 0 !important; }
+  .rel-card .select-wrapper > select { display: none !important; }
+  .rel-btn { width: 100%; background: var(--hw-brand) !important; border-radius: 9px; text-transform: none; font-weight: 600; box-shadow: none !important; }
+
+  /* Aviso de dado reconstruído. Amarelo e no topo de propósito: quem lê o número
+     precisa ver a ressalva antes, não depois de tirar conclusão. */
+  .rel-aviso {
+    display: flex; gap: 10px; background: #fff8e1; border: 1px solid #ffe082;
+    border-left: 4px solid #ffc107; border-radius: 12px; padding: 14px 16px;
+    color: #6b5400; font-size: 13px; line-height: 1.5; margin-bottom: 14px;
+  }
+  .rel-aviso i { color: #ffa000; flex-shrink: 0; }
+
+  .rel-tbl-wrap { overflow-x: auto; }
+  table.rel-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.rel-tbl th {
+    text-align: left; font-size: 11.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .4px; color: #8a8f98; padding: 8px 10px; border-bottom: 2px solid #ececef;
+    white-space: nowrap;
+  }
+  table.rel-tbl td { padding: 9px 10px; border-bottom: 1px solid #f2f2f4; color: #1c1d1f; }
+  table.rel-tbl tr:hover td { background: #fafafb; }
+  table.rel-tbl td:first-child { font-weight: 600; }
+  .rel-vazio { color: #8a8f98; font-style: italic; padding: 14px 10px; font-size: 13px; }
+
+  html.dark body { background: var(--hw-bg); }
+  html.dark .rel-head h1 { color: var(--hw-text); }
+  html.dark .rel-card { background: var(--hw-surface) !important; border-color: var(--hw-border) !important; box-shadow: none !important; }
+  html.dark .rel-card h2 { color: var(--hw-text) !important; }
+  html.dark .rel-lbl { color: var(--hw-text2) !important; }
+  html.dark .rel-card input[type=date],
+  html.dark .rel-card .select-wrapper input.select-dropdown { background-color: var(--hw-input-bg) !important; border-color: var(--hw-border) !important; color: var(--hw-text) !important; }
+  html.dark table.rel-tbl td { color: var(--hw-text); border-bottom-color: var(--hw-border); }
+  html.dark table.rel-tbl tr:hover td { background: rgba(255,255,255,.03); }
+  html.dark .rel-aviso { background: rgba(255,193,7,.08); border-color: rgba(255,193,7,.3); color: #ffd54f; }
+  html.dark .rel-btn-exp { background: var(--hw-surface); border-color: var(--hw-border); color: var(--hw-text2); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rel-wrap">
+
+  <div class="rel-head">
+    <div>
+      <h1>Relatórios de Atendimento</h1>
+      <p>{{ subtitulo }}</p>
+    </div>
+    <div class="rel-actions">
+      <a class="rel-btn-exp waves-effect" href="{% url 'relatorios_pdf' %}?{% url_replace %}">
+        <i class="material-icons">picture_as_pdf</i>PDF
+      </a>
+      <a class="rel-btn-exp waves-effect" href="{% url 'relatorios_excel' %}?{% url_replace %}">
+        <i class="material-icons">table_view</i>Excel
+      </a>
+    </div>
+  </div>
+
+  <div class="rel-card">
+    <form method="get">
+      <div class="rel-filters">
+        <div>
+          <span class="rel-lbl">De</span>
+          <input type="date" name="data_inicio" value="{{ data_inicio }}">
+        </div>
+        <div>
+          <span class="rel-lbl">Até</span>
+          <input type="date" name="data_fim" value="{{ data_fim }}">
+        </div>
+        <div>
+          <span class="rel-lbl">Departamento</span>
+          <select name="departamento">
+            <option value="">Todos</option>
+            {% for d in departamentos %}
+              <option value="{{ d.id }}" {% if d.id|stringformat:"s" == departamento_selecionado %}selected{% endif %}>{{ d.descricao }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <span class="rel-lbl">Tipo</span>
+          {# Agrupado por departamento: os nomes de tipo se repetem entre eles. #}
+          <select name="tipo">
+            <option value="">Todos</option>
+            {% regroup tipos by departamento as tipos_por_dep %}
+            {% for grupo in tipos_por_dep %}
+              <optgroup label="{{ grupo.grouper.descricao }}">
+                {% for t in grupo.list %}
+                  <option value="{{ t.id }}" {% if t.id|stringformat:"s" == tipo_selecionado %}selected{% endif %}>{{ t.descricao }}</option>
+                {% endfor %}
+              </optgroup>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <span class="rel-lbl">Prioridade</span>
+          <select name="prioridade">
+            <option value="">Todas</option>
+            {% for p in prioridades %}
+              <option value="{{ p.id }}" {% if p.id|stringformat:"s" == prioridade_selecionada %}selected{% endif %}>{{ p.descricao }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <span class="rel-lbl">&nbsp;</span>
+          <button class="btn rel-btn waves-effect waves-light"><i class="material-icons left">search</i>Filtrar</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  {% for aviso in avisos %}
+    <div class="rel-aviso">
+      <i class="material-icons">warning</i>
+      <div>{{ aviso }}</div>
+    </div>
+  {% endfor %}
+
+  {% for sec in secoes %}
+    <div class="rel-card">
+      <h2><i class="material-icons">insights</i>{{ sec.titulo }}</h2>
+      {% if sec.linhas %}
+        <div class="rel-tbl-wrap">
+          <table class="rel-tbl">
+            <thead>
+              <tr>{% for col in sec.colunas %}<th>{{ col }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody>
+              {% for linha in sec.linhas %}
+                <tr>{% for celula in linha %}<td>{{ celula|traco_se_vazio }}</td>{% endfor %}</tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="rel-vazio">Nada no período.</div>
+      {% endif %}
+    </div>
+  {% endfor %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    M.FormSelect.init(document.querySelectorAll('.rel-card select'));
+  });
+</script>
+{% endblock %}

@@ -169,6 +169,10 @@ def HomeView(request):
         criado_em__lte=data_fim_dt
     )
 
+    # Quem não é da diretoria só vê os próprios números — inclusive no comparativo
+    # por atendente mais abaixo.
+    tickets = tickets_visiveis_para(request.user, tickets)
+
     if usuarios_ids:
         tickets = tickets.filter(responsavel_id__in=usuarios_ids)
 
@@ -261,6 +265,7 @@ def HomeView(request):
         "prioridade_selecionada": prioridade_id,
         "data_inicio": data_inicio.strftime("%Y-%m-%d"),
         "data_fim": data_fim.strftime("%Y-%m-%d"),
+        "e_diretoria": e_diretoria(request.user),
     }
 
     return render(request, "core/home.html", context)
@@ -768,6 +773,22 @@ def card_permitido(user, card_id, qs=None):
     return card
 
 
+# Nome do grupo que enxerga os números de todo mundo (sócios/diretoria).
+# Segue o mesmo mecanismo do Kanban: auth.Group, não um campo novo no User.
+GRUPO_DIRETORIA = 'Diretoria'
+
+
+def e_diretoria(user):
+    return user.is_superuser or user.groups.filter(name=GRUPO_DIRETORIA).exists()
+
+
+def tickets_visiveis_para(user, qs):
+    """Diretoria vê tudo; o atendente vê só o que passou pela mão dele."""
+    if e_diretoria(user):
+        return qs
+    return qs.filter(Q(responsavel=user) | Q(atendente=user))
+
+
 # Quantos cards cada coluna renderiza de cara. O resto vem no "Mostrar mais".
 CARDS_POR_COLUNA = 50
 
@@ -1110,7 +1131,7 @@ class TicketCloseAjaxView(LoginRequiredMixin, View):
         if not solucao_texto:
             return JsonResponse({'error': 'Informe a solução antes de encerrar'}, status=400)
         Solucao.objects.create(ticket=ticket, texto=solucao_texto, autor=request.user)
-        ticket.encerrar_atendimento()
+        ticket.encerrar_atendimento(request.user, origem='kanban')
         return JsonResponse({'ok': True})
 
 
@@ -1982,7 +2003,7 @@ class CloseTicketView(LoginRequiredMixin, View):
         if form.is_valid():
             solucao_texto = form.cleaned_data['solucao']
             solucao = Solucao.objects.create(ticket=ticket, texto=solucao_texto, autor=request.user)
-            ticket.encerrar_atendimento()
+            ticket.encerrar_atendimento(request.user, origem='detalhe')
             return HttpResponseRedirect(reverse("ticket_detail", kwargs={"pk": pk}))
         return render(request, 'core/ticket_close_form.html', {'form': form, 'ticket': ticket})
 
@@ -2050,7 +2071,7 @@ class TicketLoteEncerrarView(LoginRequiredMixin, View):
                 ticket.iniciar_atendimento(request.user)
 
             Solucao.objects.create(ticket=ticket, texto=solucoes[str(tid)], autor=request.user)
-            ticket.encerrar_atendimento()
+            ticket.encerrar_atendimento(request.user, origem='lote')
             encerrados.append(ticket.pk)
 
         return JsonResponse({

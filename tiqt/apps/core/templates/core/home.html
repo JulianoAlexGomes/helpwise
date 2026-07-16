@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load ticket_extras %}
 
 {% block title %}Dashboard · HelpWise{% endblock %}
 
@@ -13,6 +14,13 @@
   .dash-head p { font-size: 13px; color: #8a8f98; margin: 3px 0 0; }
   .dash-new { background: var(--hw-brand) !important; border-radius: 9px; text-transform: none; font-weight: 600; padding: 0 20px; box-shadow: none !important; }
   .dash-new:hover { background: var(--hw-brand-2) !important; }
+  .dash-head-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .dash-exp {
+    display: inline-flex; align-items: center; height: 38px; padding: 0 14px; border-radius: 9px;
+    font-size: 13px; font-weight: 600; text-transform: none; color: #44474c; border: 1.5px solid #e2e4e8;
+  }
+  .dash-exp:hover { border-color: var(--hw-brand); color: var(--hw-brand); background: transparent; }
+  .dash-exp i.left { margin-right: 5px; font-size: 18px; line-height: 38px; }
 
   /* Cards de resumo */
   .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 18px; }
@@ -73,6 +81,7 @@
   html.dark .dash-card input[type=date],
   html.dark .dash-card .select-wrapper input.select-dropdown { background-color: var(--hw-input-bg) !important; border-color: var(--hw-border) !important; color: var(--hw-text) !important; }
   html.dark .dash-empty { background: rgba(255,193,7,.08); border-color: rgba(255,193,7,.3); color: #ffd54f; }
+  html.dark .dash-exp { border-color: var(--hw-border); color: var(--hw-text2); }
 </style>
 {% endblock %}
 
@@ -97,7 +106,18 @@
       <h1>Dashboard</h1>
       <p>Olá, {{ user.first_name|default:user.username }} — período de {{ data_inicio }} a {{ data_fim }}</p>
     </div>
-    <a href="{% url 'new_ticket' %}" class="btn dash-new waves-effect waves-light"><i class="material-icons left">add</i>Novo Ticket</a>
+    <div class="dash-head-actions">
+      <a class="btn-flat dash-exp waves-effect" href="{% url 'relatorios_pdf' %}?{% url_replace %}" title="Exporta o período e os filtros atuais">
+        <i class="material-icons left">picture_as_pdf</i>PDF
+      </a>
+      <a class="btn-flat dash-exp waves-effect" href="{% url 'relatorios_excel' %}?{% url_replace %}" title="Exporta o período e os filtros atuais">
+        <i class="material-icons left">table_view</i>Excel
+      </a>
+      <a class="btn-flat dash-exp waves-effect" href="{% url 'relatorios' %}?{% url_replace %}">
+        <i class="material-icons left">insights</i>Relatórios
+      </a>
+      <a href="{% url 'new_ticket' %}" class="btn dash-new waves-effect waves-light"><i class="material-icons left">add</i>Novo Ticket</a>
+    </div>
   </div>
 
   <!-- Cards de resumo -->
@@ -173,7 +193,7 @@
           <select name="departamento">
             <option value="">Todos</option>
             {% for d in departamentos %}
-              <option value="{{ d.id }}" {% if d.id|stringformat:"s" == departamento_selecionado %}selected{% endif %}>{{ d.nome }}</option>
+              <option value="{{ d.id }}" {% if d.id|stringformat:"s" == departamento_selecionado %}selected{% endif %}>{{ d.descricao }}</option>
             {% endfor %}
           </select>
         </div>

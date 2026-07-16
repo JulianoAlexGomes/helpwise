@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
 from django.core.exceptions import ValidationError
@@ -38,6 +38,11 @@ class Prioridade(models.Model):
     id = models.AutoField(primary_key=True)
     descricao = models.CharField(max_length=20, null=True, blank=True)
     observacoes = models.TextField(max_length= 100, null=True, blank=True, default=1)
+    # Só ordena a fila do painel de TV. Quem define a meta de SLA é SlaPolitica —
+    # derivar minutos do peso por fórmula quebra assim que um departamento tiver
+    # meta diferente para a mesma prioridade.
+    peso = models.PositiveSmallIntegerField(
+        default=0, help_text='Maior = mais urgente. Ordena a fila do painel de TV.')
 
     def __str__(self):
         return self.descricao
@@ -149,24 +154,56 @@ class Ticket(models.Model):
     class Meta:
         ordering = ["criado_em"]
 
-    def iniciar_atendimento(self, user):
-        self.responsavel = user
-        self.status = self.EM_ATENDIMENTO
-        self.iniciado_em = timezone.localtime()
-        self.save()
+    def save(self, *args, **kwargs):
+        """Grava o evento CRIADO no nascimento do ticket.
 
-    def encerrar_atendimento(self):
-        self.status = self.ENCERRADO
-        self.encerrado_em = timezone.localtime()
-        self.save()
+        É aqui e não numa view porque ticket é criado em vários pontos (form,
+        kanban, API) e o evento não pode depender de ninguém lembrar de chamá-lo.
+        Autor fica nulo: o Ticket não guarda quem o criou."""
+        from .services import eventos
+        novo = self._state.adding
+        super().save(*args, **kwargs)
+        if novo:
+            eventos.registrar(self, TicketEvento.CRIADO, ocorrido_em=self.criado_em)
 
-    def cancelar_atendimento(self, user):
-        self.cancelado = user
-        self.status = self.CANCELADO
-        self.cancelado_em = timezone.localtime()
-        self.save()
+    def iniciar_atendimento(self, user, origem=''):
+        from .services import eventos
+        with transaction.atomic():
+            status_de = self.status
+            self.responsavel = user
+            self.status = self.EM_ATENDIMENTO
+            self.iniciado_em = timezone.localtime()
+            self.save()
+            # ocorrido_em = o mesmo instante que ficou no ticket, não uma segunda
+            # leitura do relógio: evento e timestamp não podem divergir.
+            eventos.registrar(self, TicketEvento.INICIADO, usuario=user,
+                              status_de=status_de, origem=origem,
+                              ocorrido_em=self.iniciado_em)
 
-    def reabrir(self, user, novo_status=None):
+    def encerrar_atendimento(self, user=None, origem=''):
+        from .services import eventos
+        with transaction.atomic():
+            status_de = self.status
+            self.status = self.ENCERRADO
+            self.encerrado_em = timezone.localtime()
+            self.save()
+            eventos.registrar(self, TicketEvento.ENCERRADO, usuario=user,
+                              status_de=status_de, origem=origem,
+                              ocorrido_em=self.encerrado_em)
+
+    def cancelar_atendimento(self, user, origem=''):
+        from .services import eventos
+        with transaction.atomic():
+            status_de = self.status
+            self.cancelado = user
+            self.status = self.CANCELADO
+            self.cancelado_em = timezone.localtime()
+            self.save()
+            eventos.registrar(self, TicketEvento.CANCELADO, usuario=user,
+                              status_de=status_de, origem=origem,
+                              ocorrido_em=self.cancelado_em)
+
+    def reabrir(self, user, novo_status=None, origem=''):
         """Reabre um ticket encerrado ou cancelado.
 
         Limpa as datas/autoria do fechamento, senão o ticket volta a ficar ativo
@@ -174,20 +211,29 @@ class Ticket(models.Model):
         continuaria barrando um novo encerramento.
 
         As Soluções antigas são mantidas (é histórico); ao encerrar de novo, uma nova
-        é criada e passa a ser a mais recente."""
+        é criada e passa a ser a mais recente.
+
+        O fechamento anterior não se perde mais: ele já está gravado como um
+        TicketEvento próprio, que esta função não toca. Limpar os campos aqui é
+        só estado atual, não histórico."""
+        from .services import eventos
         if novo_status is None:
             novo_status = self.EM_ATENDIMENTO
-        self.status = novo_status
-        self.encerrado_em = None
-        self.cancelado_em = None
-        self.cancelado = None
-        # Voltando para "Em atendimento" sem responsável, assume quem reabriu.
-        if novo_status == self.EM_ATENDIMENTO:
-            if not self.responsavel_id:
-                self.responsavel = user
-            if not self.iniciado_em:
-                self.iniciado_em = timezone.localtime()
-        self.save()
+        with transaction.atomic():
+            status_de = self.status
+            self.status = novo_status
+            self.encerrado_em = None
+            self.cancelado_em = None
+            self.cancelado = None
+            # Voltando para "Em atendimento" sem responsável, assume quem reabriu.
+            if novo_status == self.EM_ATENDIMENTO:
+                if not self.responsavel_id:
+                    self.responsavel = user
+                if not self.iniciado_em:
+                    self.iniciado_em = timezone.localtime()
+            self.save()
+            eventos.registrar(self, TicketEvento.REABERTO, usuario=user,
+                              status_de=status_de, origem=origem)
 
     def get_absolute_url(self):
         from django.shortcuts import reverse
@@ -462,3 +508,129 @@ class CertificadoCliente(models.Model):
 
     def __str__(self):
         return f"Arquivo ({self.arquivo.name})"
+
+
+class TicketEvento(models.Model):
+    """Histórico append-only das transições de um ticket.
+
+    Existe porque os timestamps do próprio Ticket não são histórico: `reabrir()`
+    zera `encerrado_em`/`cancelado_em`, apagando o passado de forma irreversível.
+    Nada aqui é atualizado ou apagado — só inserido.
+    """
+
+    CRIADO = 0
+    INICIADO = 1
+    ENCERRADO = 2
+    CANCELADO = 3
+    REABERTO = 4
+    RESPONSAVEL_ALTERADO = 5
+
+    TIPOS = (
+        (CRIADO, 'Criado'),
+        (INICIADO, 'Atendimento iniciado'),
+        (ENCERRADO, 'Encerrado'),
+        (CANCELADO, 'Cancelado'),
+        (REABERTO, 'Reaberto'),
+        (RESPONSAVEL_ALTERADO, 'Responsável alterado'),
+    )
+
+    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='eventos')
+    tipo = models.SmallIntegerField(choices=TIPOS)
+    # default e não auto_now_add: o backfill precisa gravar instantes do passado.
+    ocorrido_em = models.DateTimeField(default=timezone.now)
+    # SET_NULL e não PROTECT (que é o padrão do resto do projeto): evento é
+    # histórico imutável, não pode virar âncora que impede apagar um usuário.
+    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                related_name='eventos_ticket')
+    status_de = models.SmallIntegerField(null=True, blank=True)
+    status_para = models.SmallIntegerField(null=True, blank=True)
+    origem = models.CharField(max_length=20, blank=True, default='')
+    # True = reconstruído por aproximação (backfill), não observado. Sem isso o
+    # backfill contamina os relatórios em silêncio.
+    estimado = models.BooleanField(default=False)
+    registrado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['ocorrido_em', 'id']
+        indexes = [
+            models.Index(fields=['ticket', 'ocorrido_em'], name='tktevt_ticket_ocor_idx'),
+            models.Index(fields=['tipo', 'ocorrido_em'], name='tktevt_tipo_ocor_idx'),
+        ]
+
+    def __str__(self):
+        return f"#{self.ticket_id} {self.get_tipo_display()} em {self.ocorrido_em:%d/%m/%Y %H:%M}"
+
+
+class Expediente(models.Model):
+    """Uma faixa de atendimento num dia da semana.
+
+    Vários registros no mesmo dia = intervalo de almoço
+    (ex.: seg 08:00-12:00 e seg 13:00-18:00).
+    """
+
+    DIAS = (
+        (0, 'Segunda'), (1, 'Terça'), (2, 'Quarta'), (3, 'Quinta'),
+        (4, 'Sexta'), (5, 'Sábado'), (6, 'Domingo'),
+    )
+
+    dia_semana = models.SmallIntegerField(choices=DIAS)  # 0=segunda, igual a date.weekday()
+    hora_inicio = models.TimeField()
+    hora_fim = models.TimeField()
+    ativo = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['dia_semana', 'hora_inicio']
+        unique_together = [('dia_semana', 'hora_inicio')]
+        verbose_name = 'Expediente'
+        verbose_name_plural = 'Expediente'
+
+    def __str__(self):
+        return f"{self.get_dia_semana_display()} {self.hora_inicio:%H:%M}-{self.hora_fim:%H:%M}"
+
+    def clean(self):
+        if self.hora_fim <= self.hora_inicio:
+            raise ValidationError('A hora final deve ser maior que a inicial.')
+
+
+class Feriado(models.Model):
+    data = models.DateField()
+    descricao = models.CharField(max_length=60)
+    # Só resolve feriado de data fixa (Natal, Tiradentes). Carnaval e Páscoa são
+    # móveis: cadastre uma linha por ano.
+    recorrente_anual = models.BooleanField(
+        default=False, help_text='Repete todo ano na mesma data (Natal, Tiradentes...). '
+                                 'Feriado móvel (Carnaval, Páscoa) deixe desmarcado e cadastre ano a ano.')
+
+    class Meta:
+        ordering = ['data']
+
+    def __str__(self):
+        return f"{self.data:%d/%m} {self.descricao}"
+
+
+class SlaPolitica(models.Model):
+    """Meta de resposta e resolução, em minutos de expediente.
+
+    Departamento e prioridade vazios funcionam como curinga. A política mais
+    específica vence — ver sla.politica_para().
+    """
+
+    departamento = models.ForeignKey(Departamento, on_delete=models.CASCADE, null=True, blank=True,
+                                     help_text='Vazio = vale para qualquer departamento.')
+    prioridade = models.ForeignKey(Prioridade, on_delete=models.CASCADE, null=True, blank=True,
+                                   help_text='Vazio = vale para qualquer prioridade.')
+    minutos_resposta = models.PositiveIntegerField(
+        help_text='Minutos úteis entre a abertura e o início do atendimento.')
+    minutos_resolucao = models.PositiveIntegerField(
+        help_text='Minutos úteis entre a abertura e o encerramento.')
+    ativo = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = [('departamento', 'prioridade')]
+        verbose_name = 'Política de SLA'
+        verbose_name_plural = 'Políticas de SLA'
+
+    def __str__(self):
+        dep = self.departamento or 'qualquer depto'
+        pri = self.prioridade or 'qualquer prioridade'
+        return f"{dep} / {pri}: {self.minutos_resposta}min resposta, {self.minutos_resolucao}min resolução"

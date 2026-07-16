@@ -39,3 +39,11 @@ def is_image(value):
         return os.path.splitext(_name(value))[1].lower() in IMAGE_EXTS
     except Exception:
         return False
+
+
+@register.filter
+def traco_se_vazio(value):
+    """None/'' viram travessão. Célula vazia em relatório parece erro de geração."""
+    if value is None or value == '':
+        return '—'
+    return value

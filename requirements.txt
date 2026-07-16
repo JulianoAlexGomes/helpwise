@@ -11,6 +11,7 @@ channels
 djangorestframework
 Pillow
 openpyxl
+xhtml2pdf
 model-mommy
 pytest
 pytest-django

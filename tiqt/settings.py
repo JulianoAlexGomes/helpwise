@@ -15,6 +15,12 @@ DEBUG = True
 GROQ_API_KEY = config('GROQ_API_KEY', default='')
 IA_MODELO = config('IA_MODELO', default='meta-llama/llama-4-scout-17b-16e-instruct')
 
+# Chave de acesso do painel de TV (/tv/?k=...). A TV fica largada numa tela em
+# modo quiosque: sessão não serve, porque expira e não renova. Gere com
+#   python -c "import secrets; print(secrets.token_urlsafe(32))"
+# e coloque no .env. Vazio = painel exige login normal (falha fechado).
+PAINEL_TV_TOKEN = config('PAINEL_TV_TOKEN', default='')
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',

@@ -1,0 +1,68 @@
+{% load ticket_extras %}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    /* xhtml2pdf entende um subconjunto de CSS: nada de flexbox/grid.
+       Tabela e float é o que funciona aqui. */
+    @page {
+      size: a4 landscape;
+      margin: 1.4cm 1.2cm 1.8cm 1.2cm;
+      @frame rodape { -pdf-frame-content: rodape; bottom: 0.8cm; margin-left: 1.2cm; height: 1cm; }
+    }
+    body { font-family: Helvetica, sans-serif; font-size: 8.5pt; color: #1a1a19; }
+    h1 { font-size: 15pt; margin: 0 0 2pt; }
+    .subtitulo { font-size: 9pt; color: #6b6b66; margin-bottom: 10pt; }
+
+    .aviso {
+      background: #fff8e6; border-left: 3pt solid #fab219;
+      padding: 5pt 7pt; margin-bottom: 9pt; font-size: 8pt; color: #5c4a12;
+    }
+
+    h2 {
+      font-size: 10.5pt; margin: 12pt 0 4pt; padding-bottom: 2pt;
+      border-bottom: 0.6pt solid #d4d4d0;
+    }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 4pt; }
+    th {
+      background: #1a1a19; color: #fff; font-size: 7.5pt; text-align: left;
+      padding: 4pt 5pt; font-weight: bold;
+    }
+    td { padding: 3.5pt 5pt; border-bottom: 0.4pt solid #e6e6e3; }
+    tr:nth-child(even) td { background: #f7f7f5; }
+    .vazio { color: #6b6b66; font-style: italic; padding: 6pt; }
+    #rodape { font-size: 7pt; color: #9a9a95; text-align: center; }
+  </style>
+</head>
+<body>
+  <h1>{{ titulo }}</h1>
+  {% if subtitulo %}<div class="subtitulo">{{ subtitulo }}</div>{% endif %}
+
+  {% for aviso in avisos %}
+    <div class="aviso">{{ aviso }}</div>
+  {% endfor %}
+
+  {% for sec in secoes %}
+    <h2>{{ sec.titulo }}</h2>
+    {% if sec.linhas %}
+      <table repeat="1">
+        <thead>
+          <tr>{% for col in sec.colunas %}<th>{{ col }}</th>{% endfor %}</tr>
+        </thead>
+        <tbody>
+          {% for linha in sec.linhas %}
+            <tr>{% for celula in linha %}<td>{{ celula|traco_se_vazio }}</td>{% endfor %}</tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="vazio">Nada no período.</div>
+    {% endif %}
+  {% endfor %}
+
+  <div id="rodape">
+    Helpwise · gerado em {{ gerado_em|date:"d/m/Y H:i" }} · página <pdf:pagenumber> de <pdf:pagecount>
+  </div>
+</body>
+</html>

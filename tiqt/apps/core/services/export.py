@@ -32,19 +32,15 @@ def minutos_legivel(m):
     Um SLA em 'minutos úteis' é preciso e ilegível: 6918min não diz nada, '11,8
     dias úteis' diz. O dia útil aqui é o expediente cadastrado, não 24h.
     """
+    from .sla import carregar_calendario, minutos_por_dia_util
+
     if m is None:
         return '—'
     if m < 60:
         return f'{int(m)}min'
-    if m < 600:   # até ~1 dia útil, hora é mais natural
-        return f'{m / 60:.1f}h'
-    from .sla import carregar_calendario
-    cal = carregar_calendario()
-    minutos_dia = sum(
-        (h2.hour * 60 + h2.minute) - (h1.hour * 60 + h1.minute)
-        for faixas in cal.faixas.values() for h1, h2 in faixas
-    ) / max(len(cal.faixas), 1)
-    if not minutos_dia:
+
+    minutos_dia = minutos_por_dia_util(carregar_calendario())
+    if not minutos_dia or m < minutos_dia:
         return f'{m / 60:.1f}h'
     return f'{m / minutos_dia:.1f}d úteis'
 

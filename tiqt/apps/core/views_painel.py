@@ -43,6 +43,18 @@ MAX_DIAS_CALCULO = 45
 # continua gritando no contador. Se a fila encolher, dá para apertar.
 DIAS_FILA_DO_DIA = 7
 
+# Quem entra como coluna fixa na TV. Os membros deste grupo aparecem SEMPRE,
+# mesmo sem ticket nenhum — coluna que some quando a pessoa zera é coluna que faz
+# a tela inteira reflowar na frente de quem está lendo.
+#
+# Grupo ausente ou vazio => fallback: só quem tem ticket em atendimento. A TV não
+# pode depender de configuração para funcionar.
+GRUPO_ATENDENTES = 'Atendentes'
+
+# Quantas colunas existem é decidido pelo grupo, no admin — não há teto aqui.
+CHAVE_SEM_RESPONSAVEL = 'sem-responsavel'
+CHAVE_OUTROS = 'outros'
+
 
 def _autorizado(request):
     """A TV entra por token; gente entra por sessão.
@@ -59,25 +71,121 @@ def _autorizado(request):
 
 
 def _rotulo(filtros):
-    """Ex.: 'Desenvolvimento · Correção'. Vai no cabeçalho da TV.
+    """Ex.: 'Suporte + Notas · Correção'. Vai no cabeçalho da TV.
 
     Quem olha a tela da parede precisa saber que está vendo um recorte — senão lê
     'fila: 3' e conclui que a empresa inteira tem 3 tickets."""
     from .models import Departamento, Prioridade, Tipo
+
     partes = []
-    if 'departamento' in filtros:
-        d = Departamento.objects.filter(pk=filtros['departamento']).first()
-        if d:
-            partes.append(d.descricao)
-    if 'tipo' in filtros:
-        t = Tipo.objects.filter(pk=filtros['tipo']).first()
-        if t:
-            partes.append(t.descricao)
-    if 'prioridade' in filtros:
-        p = Prioridade.objects.filter(pk=filtros['prioridade']).first()
-        if p:
-            partes.append(p.descricao)
+    for campo, model in (('departamento', Departamento), ('tipo', Tipo), ('prioridade', Prioridade)):
+        if campo not in filtros:
+            continue
+        nomes = list(model.objects.filter(pk__in=filtros[campo]).values_list('descricao', flat=True))
+        if nomes:
+            partes.append(' + '.join(sorted(nomes)))
     return ' · '.join(partes)
+
+
+def _iniciais(nome):
+    """'Maria Silva' -> 'MS'; 'Juliano' -> 'JU'. O avatar da coluna pede 2 letras.
+
+    Iniciais e não `User.foto`: a TV fica meses ligada e buscaria uma imagem por
+    coluna a cada render — e em dev os arquivos de mídia nem existem no disco.
+    """
+    partes = [p for p in (nome or '').split() if p]
+    if not partes:
+        return '?'
+    if len(partes) == 1:
+        return partes[0][:2].upper()
+    return (partes[0][0] + partes[-1][0]).upper()
+
+
+def _atendentes_fixos():
+    """Os membros do grupo `Atendentes` — colunas que existem mesmo sem ticket.
+
+    Devolve [] quando o grupo não existe ou está vazio: aí o painel cai no
+    comportamento antigo (coluna só para quem tem ticket). A TV precisa
+    funcionar antes de alguém lembrar de configurar o grupo.
+    """
+    from django.contrib.auth.models import Group
+
+    grupo = Group.objects.filter(name__iexact=GRUPO_ATENDENTES).first()
+    if not grupo:
+        return []
+    return list(grupo.user_set.filter(is_active=True))
+
+
+def _foto_url(user):
+    """URL da foto, ou '' se não tiver.
+
+    O template desenha a inicial no fundo e sobrepõe a <img> com
+    onerror="this.remove()" — mesmo padrão do Kanban. É o que salva quando o
+    arquivo está no banco mas não no disco (o caso de dev, e de qualquer upload
+    que se perca).
+    """
+    try:
+        return user.foto.url if user and user.foto else ''
+    except ValueError:
+        return ''
+
+
+def _agrupar_por_atendente(itens, fixos):
+    """Uma coluna por atendente do grupo. O ticket cai na coluna de QUEM O ABRIU.
+
+    As colunas são EXATAMENTE os membros do grupo `Atendentes`, mesmo os que
+    estão sem ticket — coluna que aparece e some conforme a pessoa abre ou
+    encerra faria a grade inteira reflowar na frente de quem lê.
+
+    Ticket aberto por quem não está no grupo NÃO aparece: é decisão de negócio
+    (a TV é a operação dos atendentes). Note que isso não esconde o trabalho de
+    quem resolve — um chamado que o Lucas abriu e o Juliano está resolvendo
+    aparece na coluna do Lucas, com o Juliano no card.
+
+    Sem grupo configurado, cai no comportamento simples: coluna para cada
+    atendente que tenha ticket. A TV precisa funcionar antes de alguém lembrar
+    de criar o grupo.
+
+    Os grupos carregam IDs, não cópias dos cards. É deliberado: o `tick()` do JS
+    muta consumido_min/pct/cor nos objetos de `itens[]` a cada segundo. Se os
+    grupos trouxessem os cards inteiros, o payload teria DUAS cópias de cada
+    ticket, o tick atualizaria uma e o render leria a outra — cronômetro
+    congelado na parede. Com ids, há um objeto por ticket e uma fonte só.
+    """
+    fixos = list(fixos or [])
+    colunas = {}
+
+    def _nova(chave, nome, iniciais, do_grupo):
+        return colunas.setdefault(chave, {
+            'chave': chave, 'nome': nome, 'iniciais': iniciais, 'foto': '',
+            'do_grupo': do_grupo, 'total': 0, 'estourados': 0,
+            'em_atendimento': 0, 'ids': [],
+        })
+
+    for u in fixos:
+        nome = u.get_full_name() or u.username
+        col = _nova(str(u.id), nome, _iniciais(nome), True)
+        col['foto'] = _foto_url(u)
+
+    for item in itens:
+        chave = str(item['atendente_id']) if item['atendente_id'] else CHAVE_SEM_RESPONSAVEL
+        col = colunas.get(chave)
+        if col is None:
+            if fixos:
+                continue      # abriu quem não é atendente: fora da TV
+            col = _nova(chave, item['atendente_nome'] or 'Sem atendente',
+                        item['atendente_iniciais'] or '—', False)
+            col['foto'] = item['atendente_foto']
+        col['total'] += 1
+        col['ids'].append(item['id'])
+        if item['cor'] == 'vermelho':
+            col['estourados'] += 1
+        if item['em_atendimento']:
+            col['em_atendimento'] += 1
+
+    # Alfabética e NUNCA por contagem: numa TV, coluna que pula de lugar a cada
+    # ticket é coluna que ninguém consegue acompanhar.
+    return sorted(colunas.values(), key=lambda c: c['nome'].lower())
 
 
 def _cor(pct, sem_sla):
@@ -109,14 +217,36 @@ def _item(ticket, agora, cal, meta_attr):
         consumido = sla.minutos_uteis(ticket.criado_em, agora, cal)
         pct = round(consumido / meta * 100, 1) if meta else 0.0
 
+    resp = ticket.responsavel
+    resp_nome = (resp.get_full_name() or resp.username) if resp else ''
+    aten = ticket.atendente
+    aten_nome = (aten.get_full_name() or aten.username) if aten else ''
+    peso = ticket.prioridade.peso if ticket.prioridade_id else 0
+
     return {
         'id': ticket.id,
         'titulo': ticket.titulo or f'Ticket #{ticket.id}',
         'cliente': ticket.cliente.fantasia if ticket.cliente_id else '',
         'departamento': ticket.departamento.descricao if ticket.departamento_id else 'Sem departamento',
         'departamento_id': ticket.departamento_id or 0,
+        # `atendente` é QUEM ABRIU o chamado (views.py:595 grava request.user na
+        # criação) — é ele quem dá a coluna. `responsavel` é quem está
+        # RESOLVENDO: vem do form de criação ou de quem clicou em iniciar
+        # atendimento, e aparece dentro do card.
+        'atendente_id': ticket.atendente_id or 0,
+        'atendente_nome': aten_nome,
+        'atendente_iniciais': _iniciais(aten_nome) if aten_nome else '',
+        'atendente_foto': _foto_url(aten),
+        'responsavel_id': ticket.responsavel_id or 0,
+        'responsavel_nome': resp_nome,
+        'responsavel_iniciais': _iniciais(resp_nome) if resp_nome else '',
+        'em_atendimento': ticket.status == Ticket.EM_ATENDIMENTO,
         'prioridade': ticket.prioridade.descricao if ticket.prioridade_id else '',
-        'peso': ticket.prioridade.peso if ticket.prioridade_id else 0,
+        'peso': peso,
+        # Nível 1..4 para a cor do chip. Sai do PESO e não do nome: o nome muda no
+        # admin, o peso é o que já ordena a fila. Peso 0 (não configurado) cai em
+        # 1 = neutro.
+        'prioridade_nivel': min(4, max(1, peso)) if peso else 1,
         'consumido_min': consumido,
         'meta_min': meta,
         'pct': pct,
@@ -128,27 +258,30 @@ def _item(ticket, agora, cal, meta_attr):
 
 
 def _filtros(request):
-    """Filtros da TV, vindos da URL.
+    """Filtros da TV, vindos da URL. Cada um aceita VÁRIOS valores.
 
     A TV é uma tela em quiosque: não tem quem clique nela. Então o que ela mostra
-    é decidido no link — /tv/?k=TOKEN&departamento=2 é a TV do Dev, outro link é a
-    do Suporte. Ver o montador de link no template.
+    é decidido no link — /tv/?k=TOKEN&departamento=2&departamento=5 é a TV que
+    junta dois departamentos. Ver o montador de link no template.
+
+    Valor não numérico é ignorado em silêncio: ?departamento=abc não pode
+    derrubar a tela da parede.
     """
     out = {}
     for campo in ('departamento', 'tipo', 'prioridade'):
-        v = request.GET.get(campo)
-        if v and v.isdigit():
-            out[campo] = int(v)
+        vals = [int(v) for v in request.GET.getlist(campo) if v.isdigit()]
+        if vals:
+            out[campo] = sorted(set(vals))
     return out
 
 
 def _aplicar_filtros(qs, filtros):
     if 'departamento' in filtros:
-        qs = qs.filter(departamento_id=filtros['departamento'])
+        qs = qs.filter(departamento_id__in=filtros['departamento'])
     if 'tipo' in filtros:
-        qs = qs.filter(tipo_id=filtros['tipo'])
+        qs = qs.filter(tipo_id__in=filtros['tipo'])
     if 'prioridade' in filtros:
-        qs = qs.filter(prioridade_id=filtros['prioridade'])
+        qs = qs.filter(prioridade_id__in=filtros['prioridade'])
     return qs
 
 
@@ -157,30 +290,44 @@ def _montar_payload(filtros=None):
     agora = timezone.now()
     cal = sla.carregar_calendario()
 
-    base = Ticket.objects.select_related('cliente', 'prioridade', 'departamento')
+    # `atendente` (quem abriu) dá a coluna; `responsavel` (quem resolve) vai no
+    # card. Ambos no select_related: sem isso é uma query por ticket.
+    base = Ticket.objects.select_related(
+        'cliente', 'prioridade', 'departamento', 'responsavel', 'atendente')
     base = _aplicar_filtros(base, filtros)
 
-    # Fila: ninguém pegou ainda. O relógio corre contra a meta de RESPOSTA.
-    fila_qs = base.filter(status=Ticket.ABERTO, responsavel__isnull=True)
-    # Em atendimento: alguém pegou. O relógio corre contra a meta de RESOLUÇÃO,
-    # contada desde criado_em — o cliente não tem culpa se ficou 3h na fila.
-    atend_qs = base.filter(status=Ticket.EM_ATENDIMENTO)
+    # A TV mostra o que está VIVO: aberto ou em atendimento. Encerrado/cancelado
+    # sai da tela. Não existe "fila sem dono" — todo ticket tem quem o abriu; o
+    # que pode faltar é quem o resolva.
+    vivos_qs = base.filter(status__in=[Ticket.ABERTO, Ticket.EM_ATENDIMENTO])
 
-    fila_toda = [_item(t, agora, cal, 'minutos_resposta') for t in fila_qs]
-    atendimento = [_item(t, agora, cal, 'minutos_resolucao') for t in atend_qs]
+    # Com o grupo configurado, o corte é aqui e não no agrupamento: um ticket que
+    # não vai virar coluna também não pode contar no KPI nem viajar no JSON —
+    # senão a tela diz "17 na fila" e mostra 12 cards.
+    fixos = _atendentes_fixos()
+    if fixos:
+        vivos_qs = vivos_qs.filter(atendente__in=fixos)
 
-    # Fila do dia x dívida antiga. Os antigos não somem: viram um contador, para
-    # a tela ser legível sem varrer o problema para debaixo do tapete.
-    fila = [i for i in fila_toda if i['idade_dias'] <= DIAS_FILA_DO_DIA]
-    parados = [i for i in fila_toda if i['idade_dias'] > DIAS_FILA_DO_DIA]
+    # Sem responsável, o relógio corre contra a meta de RESPOSTA; com alguém
+    # resolvendo, contra a de RESOLUÇÃO — sempre desde criado_em, porque o
+    # cliente não tem culpa do tempo que o chamado ficou parado.
+    todos = [
+        _item(t, agora, cal,
+              'minutos_resolucao' if t.status == Ticket.EM_ATENDIMENTO else 'minutos_resposta')
+        for t in vivos_qs
+    ]
 
-    # Agrupado por departamento (o JS quebra a lista onde o departamento muda),
-    # e dentro dele: mais urgente primeiro, depois quem espera há mais tempo.
-    # Ordem alfabética de departamento de propósito — numa TV que fica ligada o
-    # dia todo, grupo que troca de lugar sozinho é grupo que ninguém acompanha.
-    # Ordenamos por idade_dias e não por consumido_min: este último é None nos antigos.
-    fila.sort(key=lambda i: (i['departamento'], -i['peso'], -i['idade_dias']))
-    atendimento.sort(key=lambda i: (i['departamento'], -i['pct'], -i['idade_dias']))
+    # O que chegou na semana fica nas colunas; o resto vira contador. Sem isso a
+    # coluna do Henrique abriria com 45 cards, quase todos de meses atrás.
+    itens = [i for i in todos if i['idade_dias'] <= DIAS_FILA_DO_DIA]
+    parados = [i for i in todos if i['idade_dias'] > DIAS_FILA_DO_DIA]
+
+    # Quem espera há mais tempo primeiro — é a regra pedida, e por sorte é
+    # ESTÁVEL: todo ticket envelhece na mesma taxa, então dois cards nunca se
+    # ultrapassam. (Ordenar por `pct` seria instável: metas diferentes fazem o
+    # percentual correr em velocidades diferentes, os cards se cruzam e trocam de
+    # lugar debaixo do olho de quem lê a parede.)
+    itens.sort(key=lambda i: -i['idade_dias'])
     parados.sort(key=lambda i: -i['idade_dias'])
 
     fechamento = sla.proximo_fechamento(agora, cal)
@@ -206,23 +353,6 @@ def _montar_payload(filtros=None):
                               status=Ticket.ENCERRADO),
         filtros).count()
 
-    # Contagem por departamento, incluindo a dívida antiga — para o cabeçalho de
-    # cada grupo dizer o tamanho do problema, não só o que coube na tela.
-    por_depto = {}
-
-    def _conta(itens, chave):
-        for i in itens:
-            d = por_depto.setdefault(i['departamento'], {
-                'departamento': i['departamento'], 'fila': 0, 'atendimento': 0,
-                'parados': 0, 'estourados': 0})
-            d[chave] += 1
-            if i['cor'] == 'vermelho':
-                d['estourados'] += 1
-
-    _conta(fila, 'fila')
-    _conta(atendimento, 'atendimento')
-    _conta(parados, 'parados')
-
     return {
         'gerado_em': agora.isoformat(),
         'expediente_aberto': aberto,
@@ -231,15 +361,19 @@ def _montar_payload(filtros=None):
         'expediente_configurado': configurado,
         'cortes': {'atencao': PCT_ATENCAO, 'estouro': PCT_ESTOURO},
         'dias_fila_do_dia': DIAS_FILA_DO_DIA,
-        'fila': fila,
-        'atendimento': atendimento,
-        'por_departamento': sorted(por_depto.values(), key=lambda d: d['departamento']),
+        # Quanto vale um "dia" para o JS formatar o cronômetro. Não é 1440: o
+        # relógio conta minutos ÚTEIS, então o dia é o expediente cadastrado.
+        # Quem sabe disso é o servidor — o JS não tem calendário.
+        'minutos_por_dia_util': sla.minutos_por_dia_util(cal),
+        # Lista única e plana: é a fonte de cada card. As colunas só carregam ids.
+        'itens': itens,
+        'por_atendente': _agrupar_por_atendente(itens, fixos),
         'resumo': {
-            'fila_total': len(fila),
-            'atendimento_total': len(atendimento),
-            'estourados': sum(1 for i in fila + atendimento if i['cor'] == 'vermelho'),
+            'fila_total': sum(1 for i in itens if not i['em_atendimento']),
+            'atendimento_total': sum(1 for i in itens if i['em_atendimento']),
+            'estourados': sum(1 for i in itens if i['cor'] == 'vermelho'),
             'encerrados_hoje': encerrados_hoje,
-            # A dívida antiga fica visível como número, mesmo fora das listas.
+            # A dívida antiga fica visível como número, mesmo fora das colunas.
             'parados_total': len(parados),
             'parados_mais_antigo_dias': parados[0]['idade_dias'] if parados else 0,
         },
@@ -264,10 +398,17 @@ def painel_tv(request):
 
     return render(request, 'core/painel_tv.html', {
         'token': request.GET.get('k', ''),
-        'filtros': filtros,
+        # Sempre as 3 chaves como lista: no template, `{% if x in filtros.tipo %}`
+        # com a chave ausente viraria `x in ''` e estouraria TypeError.
+        'filtros': {c: filtros.get(c, []) for c in ('departamento', 'tipo', 'prioridade')},
         'rotulo_filtros': _rotulo(filtros),
         'pode_configurar': pode_configurar,
         'pode_ver_token': pode_ver_token,
+        # Sem sessão só se entra por token: é a TV na parede, não o navegador de
+        # alguém. Lá a rolagem é funcional (sem ela o card fica invisível), então
+        # o painel ignora prefers-reduced-motion — que continua valendo para
+        # quem abre /tv/ logado.
+        'modo_quiosque': not request.user.is_authenticated,
         # Sem token configurado não existe modo quiosque — a tela diz isso em vez
         # de entregar um link que vai cair no login da TV.
         'token_tv': token_tv if pode_ver_token else '',
@@ -285,8 +426,10 @@ def painel_tv_dados(request):
 
     filtros = _filtros(request)
     # A chave inclui os filtros: sem isso a TV do Suporte serviria o cache da TV
-    # do Dev por até 20s.
-    chave = CACHE_KEY_PAYLOAD + ':' + ','.join(f'{k}={v}' for k, v in sorted(filtros.items()))
+    # do Dev por até 20s. Os ids viram "1-2" e não "[1, 2]": chave de cache com
+    # espaço é inválida em memcached, e hoje só funciona porque o backend é local.
+    chave = CACHE_KEY_PAYLOAD + ':' + ','.join(
+        '%s=%s' % (k, '-'.join(str(i) for i in v)) for k, v in sorted(filtros.items()))
     payload = cache.get(chave)
     if payload is None:
         payload = _montar_payload(filtros)

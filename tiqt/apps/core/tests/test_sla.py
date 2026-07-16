@@ -134,6 +134,36 @@ class TestIdaEVolta:
         assert minutos_uteis(inicio, prazo, cal) == minutos
 
 
+class TestMinutosPorDiaUtil:
+    """O divisor que traduz "minutos úteis" em "dias" sem mentir.
+
+    Um dia aqui é o expediente, não 24h — é o que permite a TV mostrar "5d 6h"
+    em vez de "58h14", e o relatório mostrar "11,8d úteis".
+    """
+
+    def test_expediente_com_almoco(self, cal):
+        from tiqt.apps.core.services.sla import minutos_por_dia_util
+        assert minutos_por_dia_util(cal) == 540      # 4h + 5h
+
+    def test_expediente_corrido(self):
+        from tiqt.apps.core.services.sla import minutos_por_dia_util
+        c = Calendario(faixas={d: [(time(8, 12), time(18, 0))] for d in range(5)}, tz=TZ)
+        assert minutos_por_dia_util(c) == 588        # 9h48 — o expediente real do cliente
+
+    def test_dias_diferentes_tiram_a_media(self):
+        from tiqt.apps.core.services.sla import minutos_por_dia_util
+        c = Calendario(faixas={
+            0: [(time(8, 0), time(18, 0))],   # 600
+            1: [(time(8, 0), time(12, 0))],   # 240
+        }, tz=TZ)
+        assert minutos_por_dia_util(c) == 420
+
+    def test_sem_expediente_devolve_zero(self):
+        """Quem chama decide o fallback — não pode dividir por zero."""
+        from tiqt.apps.core.services.sla import minutos_por_dia_util
+        assert minutos_por_dia_util(Calendario(faixas={}, tz=TZ)) == 0
+
+
 class TestExpediente:
     def test_esta_no_expediente(self, cal):
         assert esta_no_expediente(dt(2026, 7, 17, 9, 0), cal)

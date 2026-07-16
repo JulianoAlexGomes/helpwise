@@ -161,6 +161,21 @@ def prazo_a_partir_de(inicio: datetime, minutos: int, cal: Calendario) -> dateti
     )
 
 
+def minutos_por_dia_util(cal: Calendario) -> int:
+    """Quanto vale um "dia" em minutos úteis — a média das faixas cadastradas.
+
+    Não é 1440: um dia aqui é o expediente. Com 08:00-12:00 + 13:00-18:00 dá 540.
+    É o divisor para traduzir "3494 minutos úteis" em "5,9 dias" sem mentir.
+
+    0 quando não há expediente cadastrado; quem chama decide o que fazer.
+    """
+    dias = [
+        sum((f.hour * 60 + f.minute) - (i.hour * 60 + i.minute) for i, f in faixas)
+        for faixas in cal.faixas.values() if faixas
+    ]
+    return int(sum(dias) / len(dias)) if dias else 0
+
+
 def _montar_calendario() -> Calendario:
     from tiqt.apps.core.models import Expediente, Feriado
 

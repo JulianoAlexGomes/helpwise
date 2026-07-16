@@ -1,0 +1,440 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Painel de Atendimento</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Tela de TV: fundo escuro fixo, sem sidebar, sem toggle de tema.
+       Tamanhos pensados para leitura a ~3m de distância. */
+    :root {
+      --surface: #1a1a19;
+      --surface-alt: #242423;
+      --ink: #f4f4f2;
+      --ink-muted: #a1a19c;
+      --verde: #0ca30c;
+      --amarelo: #fab219;
+      --vermelho: #d03b3b;
+      --cinza: #6b6b66;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    /* Flex em coluna com as faixas em flex:1 — assim a barra de config (que só
+       existe para usuário logado) não empurra as listas para fora da tela. */
+    body {
+      background: var(--surface);
+      color: var(--ink);
+      font-family: 'Inter', system-ui, sans-serif;
+      padding: 1.5vw 2vw;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      display: flex; justify-content: space-between; align-items: baseline;
+      border-bottom: 2px solid var(--surface-alt); padding-bottom: .8vw; margin-bottom: 1.2vw;
+    }
+    h1 { font-size: 1.9vw; font-weight: 700; letter-spacing: -.02em; }
+    /* O escopo tem que ser óbvio: quem lê "fila: 3" precisa saber que são 3 do
+       Dev, não 3 da empresa inteira. */
+    h1 .escopo {
+      font-size: 1.1vw; font-weight: 600; color: var(--surface); background: var(--ink-muted);
+      padding: .15vw .6vw; border-radius: .3vw; margin-left: .6vw; vertical-align: middle;
+    }
+    .relogio { font-size: 1.4vw; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+
+    /* Montador de link (só para usuário logado) */
+    .config { background: var(--surface-alt); border-radius: .5vw; padding: .7vw 1vw; margin-bottom: 1vw; }
+    .config form { display: flex; align-items: flex-end; gap: .8vw; flex-wrap: wrap; }
+    .config label { font-size: .75vw; color: var(--ink-muted); display: flex; flex-direction: column; gap: .25vw; }
+    .config select {
+      background: var(--surface); color: var(--ink); border: 1px solid #3a3a36;
+      border-radius: .3vw; padding: .35vw .5vw; font-size: .85vw; font-family: inherit;
+    }
+    .config button {
+      background: var(--surface); color: var(--ink); border: 1px solid #3a3a36;
+      border-radius: .3vw; padding: .4vw .9vw; font-size: .85vw; cursor: pointer; font-family: inherit;
+    }
+    .config button:hover { border-color: var(--ink-muted); }
+    .config .dica { font-size: .7vw; color: var(--ink-muted); margin-left: auto; max-width: 34vw; text-align: right; }
+    .config .dica.alerta { color: var(--amarelo); }
+    .config .dica code { background: var(--surface); padding: .1vw .3vw; border-radius: .2vw; font-size: .95em; }
+
+    .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1vw; margin-bottom: 1.2vw; flex-shrink: 0; }
+    .kpi { background: var(--surface-alt); border-radius: .6vw; padding: 1vw 1.2vw; }
+    .kpi .valor { font-size: 3vw; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+    .kpi .rotulo { font-size: .85vw; color: var(--ink-muted); text-transform: uppercase; letter-spacing: .08em; margin-top: .4vw; }
+    .kpi.alerta .valor { color: var(--vermelho); }
+
+    .faixas { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5vw; flex: 1; min-height: 0; }
+    .faixa { display: flex; flex-direction: column; min-height: 0; }
+    .faixa h2 { font-size: 1.2vw; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-muted); margin-bottom: .8vw; }
+    .faixa h2 .cont { color: var(--ink); font-weight: 700; }
+    .faixa .sub { font-size: .8vw; color: var(--ink-muted); margin: -.5vw 0 .6vw; }
+    .lista { overflow-y: auto; display: flex; flex-direction: column; gap: .6vw; }
+    .lista::-webkit-scrollbar { width: 6px; }
+    .lista::-webkit-scrollbar-thumb { background: var(--surface-alt); border-radius: 3px; }
+
+    /* Cabeçalho de departamento dentro da faixa. Discreto de propósito: separa
+       sem competir com os cards, que são o que importa. */
+    .grupo-header {
+      display: flex; justify-content: space-between; align-items: baseline;
+      font-size: .85vw; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+      color: var(--ink-muted); padding: .5vw 0 .1vw; margin-top: .4vw;
+      border-bottom: 1px solid #33332f;
+    }
+    .grupo-header:first-child { margin-top: 0; }
+    .grupo-header .info { font-weight: 400; text-transform: none; letter-spacing: 0; }
+
+    .card {
+      background: var(--surface-alt); border-radius: .5vw; padding: .8vw 1vw;
+      display: grid; grid-template-columns: 1fr auto; gap: .6vw; align-items: center;
+      border-left: .4vw solid var(--cinza);
+    }
+    .card.verde    { border-left-color: var(--verde); }
+    .card.amarelo  { border-left-color: var(--amarelo); }
+    .card.vermelho { border-left-color: var(--vermelho); }
+    .card.cinza    { border-left-color: var(--cinza); }
+
+    .card .titulo { font-size: 1.05vw; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card .meta { font-size: .8vw; color: var(--ink-muted); margin-top: .2vw; }
+    .card .direita { text-align: right; }
+    .card .tempo { font-size: 1.5vw; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+    /* Status nunca por cor sozinha: o rótulo acompanha, para quem não distingue
+       verde de vermelho e para quem olha de longe. */
+    .selo { font-size: .7vw; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; margin-top: .3vw; }
+    .selo.verde { color: var(--verde); }
+    .selo.amarelo { color: var(--amarelo); }
+    .selo.vermelho { color: var(--vermelho); }
+    .selo.cinza { color: var(--cinza); }
+
+    .vazio { color: var(--ink-muted); font-size: 1vw; padding: 2vw; text-align: center; }
+    .avisos { position: fixed; bottom: 1vw; right: 2vw; display: flex; gap: .8vw; font-size: .8vw; }
+    .aviso { background: var(--surface-alt); padding: .4vw .8vw; border-radius: .4vw; color: var(--ink-muted); }
+    .aviso.off { color: var(--amarelo); }
+    #reconectando { display: none; }
+  </style>
+</head>
+<body data-token="{{ token }}">
+  <header>
+    <h1>
+      Painel de Atendimento
+      {% if rotulo_filtros %}<span class="escopo">{{ rotulo_filtros }}</span>{% endif %}
+    </h1>
+    <div class="relogio" id="relogio"></div>
+  </header>
+
+  {% if pode_configurar %}
+  {% comment %}
+    Montador de link. Só para quem está logado: a TV em quiosque não tem quem
+    clique. Configure aqui, copie a URL, abra na TV.
+  {% endcomment %}
+  <div class="config" id="config">
+    <form method="get" id="form-config">
+      {% if token %}<input type="hidden" name="k" value="{{ token }}">{% endif %}
+      <label>Departamento
+        <select name="departamento">
+          <option value="">Todos</option>
+          {% for d in departamentos %}
+            <option value="{{ d.id }}" {% if d.id == filtros.departamento %}selected{% endif %}>{{ d.descricao }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Tipo
+        <select name="tipo">
+          <option value="">Todos</option>
+          {% regroup tipos by departamento as tipos_por_dep %}
+          {% for grupo in tipos_por_dep %}
+            <optgroup label="{{ grupo.grouper.descricao }}">
+              {% for t in grupo.list %}
+                <option value="{{ t.id }}" {% if t.id == filtros.tipo %}selected{% endif %}>{{ t.descricao }}</option>
+              {% endfor %}
+            </optgroup>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Prioridade
+        <select name="prioridade">
+          <option value="">Todas</option>
+          {% for p in prioridades %}
+            <option value="{{ p.id }}" {% if p.id == filtros.prioridade %}selected{% endif %}>{{ p.descricao }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="submit">Aplicar</button>
+      {% if pode_ver_token %}
+        {% if token_configurado %}
+          <button type="button" id="copiar" data-token="{{ token_tv }}">Copiar link da TV</button>
+          <span class="dica">O link copiado já vem com a chave de acesso: abra na TV em quiosque e esta barra some.</span>
+        {% else %}
+          <span class="dica alerta">
+            Modo quiosque indisponível: falta <code>PAINEL_TV_TOKEN</code> no .env.
+            Sem ele a TV cai no login. Gere com
+            <code>python -c "import secrets; print(secrets.token_urlsafe(32))"</code>
+          </span>
+        {% endif %}
+      {% else %}
+        <span class="dica">O link para a TV é gerado pela Diretoria.</span>
+      {% endif %}
+    </form>
+  </div>
+  {% endif %}
+
+  <div class="kpis">
+    <div class="kpi"><div class="valor" id="kpi-fila">–</div><div class="rotulo">Na fila</div></div>
+    <div class="kpi"><div class="valor" id="kpi-atend">–</div><div class="rotulo">Em atendimento</div></div>
+    <div class="kpi alerta"><div class="valor" id="kpi-estourados">–</div><div class="rotulo">SLA estourado</div></div>
+    <div class="kpi"><div class="valor" id="kpi-encerrados">–</div><div class="rotulo">Encerrados hoje</div></div>
+    <div class="kpi" id="kpi-parados-box">
+      <div class="valor" id="kpi-parados">–</div>
+      <div class="rotulo" id="kpi-parados-rotulo">Parados</div>
+    </div>
+  </div>
+
+  <div class="faixas">
+    <section class="faixa">
+      <h2>Aguardando atendimento <span class="cont" id="cont-fila"></span></h2>
+      <div class="sub" id="sub-fila"></div>
+      <div class="lista" id="lista-fila"></div>
+    </section>
+    <section class="faixa">
+      <h2>Em atendimento <span class="cont" id="cont-atend"></span></h2>
+      <div class="lista" id="lista-atend"></div>
+    </section>
+  </div>
+
+  <div class="avisos">
+    <div class="aviso" id="expediente"></div>
+    <div class="aviso off" id="reconectando">Reconectando…</div>
+  </div>
+
+<script>
+(function () {
+  'use strict';
+
+  var REFRESH_MS = 30000;
+  // Repassa a query inteira (token + filtros): a TV do Dev e a do Suporte são o
+  // mesmo código, só muda o link.
+  var URL_DADOS = "{% url 'painel_tv_dados' %}" + window.location.search;
+
+  // Último payload bom. A TV fica meses ligada: se a rede cair, mantemos a
+  // última leitura na tela em vez de piscar vazio.
+  var dados = null;
+  var ultimoFetchOk = 0;
+
+  var SELOS = { verde: 'No prazo', amarelo: 'Atenção', vermelho: 'Estourado', cinza: 'Sem SLA' };
+
+  function fmtTempo(min) {
+    if (min < 60) return min + 'min';
+    var h = Math.floor(min / 60), m = min % 60;
+    return h + 'h' + (m ? String(m).padStart(2, '0') : '');
+  }
+
+  // Tickets muito antigos não têm cronômetro: o servidor manda consumido_min
+  // nulo, porque contar minutos úteis de 300 dias atrás não diz nada a ninguém.
+  function fmtPrincipal(item) {
+    if (item.antigo) return 'há ' + item.idade_dias + 'd';
+    var alvo = item.sem_sla ? '' : ' / ' + fmtTempo(item.meta_min);
+    return fmtTempo(item.consumido_min) + alvo;
+  }
+
+  function corDe(pct, semSla) {
+    if (semSla) return 'cinza';
+    var c = dados.cortes;
+    if (pct >= c.estouro) return 'vermelho';
+    if (pct >= c.atencao) return 'amarelo';
+    return 'verde';
+  }
+
+  function card(item) {
+    var el = document.createElement('div');
+    el.className = 'card ' + item.cor;
+    // Sem o departamento: ele já está no cabeçalho do grupo logo acima.
+    var meta = [item.cliente, item.prioridade].filter(Boolean).join(' · ');
+    el.innerHTML =
+      '<div>' +
+        '<div class="titulo"></div>' +
+        '<div class="meta"></div>' +
+      '</div>' +
+      '<div class="direita">' +
+        '<div class="tempo">' + fmtPrincipal(item) + '</div>' +
+        '<div class="selo ' + item.cor + '">' + SELOS[item.cor] + '</div>' +
+      '</div>';
+    // textContent para não injetar HTML de título/cliente vindo do banco
+    el.querySelector('.titulo').textContent = item.titulo;
+    el.querySelector('.meta').textContent = meta;
+    return el;
+  }
+
+  // Cabeçalho de grupo. Mostra também a dívida antiga do departamento, que não
+  // está na lista — o número tem que aparecer mesmo quando os cards não cabem.
+  function headerDepto(nome) {
+    var d = (dados.por_departamento || []).find(function (x) { return x.departamento === nome; });
+    var el = document.createElement('div');
+    el.className = 'grupo-header';
+    var extra = (d && d.parados) ? ' · ' + d.parados + ' parados' : '';
+    el.innerHTML = '<span class="nome"></span><span class="info"></span>';
+    el.querySelector('.nome').textContent = nome;
+    el.querySelector('.info').textContent = extra;
+    return el;
+  }
+
+  function pinta(lista, itens, vazio) {
+    lista.replaceChildren();   // sem acumular nós/listeners a cada render
+    if (!itens.length) {
+      var v = document.createElement('div');
+      v.className = 'vazio';
+      v.textContent = vazio;
+      lista.appendChild(v);
+      return;
+    }
+    // Os itens já vêm ordenados por departamento: quebramos o grupo onde ele muda.
+    var frag = document.createDocumentFragment();
+    var deptoAtual = null;
+    itens.forEach(function (i) {
+      if (i.departamento !== deptoAtual) {
+        deptoAtual = i.departamento;
+        frag.appendChild(headerDepto(deptoAtual));
+      }
+      frag.appendChild(card(i));
+    });
+    lista.appendChild(frag);
+  }
+
+  function render() {
+    if (!dados) return;
+    document.getElementById('kpi-fila').textContent = dados.resumo.fila_total;
+    document.getElementById('kpi-atend').textContent = dados.resumo.atendimento_total;
+    document.getElementById('kpi-estourados').textContent = dados.resumo.estourados;
+    document.getElementById('kpi-encerrados').textContent = dados.resumo.encerrados_hoje;
+    document.getElementById('cont-fila').textContent = dados.fila.length;
+    document.getElementById('cont-atend').textContent = dados.atendimento.length;
+
+    // Dívida antiga: fora das listas, mas nunca escondida. Some só quando zera.
+    var box = document.getElementById('kpi-parados-box');
+    var parados = dados.resumo.parados_total;
+    box.style.visibility = parados ? 'visible' : 'hidden';
+    if (parados) {
+      document.getElementById('kpi-parados').textContent = parados;
+      document.getElementById('kpi-parados-rotulo').textContent =
+        'Parados +' + dados.dias_fila_do_dia + 'd · pior ' + dados.resumo.parados_mais_antigo_dias + 'd';
+    }
+
+    document.getElementById('sub-fila').textContent =
+      'últimos ' + dados.dias_fila_do_dia + ' dias' + (parados ? ' · ' + parados + ' mais antigos fora da lista' : '');
+
+    pinta(document.getElementById('lista-fila'), dados.fila, 'Ninguém esperando 🎉');
+    pinta(document.getElementById('lista-atend'), dados.atendimento, 'Nada em atendimento');
+
+    var exp = document.getElementById('expediente');
+    if (dados.expediente_configurado === false) {
+      exp.classList.add('off');
+      exp.textContent = 'Expediente não cadastrado — SLA inativo';
+      return;
+    }
+    if (dados.expediente_aberto) {
+      exp.classList.remove('off');
+      exp.textContent = 'Expediente aberto';
+    } else {
+      exp.classList.add('off');
+      var volta = dados.expediente_abre_em ? new Date(dados.expediente_abre_em) : null;
+      exp.textContent = 'Fora do expediente' + (volta
+        ? ' — retoma ' + volta.toLocaleString('pt-BR', { weekday: 'short', hour: '2-digit', minute: '2-digit' })
+        : '');
+    }
+  }
+
+  // O relógio só corre dentro do expediente. Quem sabe o que é feriado e hora de
+  // almoço é o servidor: aqui só perguntamos "já passou do fechamento?".
+  function tick() {
+    var agora = new Date();
+    document.getElementById('relogio').textContent =
+      agora.toLocaleString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+    if (!dados || !dados.expediente_aberto) return;
+    var fecha = dados.expediente_fecha_em ? new Date(dados.expediente_fecha_em) : null;
+    if (fecha && agora >= fecha) return;   // fechou: congela até o próximo fetch confirmar
+
+    var decorrido = Math.floor((agora - new Date(dados.gerado_em)) / 60000);
+    if (decorrido < 1) return;
+
+    var mudou = false;
+    [dados.fila, dados.atendimento].forEach(function (lista) {
+      lista.forEach(function (i) {
+        if (i.antigo) return;   // sem cronômetro: mostra "há N dias"
+        var novo = i.consumido_base + decorrido;
+        if (novo !== i.consumido_min) {
+          i.consumido_min = novo;
+          if (i.meta_min) {
+            i.pct = Math.round(novo / i.meta_min * 1000) / 10;
+            i.cor = corDe(i.pct, i.sem_sla);
+          }
+          mudou = true;
+        }
+      });
+    });
+    if (mudou) render();
+  }
+
+  async function buscar() {
+    try {
+      var r = await fetch(URL_DADOS, { credentials: 'same-origin' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      dados = await r.json();
+      // Guarda o valor do servidor como base: o tick soma sobre ele, nunca sobre
+      // o próprio incremento (senão o contador acelera a cada segundo).
+      [dados.fila, dados.atendimento].forEach(function (lista) {
+        lista.forEach(function (i) { i.consumido_base = i.consumido_min; });
+      });
+      ultimoFetchOk = Date.now();
+      document.getElementById('reconectando').style.display = 'none';
+      render();
+    } catch (e) {
+      // Mantém os dados antigos na tela; só avisa que estão parados.
+      document.getElementById('reconectando').style.display = 'block';
+    }
+  }
+
+{% if pode_configurar %}
+  // Montador de link: copia a URL atual já com os filtros escolhidos.
+  // Só existe para usuário logado — a TV em quiosque não recebe este código.
+  var btnCopiar = document.getElementById('copiar');
+  if (btnCopiar) {
+    btnCopiar.addEventListener('click', async function () {
+      // MONTA o link do quiosque; não copia a URL da barra. Quem está aqui está
+      // logado e sem ?k= — copiar a URL atual daria um link que cai no login
+      // assim que abrisse na TV.
+      var p = new URLSearchParams(window.location.search);
+      p.set('k', btnCopiar.dataset.token);
+      var url = window.location.origin + window.location.pathname + '?' + p.toString();
+
+      var rotulo = btnCopiar.textContent;
+      try {
+        await navigator.clipboard.writeText(url);
+        btnCopiar.textContent = 'Copiado!';
+      } catch (e) {
+        // clipboard exige contexto seguro (https); sem ele, mostra a URL para copiar na mão
+        window.prompt('Copie o link da TV:', url);
+      }
+      setTimeout(function () { btnCopiar.textContent = rotulo; }, 2000);
+    });
+  }
+
+  // Selects vazios sujariam a URL com ?departamento=&tipo=
+  var form = document.getElementById('form-config');
+  if (form) {
+    form.addEventListener('submit', function () {
+      form.querySelectorAll('select').forEach(function (s) { if (!s.value) s.disabled = true; });
+    });
+  }
+{% endif %}
+
+  buscar();
+  setInterval(buscar, REFRESH_MS);
+  setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>

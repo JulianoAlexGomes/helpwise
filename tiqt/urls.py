@@ -2,12 +2,19 @@ from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from tiqt.apps.core import views
+from tiqt.apps.core import views_painel
+from tiqt.apps.core import views_relatorios
 from django.conf import settings
 from django.conf.urls.static import static
 from tiqt.apps.core.views import excluir_arquivo, download_certificado, CertificadoDeleteView
 
 urlpatterns = [
     path('', views.HomeView, name='home'),
+    path('tv/', views_painel.painel_tv, name='painel_tv'),
+    path('tv/dados/', views_painel.painel_tv_dados, name='painel_tv_dados'),
+    path('relatorios/', views_relatorios.relatorios_view, name='relatorios'),
+    path('relatorios/pdf/', views_relatorios.relatorios_pdf, name='relatorios_pdf'),
+    path('relatorios/excel/', views_relatorios.relatorios_excel, name='relatorios_excel'),
     path('perfil/', views.PerfilView.as_view(), name='perfil'),
     path('ticket/new/', views.NewTicketView.as_view(), name='new_ticket'),
     path('ticket/my/', views.MyTicketsView.as_view(), name='my_tickets'),

@@ -140,6 +140,66 @@
   html.dark #modal-lote-encerrar .modal-footer { background: var(--hw-surface) !important; border-top-color: var(--hw-border) !important; }
   html.dark .lote-item textarea { background: var(--hw-input-bg); color: var(--hw-text); border-color: var(--hw-border) !important; }
 
+  /* ── Agrupamento de tickets (coluna Grupo) ── */
+  .tkl-grp-add, .tkl-grp-chip {
+    display: inline-flex; align-items: center; gap: 3px; height: 28px; padding: 0 9px;
+    border-radius: 8px; border: 1.5px solid #e2e4e8; background: #fff; cursor: pointer;
+    font-size: 12px; font-weight: 700; color: #8a8f98; line-height: 0;
+  }
+  .tkl-grp-add i, .tkl-grp-chip i { font-size: 17px; }
+  .tkl-grp-add:hover { border-color: var(--hw-brand); color: var(--hw-brand-2); background: rgba(0,121,107,.05); }
+  .tkl-grp-chip { border-color: rgba(0,121,107,.35); color: var(--hw-brand-2); background: rgba(0,121,107,.08); }
+  .tkl-grp-chip:hover { background: rgba(0,121,107,.15); }
+  html.dark .tkl-grp-add { background: var(--hw-input-bg); border-color: var(--hw-border); color: var(--hw-text2); }
+  html.dark .tkl-grp-chip { background: rgba(0,150,136,.16); border-color: rgba(0,150,136,.4); color: #4db6ac; }
+
+  /* Modal de agrupar (busca de tickets do mesmo cliente) */
+  #modal-agrupar { border-radius: 14px; max-width: 560px; width: 92%; overflow: hidden; }
+  #modal-agrupar .modal-content { padding: 24px 26px 8px; }
+  #modal-agrupar h5 { margin: 0; font-size: 19px; font-weight: 700; color: #1c1d1f; }
+  .agr-membros { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 4px; }
+  .agr-membros:empty { display: none; }
+  .agr-chip {
+    display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px;
+    background: rgba(0,121,107,.1); color: var(--hw-brand-2); font-size: 12.5px; font-weight: 600;
+  }
+  .agr-search { position: relative; margin-top: 14px; }
+  .agr-search > i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 19px; }
+  .agr-search input {
+    width: 100%; box-sizing: border-box; height: 42px; padding: 0 13px 0 38px;
+    border: 1.5px solid #e2e4e8 !important; border-radius: 9px; font-size: 13.5px;
+    background: #fff; color: #1c1d1f;
+  }
+  .agr-search input:focus { border-color: var(--hw-brand) !important; box-shadow: 0 0 0 3px rgba(0,121,107,.13); }
+  .agr-result { margin-top: 10px; max-height: 300px; overflow-y: auto; }
+  .agr-item {
+    display: flex; align-items: center; gap: 10px; padding: 9px 11px; border: 1px solid #eceef0;
+    border-radius: 9px; margin-bottom: 6px; cursor: pointer;
+  }
+  .agr-item:hover { border-color: var(--hw-brand); background: rgba(0,121,107,.05); }
+  .agr-item.sel { border-color: var(--hw-brand); background: rgba(0,121,107,.1); }
+  .agr-item-main { min-width: 0; flex: 1; }
+  .agr-item-id { font-weight: 700; color: var(--hw-brand-2); font-size: 12.5px; }
+  .agr-item-tit { font-size: 13px; color: #2a2c30; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .agr-item-check { color: var(--hw-brand); line-height: 0; opacity: 0; }
+  .agr-item.sel .agr-item-check { opacity: 1; }
+  .agr-vazio { color: #9ca3af; font-size: 13px; text-align: center; padding: 22px 0; }
+  .agr-desagrupar { color: #e53935 !important; font-size: 12.5px; font-weight: 600; }
+  #modal-agrupar .modal-footer { display: flex; align-items: center; gap: 8px; border-top: 1px solid #eee; border-radius: 0 0 14px 14px; }
+  #modal-agrupar .modal-footer .sep { flex: 1; }
+  html.dark #modal-agrupar { background: var(--hw-surface) !important; }
+  html.dark #modal-agrupar h5 { color: var(--hw-text) !important; }
+  html.dark #modal-agrupar .agr-search input { background: var(--hw-input-bg); color: var(--hw-text); border-color: var(--hw-border) !important; }
+  html.dark #modal-agrupar .modal-footer { background: var(--hw-surface) !important; border-top-color: var(--hw-border) !important; }
+  html.dark .agr-item { border-color: var(--hw-border); }
+  html.dark .agr-item-tit { color: var(--hw-text); }
+
+  /* Rótulo de grupo no modal de encerrar em lote */
+  .lote-item-tit .lote-grp {
+    display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 10px;
+    background: rgba(0,121,107,.12); color: var(--hw-brand-2); font-size: 11px; font-weight: 700;
+  }
+
   /* Paginação */
   .hw-table-wrap .pagination { display: flex; justify-content: center; gap: 4px; margin: 14px 0; padding: 0; }
   .hw-table-wrap .pagination li { list-style: none; }
@@ -244,6 +304,28 @@
     <a href="#!" class="modal-close btn-flat">Voltar</a>
     <button class="btn tkl-lote-btn encerrar" id="btn-lote-encerrar-confirmar" type="button">
       <i class="material-icons left">check</i>Encerrar tickets
+    </button>
+  </div>
+</div>
+
+<!-- Agrupar: junta tickets do MESMO cliente (solução única ao encerrar) -->
+<div id="modal-agrupar" class="modal">
+  <div class="modal-content">
+    <h5>Agrupar tickets</h5>
+    <p class="tkl-modal-sub" id="agr-sub">Junte tickets do mesmo cliente. Ao encerrar, a mesma solução vale para o grupo todo.</p>
+    <div class="agr-membros" id="agr-membros"></div>
+    <div class="agr-search">
+      <i class="material-icons" translate="no">search</i>
+      <input type="text" id="agr-q" class="browser-default" placeholder="Buscar ticket por #nº ou título...">
+    </div>
+    <div class="agr-result" id="agr-result"></div>
+  </div>
+  <div class="modal-footer">
+    <a href="#!" class="agr-desagrupar" id="agr-desagrupar" style="display:none;">Desagrupar este ticket</a>
+    <span class="sep"></span>
+    <a href="#!" class="modal-close btn-flat">Voltar</a>
+    <button class="btn tkl-lote-btn encerrar" id="btn-agrupar-confirmar" type="button" disabled>
+      <i class="material-icons left">add_link</i>Agrupar
     </button>
   </div>
 </div>
@@ -374,18 +456,37 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     if (!permitidos.length) return;
 
-    lista.innerHTML = permitidos.map(function (c) {
-      const tr = linhaDe(c);
-      const id = tr.dataset.ticketId;
-      // Aberto (0) ainda não foi iniciado: será assumido em seu nome ao encerrar
-      const aviso = tr.dataset.status === '0'
-        ? '<span class="lote-aviso">será iniciado em seu nome</span>' : '';
+    // Colapsa os membros de um mesmo grupo num único campo: a solução vale para
+    // o grupo todo. O campo carrega o id de um representante; o backend
+    // (_encerrar_grupo) encerra todos os irmãos com o mesmo texto.
+    const vistosGrupo = new Set();
+    const itens = [];
+    permitidos.forEach(function (c) {
+      const tr  = linhaDe(c);
+      const id  = tr.dataset.ticketId;
       const tit = (tr.dataset.titulo || '').replace(/[<>&]/g, '');
-      return '<div class="lote-item">' +
-        '<div class="lote-item-tit"><span class="lote-id">#' + id + '</span> ' + tit + aviso + '</div>' +
-        '<textarea data-id="' + id + '" placeholder="O que foi feito para resolver?"></textarea>' +
-      '</div>';
-    }).join('');
+      const gid = tr.dataset.grupoId || '';
+      if (gid) {
+        if (vistosGrupo.has(gid)) return;   // esse grupo já tem seu campo
+        vistosGrupo.add(gid);
+        const membros = (tr.dataset.grupoMembros || id).split(',').filter(Boolean);
+        const idsTxt = membros.map(function (m) { return '#' + m; }).join(', ');
+        itens.push('<div class="lote-item">' +
+          '<div class="lote-item-tit"><span class="lote-id">#' + id + '</span> ' + tit +
+            '<span class="lote-grp">grupo: ' + idsTxt + '</span></div>' +
+          '<textarea data-id="' + id + '" placeholder="Solução aplicada a todo o grupo..."></textarea>' +
+        '</div>');
+      } else {
+        // Aberto (0) ainda não foi iniciado: será assumido em seu nome ao encerrar
+        const aviso = tr.dataset.status === '0'
+          ? '<span class="lote-aviso">será iniciado em seu nome</span>' : '';
+        itens.push('<div class="lote-item">' +
+          '<div class="lote-item-tit"><span class="lote-id">#' + id + '</span> ' + tit + aviso + '</div>' +
+          '<textarea data-id="' + id + '" placeholder="O que foi feito para resolver?"></textarea>' +
+        '</div>');
+      }
+    });
+    lista.innerHTML = itens.join('');
     if (!modalInst) modalInst = M.Modal.init(modalEl, {});
     modalInst.open();
   });
@@ -423,6 +524,145 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   pintar();
+})();
+</script>
+
+<script>
+// ── Agrupar tickets do mesmo cliente (solução única ao encerrar) ──────────
+(function () {
+  const modalEl = document.getElementById('modal-agrupar');
+  if (!modalEl) return;
+  let modalInst = null;
+
+  const subEl    = document.getElementById('agr-sub');
+  const membrosEl = document.getElementById('agr-membros');
+  const qEl      = document.getElementById('agr-q');
+  const resultEl = document.getElementById('agr-result');
+  const btnOk    = document.getElementById('btn-agrupar-confirmar');
+  const btnDes   = document.getElementById('agr-desagrupar');
+
+  let anchorId = null, clienteId = null, membros = [];
+  const selecionados = new Set();
+
+  function csrf() {
+    const m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? m[1] : '';
+  }
+  function esc(s) { return (s || '').replace(/[<>&]/g, function (c) {
+    return { '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]; }); }
+
+  function atualizarBtn() {
+    btnOk.disabled = selecionados.size === 0;
+  }
+
+  async function buscar() {
+    const params = new URLSearchParams({ cliente_id: clienteId, so_ativos: '1', q: qEl.value.trim() });
+    // Não sugere o próprio ticket nem quem já está no grupo
+    [anchorId].concat(membros).forEach(function (i) { params.append('excluir', i); });
+    resultEl.innerHTML = '<div class="agr-vazio">Buscando…</div>';
+    try {
+      const resp = await fetch('{% url "ticket_busca_ajax" %}?' + params.toString(),
+                               { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const d = await resp.json();
+      if (!d.resultados.length) {
+        resultEl.innerHTML = '<div class="agr-vazio">Nenhum outro ticket ativo deste cliente.</div>';
+        return;
+      }
+      resultEl.innerHTML = d.resultados.map(function (t) {
+        const on = selecionados.has(String(t.id));
+        return '<div class="agr-item' + (on ? ' sel' : '') + '" data-id="' + t.id + '">' +
+          '<div class="agr-item-main">' +
+            '<span class="agr-item-id">#' + t.id + '</span> ' +
+            '<span class="agr-item-tit">' + esc(t.titulo) + '</span></div>' +
+          '<span class="agr-item-check"><i class="material-icons" translate="no">check_circle</i></span>' +
+        '</div>';
+      }).join('');
+    } catch (e) {
+      resultEl.innerHTML = '<div class="agr-vazio">Erro ao buscar.</div>';
+    }
+  }
+
+  let debounce = null;
+  qEl.addEventListener('input', function () {
+    clearTimeout(debounce);
+    debounce = setTimeout(buscar, 300);
+  });
+
+  resultEl.addEventListener('click', function (e) {
+    const item = e.target.closest('.agr-item');
+    if (!item) return;
+    const id = item.dataset.id;
+    if (selecionados.has(id)) selecionados.delete(id); else selecionados.add(id);
+    item.classList.toggle('sel', selecionados.has(id));
+    atualizarBtn();
+  });
+
+  // Abre o modal a partir de qualquer botão .js-agrupar (coluna Grupo da tabela)
+  document.querySelector('table.hw-table').addEventListener('click', function (e) {
+    const btn = e.target.closest('.js-agrupar');
+    if (!btn) return;
+    e.preventDefault();
+    anchorId  = btn.dataset.ticketId;
+    clienteId = btn.dataset.clienteId;
+    const cliNome = btn.dataset.clienteNome || 'cliente';
+    const gid = btn.dataset.grupoId || '';
+    membros = [];
+    selecionados.clear();
+    qEl.value = '';
+
+    subEl.textContent = 'Cliente: ' + cliNome + '. Ao encerrar, a mesma solução vale para o grupo todo.';
+    membrosEl.innerHTML = gid
+      ? '<span class="agr-chip"><i class="material-icons" translate="no" style="font-size:15px">link</i> Já em um grupo — adicione mais tickets abaixo</span>'
+      : '';
+    btnDes.style.display = gid ? '' : 'none';
+    atualizarBtn();
+
+    if (!modalInst) modalInst = M.Modal.init(modalEl, {});
+    modalInst.open();
+    buscar();
+    setTimeout(function () { qEl.focus(); }, 120);
+  });
+
+  async function enviar(url, body, btn, rotulo) {
+    btn.disabled = true;
+    const original = btn.innerHTML;
+    btn.innerHTML = '<i class="material-icons left">hourglass_empty</i>' + rotulo;
+    try {
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrf(), 'X-Requested-With': 'XMLHttpRequest' },
+        body: body,
+      });
+      const d = await resp.json().catch(function () { return {}; });
+      if (!resp.ok) { M.toast({ html: d.error || 'Erro ao processar', classes: 'red' }); return null; }
+      return d;
+    } catch (e) {
+      M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
+      return null;
+    } finally {
+      btn.disabled = false; btn.innerHTML = original;
+    }
+  }
+
+  btnOk.addEventListener('click', async function () {
+    if (!selecionados.size) return;
+    const body = new URLSearchParams();
+    body.append('ticket_id', anchorId);
+    selecionados.forEach(function (id) { body.append('ids', id); });
+    const d = await enviar('{% url "ticket_grupo_agrupar" %}', body, this, 'Agrupando...');
+    if (d) { M.toast({ html: 'Tickets agrupados', classes: 'green darken-2' });
+             setTimeout(function () { location.reload(); }, 700); }
+  });
+
+  btnDes.addEventListener('click', async function (e) {
+    e.preventDefault();
+    if (!confirm('Tirar o ticket #' + anchorId + ' do grupo?')) return;
+    const body = new URLSearchParams();
+    body.append('ticket_id', anchorId);
+    const d = await enviar('{% url "ticket_grupo_desagrupar" %}', body, this, 'Removendo...');
+    if (d) { M.toast({ html: 'Ticket desagrupado', classes: 'green darken-2' });
+             setTimeout(function () { location.reload(); }, 700); }
+  });
 })();
 </script>
 {% endif %}

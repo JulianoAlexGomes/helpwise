@@ -271,6 +271,47 @@
   /* optgroup/option herdam o fundo do SO em alguns browsers; força o tema escuro */
   html.dark #sel-coluna, html.dark #nota-categoria { color-scheme: dark; }
 
+  /* ── Agrupamento de tickets ── */
+  .td-grupo-box {
+    display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 10px 12px;
+    border: 1px solid rgba(0,121,107,.3); border-radius: 9px; background: rgba(0,121,107,.06);
+    font-size: 13px; color: #2a2c30;
+  }
+  .td-grupo-box > i { color: var(--hw-brand); font-size: 18px; }
+  .td-grupo-txt { flex: 1; }
+  .td-grupo-txt a { color: var(--hw-brand-2); font-weight: 700; }
+  .td-grupo-x { color: #e53935 !important; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+  html.dark .td-grupo-box { background: rgba(0,150,136,.12); border-color: rgba(0,150,136,.35); color: var(--hw-text); }
+
+  .td-agr-search { position: relative; margin-top: 4px; }
+  .td-agr-search > i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 19px; }
+  .td-agr-search input {
+    width: 100%; box-sizing: border-box; height: 42px; padding: 0 12px 0 38px;
+    border: 1.5px solid #e2e4e8; border-radius: 9px; font-size: 13.5px; background: #fff; color: #1c1d1f;
+  }
+  .td-agr-search input:focus { outline: none; border-color: var(--hw-brand); box-shadow: 0 0 0 3px rgba(0,121,107,.13); }
+  .td-agr-result { margin-top: 10px; max-height: 300px; overflow-y: auto; }
+  .td-agr-item {
+    display: flex; align-items: center; gap: 10px; padding: 9px 11px; border: 1px solid #eceef0;
+    border-radius: 9px; margin-bottom: 6px; cursor: pointer;
+  }
+  .td-agr-item:hover { border-color: var(--hw-brand); background: rgba(0,121,107,.05); }
+  .td-agr-item.sel { border-color: var(--hw-brand); background: rgba(0,121,107,.1); }
+  .td-agr-item-main { min-width: 0; flex: 1; }
+  .td-agr-id { font-weight: 700; color: var(--hw-brand-2); font-size: 12.5px; }
+  .td-agr-tit { font-size: 13px; color: #2a2c30; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .td-agr-check { color: var(--hw-brand); line-height: 0; opacity: 0; }
+  .td-agr-item.sel .td-agr-check { opacity: 1; }
+  .td-agr-vazio { color: #9ca3af; font-size: 13px; text-align: center; padding: 22px 0; }
+  #modal-agrupar-td { border-radius: 14px; overflow: hidden; }
+  #modal-agrupar-td .modal-footer { border-radius: 0 0 14px 14px; }
+  html.dark #modal-agrupar-td { background: var(--hw-surface) !important; }
+  html.dark #modal-agrupar-td .modal-content h5 { color: var(--hw-text); }
+  html.dark #modal-agrupar-td .modal-footer { background-color: var(--hw-surface) !important; border-top-color: var(--hw-border) !important; }
+  html.dark .td-agr-search input { background: var(--hw-input-bg); color: var(--hw-text); border-color: var(--hw-border); }
+  html.dark .td-agr-item { border-color: var(--hw-border); }
+  html.dark .td-agr-tit { color: var(--hw-text); }
+
   /* ── Dark mode ── */
   html.dark .td-head-info h1 { color: var(--hw-text); }
   html.dark .td-back { background: rgba(255,255,255,.06); color: var(--hw-text2); }
@@ -456,7 +497,21 @@
             <button type="button" class="td-link-btn" id="btn-add-mural">
               <i class="material-icons" translate="no">sticky_note_2</i> Enviar ao Mural
             </button>
+            <button type="button" class="td-link-btn" id="btn-agrupar"
+                    data-cliente-id="{{ object.cliente_id }}">
+              <i class="material-icons" translate="no">add_link</i> Agrupar tickets
+            </button>
           </div>
+
+          {% if object.grupo %}
+            <div class="td-grupo-box">
+              <i class="material-icons" translate="no">link</i>
+              <span class="td-grupo-txt">Agrupado com
+                {% for t in object.grupo.tickets.all %}{% if t.pk != object.pk %}<a href="{% url 'ticket_detail' t.pk %}">#{{ t.pk }}</a>{% if not forloop.last %}, {% endif %}{% endif %}{% endfor %}
+                — ao encerrar, a mesma solução vale para o grupo.</span>
+              <a href="#!" id="btn-desagrupar" class="td-grupo-x" title="Tirar este ticket do grupo">Desagrupar</a>
+            </div>
+          {% endif %}
 
           {% if not notas and not agendamentos and not kanban_cards %}
             <div class="td-link-empty">Nenhum vínculo ainda.</div>
@@ -561,6 +616,23 @@
   <div class="modal-footer">
     <a href="#!" class="modal-close btn-flat">Cancelar</a>
     <button class="btn td-btn-save" id="btn-save-mural" type="button">Criar nota</button>
+  </div>
+</div>
+
+<!-- Modal: agrupar com outros tickets do mesmo cliente -->
+<div id="modal-agrupar-td" class="modal">
+  <div class="modal-content">
+    <h5>Agrupar tickets</h5>
+    <p class="td-modal-sub">Junte tickets do mesmo cliente do #{{ object.id }}. Ao encerrar, a mesma solução vale para o grupo todo.</p>
+    <div class="td-agr-search">
+      <i class="material-icons" translate="no">search</i>
+      <input type="text" id="td-agr-q" class="browser-default" placeholder="Buscar por #nº ou título...">
+    </div>
+    <div class="td-agr-result" id="td-agr-result"></div>
+  </div>
+  <div class="modal-footer">
+    <a href="#!" class="modal-close btn-flat">Voltar</a>
+    <button class="btn td-btn-save" id="btn-agrupar-confirmar" type="button" disabled>Agrupar</button>
   </div>
 </div>
 
@@ -748,6 +820,120 @@
           location.reload();
         });
       });
+    });
+  });
+})();
+
+// ── Agrupar tickets do mesmo cliente ──────────────────────────────────
+(function () {
+  const TICKET_ID = {{ object.id }};
+  const CLIENTE_ID = '{{ object.cliente_id }}';
+  // Ids já no grupo (para não sugeri-los na busca)
+  const NO_GRUPO = [{% if object.grupo %}{% for t in object.grupo.tickets.all %}{{ t.pk }}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}];
+
+  function getCsrf() {
+    const m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? m[1] : '';
+  }
+  function esc(s) { return (s || '').replace(/[<>&]/g, function (c) {
+    return { '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]; }); }
+
+  const selecionados = new Set();
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const modalEl = document.getElementById('modal-agrupar-td');
+    if (!modalEl) return;
+    const modal = M.Modal.init(modalEl, {});
+    const qEl = document.getElementById('td-agr-q');
+    const resultEl = document.getElementById('td-agr-result');
+    const btnOk = document.getElementById('btn-agrupar-confirmar');
+
+    async function buscar() {
+      const params = new URLSearchParams({ cliente_id: CLIENTE_ID, so_ativos: '1', q: qEl.value.trim() });
+      [TICKET_ID].concat(NO_GRUPO).forEach(function (i) { params.append('excluir', i); });
+      resultEl.innerHTML = '<div class="td-agr-vazio">Buscando…</div>';
+      try {
+        const resp = await fetch('/ticket/busca-ajax/?' + params.toString(),
+                                 { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const d = await resp.json();
+        if (!d.resultados.length) {
+          resultEl.innerHTML = '<div class="td-agr-vazio">Nenhum outro ticket ativo deste cliente.</div>';
+          return;
+        }
+        resultEl.innerHTML = d.resultados.map(function (t) {
+          const on = selecionados.has(String(t.id));
+          return '<div class="td-agr-item' + (on ? ' sel' : '') + '" data-id="' + t.id + '">' +
+            '<div class="td-agr-item-main"><span class="td-agr-id">#' + t.id + '</span> ' +
+              '<span class="td-agr-tit">' + esc(t.titulo) + '</span></div>' +
+            '<span class="td-agr-check"><i class="material-icons" translate="no">check_circle</i></span>' +
+          '</div>';
+        }).join('');
+      } catch (e) {
+        resultEl.innerHTML = '<div class="td-agr-vazio">Erro ao buscar.</div>';
+      }
+    }
+
+    let debounce = null;
+    qEl.addEventListener('input', function () {
+      clearTimeout(debounce); debounce = setTimeout(buscar, 300);
+    });
+    resultEl.addEventListener('click', function (e) {
+      const item = e.target.closest('.td-agr-item');
+      if (!item) return;
+      const id = item.dataset.id;
+      if (selecionados.has(id)) selecionados.delete(id); else selecionados.add(id);
+      item.classList.toggle('sel', selecionados.has(id));
+      btnOk.disabled = selecionados.size === 0;
+    });
+
+    const btnAgrupar = document.getElementById('btn-agrupar');
+    if (btnAgrupar) btnAgrupar.addEventListener('click', function () {
+      selecionados.clear(); qEl.value = ''; btnOk.disabled = true;
+      modal.open(); buscar();
+      setTimeout(function () { qEl.focus(); }, 120);
+    });
+
+    btnOk.addEventListener('click', async function () {
+      if (!selecionados.size) return;
+      const body = new URLSearchParams();
+      body.append('ticket_id', TICKET_ID);
+      selecionados.forEach(function (id) { body.append('ids', id); });
+      this.disabled = true;
+      try {
+        const resp = await fetch('/ticket/grupo/agrupar/', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
+          body,
+        });
+        const d = await resp.json().catch(() => ({}));
+        if (!resp.ok) { M.toast({ html: d.error || 'Erro ao agrupar', classes: 'red' }); this.disabled = false; return; }
+        M.toast({ html: 'Tickets agrupados', classes: 'green darken-2' });
+        setTimeout(function () { location.reload(); }, 700);
+      } catch (e) {
+        M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
+        this.disabled = false;
+      }
+    });
+
+    const btnDes = document.getElementById('btn-desagrupar');
+    if (btnDes) btnDes.addEventListener('click', async function (e) {
+      e.preventDefault();
+      if (!confirm('Tirar este ticket do grupo?')) return;
+      const body = new URLSearchParams();
+      body.append('ticket_id', TICKET_ID);
+      try {
+        const resp = await fetch('/ticket/grupo/desagrupar/', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' },
+          body,
+        });
+        const d = await resp.json().catch(() => ({}));
+        if (!resp.ok) { M.toast({ html: d.error || 'Erro', classes: 'red' }); return; }
+        M.toast({ html: 'Ticket desagrupado', classes: 'green darken-2' });
+        setTimeout(function () { location.reload(); }, 700);
+      } catch (e2) {
+        M.toast({ html: 'Erro de rede. Tente novamente.', classes: 'red' });
+      }
     });
   });
 })();

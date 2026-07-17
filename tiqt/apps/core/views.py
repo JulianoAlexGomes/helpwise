@@ -19,7 +19,7 @@ from django_tables2 import SingleTableMixin
 from tiqt.apps.core.models import Ticket, Comentario
 from tiqt.apps.core.tables import TicketTable, MeusTicketsTable
 from .forms import TicketForm, ClienteForm, TicketCloseForm, ComentarioForm
-from .models import Cliente, Ticket, Solucao, ComentarioArquivo, ComentarioImagem, CertificadoCliente, User, Departamento, Prioridade, Cidade, Uf, Tributacao
+from .models import Cliente, Ticket, Solucao, ComentarioArquivo, ComentarioImagem, CertificadoCliente, User, Departamento, Prioridade, Cidade, Uf, Tributacao, TicketGrupo
 from datetime import datetime, timedelta, time
 import tiqt.settings as settings
 from django.db import transaction
@@ -339,7 +339,7 @@ class MyTicketsView(LoginRequiredMixin, SingleTableMixin, TemplateView):
         queryset = Ticket.objects.filter(
             Q(status=Ticket.ABERTO) | Q(status=Ticket.EM_ATENDIMENTO)
         ).select_related('cliente', 'responsavel', 'atendente', 'tipo',
-                         'prioridade', 'situacao')
+                         'prioridade', 'situacao', 'grupo').prefetch_related('grupo__tickets')
 
         # Marca quem já é card num quadro de Desenvolvimento — esses não podem ser
         # encerrados em lote. Exists() resolve numa subquery, sem query por linha.
@@ -724,6 +724,7 @@ class TicketCancelView(LoginRequiredMixin, View):
         if not pode_cancelar(request.user, ticket):
             messages.error(request, ERRO_CANCELAR_DEV)
             return HttpResponseRedirect(reverse("ticket_detail", kwargs={"pk": pk}))
+        _sair_do_grupo(ticket)   # cancelado não faz mais parte do agrupamento
         ticket.cancelar_atendimento(request.user)
         return HttpResponseRedirect(reverse("ticket_detail", kwargs={"pk": pk}))
 
@@ -1934,10 +1935,25 @@ class KanbanCardConcluirView(LoginRequiredMixin, View):
 
 
 class TicketBuscaAjaxView(LoginRequiredMixin, View):
-    """Busca tickets por #id, título ou cliente (para adicionar cards a um quadro)."""
+    """Busca tickets por #id, título ou cliente (para adicionar cards a um quadro).
+
+    Também serve ao modal de "Agrupar tickets": aceita `cliente_id` (restringe ao
+    cliente do grupo), `excluir` (ids já no grupo / o próprio ticket) e
+    `so_ativos=1` (só abertos/em atendimento — não faz sentido agrupar encerrado)."""
     def get(self, request):
         q = (request.GET.get('q') or '').strip()
         base = Ticket.objects.select_related('cliente', 'cliente__cidade', 'cliente__uf')
+
+        # Restrições do modal de agrupar (opcionais; não afetam o uso no Kanban)
+        cliente_id = request.GET.get('cliente_id')
+        if cliente_id and str(cliente_id).isdigit():
+            base = base.filter(cliente_id=int(cliente_id))
+        if request.GET.get('so_ativos') == '1':
+            base = base.filter(Q(status=Ticket.ABERTO) | Q(status=Ticket.EM_ATENDIMENTO))
+        excluir = [int(i) for i in request.GET.getlist('excluir') if str(i).isdigit()]
+        if excluir:
+            base = base.exclude(pk__in=excluir)
+
         # Aceita "#332", "332" ou texto (título/cliente), combinando número + texto
         num = q.lstrip('#').strip()
         filtros = Q()
@@ -1949,7 +1965,12 @@ class TicketBuscaAjaxView(LoginRequiredMixin, View):
                 | Q(cliente__fantasia__icontains=q)
                 | Q(cliente__razao_social__icontains=q)
             )
-        base = base.filter(filtros) if filtros else base.none()
+        # Com cliente_id fixado (modal de agrupar), listar tudo do cliente mesmo sem
+        # busca; sem cliente_id (Kanban), só busca quando há termo.
+        if filtros:
+            base = base.filter(filtros)
+        elif not cliente_id:
+            base = base.none()
         resultados = [{
             'id': t.pk,
             'titulo': t.titulo or '(sem título)',
@@ -2002,8 +2023,8 @@ class CloseTicketView(LoginRequiredMixin, View):
         form = TicketCloseForm(request.POST)
         if form.is_valid():
             solucao_texto = form.cleaned_data['solucao']
-            solucao = Solucao.objects.create(ticket=ticket, texto=solucao_texto, autor=request.user)
-            ticket.encerrar_atendimento(request.user, origem='detalhe')
+            # Ticket agrupado: a mesma solução encerra todos os do grupo.
+            _encerrar_grupo(ticket, solucao_texto, request.user, origem='detalhe')
             return HttpResponseRedirect(reverse("ticket_detail", kwargs={"pk": pk}))
         return render(request, 'core/ticket_close_form.html', {'form': form, 'ticket': ticket})
 
@@ -2048,31 +2069,24 @@ class TicketLoteEncerrarView(LoginRequiredMixin, View):
             solucoes[str(tid)] = texto
 
         por_id = _meus_tickets_por_id(request.user, ids)
-        # Uma query só: quem já está no quadro de dev não pode ser encerrado aqui.
-        no_quadro_dev = ids_vinculados_ao_dev(list(por_id.keys()))
         encerrados, ignorados = [], []
+        ja_feitos = set()   # ticket encerrado via cascata de um grupo já processado
 
         for tid in ids:
             ticket = por_id.get(int(tid)) if str(tid).isdigit() else None
             if ticket is None:
                 ignorados.append({'id': tid, 'motivo': 'não é um ticket seu'})
                 continue
-            if ticket.status in (Ticket.ENCERRADO, Ticket.CANCELADO):
-                ignorados.append({'id': tid, 'motivo': 'já %s' % ticket.get_status_display().lower()})
+            # O front colapsa cada grupo num só campo, mas por segurança pulamos o
+            # que já foi encerrado junto com um irmão processado antes.
+            if ticket.pk in ja_feitos:
                 continue
-            # Já é card no quadro de Desenvolvimento: quem encerra é o time de dev.
-            if ticket.pk in no_quadro_dev:
-                ignorados.append({'id': tid, 'motivo': 'está no quadro de Desenvolvimento'})
-                continue
-
-            # Aberto: assume o atendimento antes de encerrar (senão ficaria um
-            # ticket encerrado que nunca foi iniciado).
-            if ticket.status == Ticket.ABERTO:
-                ticket.iniciar_atendimento(request.user)
-
-            Solucao.objects.create(ticket=ticket, texto=solucoes[str(tid)], autor=request.user)
-            ticket.encerrar_atendimento(request.user, origem='lote')
-            encerrados.append(ticket.pk)
+            # Ticket agrupado: encerra o grupo todo com a mesma solução. Solto:
+            # encerra só ele. Os guards (já fechado / quadro de dev) vivem no helper.
+            enc, ign = _encerrar_grupo(ticket, solucoes[str(tid)], request.user, origem='lote')
+            encerrados.extend(enc)
+            ignorados.extend(ign)
+            ja_feitos.update(enc)
 
         return JsonResponse({
             'ok': True, 'processados': len(encerrados),
@@ -2104,6 +2118,7 @@ class TicketLoteCancelarView(LoginRequiredMixin, View):
             if not pode_cancelar(request.user, ticket):
                 ignorados.append({'id': tid, 'motivo': 'só o time de Desenvolvimento pode cancelar'})
                 continue
+            _sair_do_grupo(ticket)   # cancelado não faz mais parte do agrupamento
             ticket.cancelar_atendimento(request.user)
             cancelados.append(ticket.pk)
 
@@ -2111,6 +2126,113 @@ class TicketLoteCancelarView(LoginRequiredMixin, View):
             'ok': True, 'processados': len(cancelados),
             'ids': cancelados, 'ignorados': ignorados,
         })
+
+
+# ── Agrupamento de tickets (mesmo cliente, solução compartilhada) ───────────
+
+def _sair_do_grupo(ticket):
+    """Tira o ticket do grupo (ao encerrar/cancelar) e desfaz o grupo se ficar
+    pequeno. Faz o update direto no banco para não re-disparar Ticket.save()."""
+    grupo = ticket.grupo
+    if not grupo:
+        return
+    Ticket.objects.filter(pk=ticket.pk).update(grupo=None)
+    ticket.grupo = None
+    grupo.dissolver_se_pequeno()
+
+
+def _encerrar_grupo(ticket, texto, user, origem):
+    """Encerra o ticket e todos os do MESMO grupo com a mesma solução.
+
+    Pula membros já fechados/cancelados ou que estejam num quadro de dev (o mesmo
+    critério do encerramento normal). Ao encerrar, cada membro sai do grupo; o
+    grupo é desfeito no fim. Retorna (encerrados, ignorados)."""
+    if ticket.grupo_id:
+        membros = list(ticket.grupo.tickets.all())
+        if all(m.pk != ticket.pk for m in membros):
+            membros.append(ticket)
+    else:
+        membros = [ticket]
+
+    encerrados, ignorados = [], []
+    for m in membros:
+        if m.status in (Ticket.ENCERRADO, Ticket.CANCELADO):
+            ignorados.append({'id': m.pk, 'motivo': 'já %s' % m.get_status_display().lower()})
+            continue
+        if bloqueado_para_encerrar(m):
+            ignorados.append({'id': m.pk, 'motivo': 'está no quadro de Desenvolvimento'})
+            continue
+        # Aberto: assume o atendimento antes de encerrar (senão fica um encerrado
+        # que nunca foi iniciado) — mesmo comportamento do encerrar em lote.
+        if m.status == Ticket.ABERTO:
+            m.iniciar_atendimento(user)
+        Solucao.objects.create(ticket=m, texto=texto, autor=user)
+        m.encerrar_atendimento(user, origem=origem)
+        Ticket.objects.filter(pk=m.pk).update(grupo=None)   # sai do grupo ao fechar
+        encerrados.append(m.pk)
+
+    if ticket.grupo_id:
+        ticket.grupo.dissolver_se_pequeno()
+    return encerrados, ignorados
+
+
+class TicketGrupoAgruparView(LoginRequiredMixin, View):
+    """Agrupa tickets do MESMO cliente. Recebe `ticket_id` (âncora) e `ids` (os
+    tickets a juntar). Cria o grupo se o âncora ainda não tiver um, ou reaproveita
+    o dele. Ticket que já estava em outro grupo é movido para este."""
+
+    def post(self, request):
+        anchor_id = request.POST.get('ticket_id')
+        if not (anchor_id and str(anchor_id).isdigit()):
+            return JsonResponse({'error': 'Ticket inválido'}, status=400)
+        anchor = get_object_or_404(Ticket, pk=int(anchor_id))
+
+        ids = [int(i) for i in request.POST.getlist('ids') if str(i).isdigit()]
+        novos = list(Ticket.objects.filter(pk__in=ids).exclude(pk=anchor.pk))
+        if not novos:
+            return JsonResponse({'error': 'Selecione ao menos um ticket para agrupar'}, status=400)
+
+        # Interseção: só agrupa quem é do mesmo cliente do âncora.
+        for t in novos:
+            if t.cliente_id != anchor.cliente_id:
+                return JsonResponse(
+                    {'error': 'Só é possível agrupar tickets do mesmo cliente'}, status=400)
+
+        with transaction.atomic():
+            grupo = anchor.grupo or TicketGrupo.objects.create(
+                cliente=anchor.cliente, criado_por=request.user)
+            afetados = set()
+            for t in [anchor] + novos:
+                if t.grupo_id and t.grupo_id != grupo.pk:
+                    afetados.add(t.grupo_id)
+                Ticket.objects.filter(pk=t.pk).update(grupo=grupo)
+            # Grupos de onde os tickets saíram podem ter ficado pequenos.
+            for gid in afetados:
+                g = TicketGrupo.objects.filter(pk=gid).first()
+                if g:
+                    g.dissolver_se_pequeno()
+
+        membros = list(grupo.tickets.order_by('pk').values('pk', 'titulo'))
+        return JsonResponse({'ok': True, 'grupo_id': grupo.pk, 'membros': membros})
+
+
+class TicketGrupoDesagruparView(LoginRequiredMixin, View):
+    """Tira um ticket do grupo. Se o grupo ficar com menos de 2, é desfeito."""
+
+    def post(self, request):
+        tid = request.POST.get('ticket_id')
+        if not (tid and str(tid).isdigit()):
+            return JsonResponse({'error': 'Ticket inválido'}, status=400)
+        ticket = get_object_or_404(Ticket, pk=int(tid))
+        grupo = ticket.grupo
+        if not grupo:
+            return JsonResponse({'ok': True, 'grupo_id': None, 'membros': []})
+
+        Ticket.objects.filter(pk=ticket.pk).update(grupo=None)
+        if grupo.dissolver_se_pequeno():
+            return JsonResponse({'ok': True, 'grupo_id': None, 'membros': []})
+        membros = list(grupo.tickets.order_by('pk').values('pk', 'titulo'))
+        return JsonResponse({'ok': True, 'grupo_id': grupo.pk, 'membros': membros})
 
 
 class CommentView(LoginRequiredMixin, View):
@@ -2196,11 +2318,17 @@ class ClienteListView(LoginRequiredMixin, ListView):
             queryset = queryset.filter(Q(ativo=True) | Q(ativo__isnull=True))
 
         if q:
-            queryset = queryset.filter(
+            filtro = (
                 Q(fantasia__icontains=q) |
                 Q(razao_social__icontains=q) |
                 Q(cnpj__icontains=q)
             )
+            # CNPJ é gravado só com dígitos; se a busca vier com máscara
+            # (pontos/barra/traço), procura também pela versão só-números.
+            q_digitos = ''.join(filter(str.isdigit, q))
+            if q_digitos and q_digitos != q:
+                filtro |= Q(cnpj__icontains=q_digitos)
+            queryset = queryset.filter(filtro)
 
         if cidade:
             queryset = queryset.filter(cidade_id=cidade)
@@ -2228,6 +2356,8 @@ class ClienteCreateView(LoginRequiredMixin, CreateView):
     success_url = reverse_lazy('cliente_list')
 
     def form_valid(self, form):
+        if not form.cleaned_data.get('fantasia'):
+            form.instance.fantasia = form.cleaned_data.get('razao_social')
         response = super().form_valid(form)
         cliente = form.instance
         certificados = self.request.FILES.getlist('certificados')
@@ -2242,6 +2372,8 @@ class ClienteUpdateView(LoginRequiredMixin, UpdateView):
     success_url = reverse_lazy('cliente_list')
 
     def form_valid(self, form):
+        if not form.cleaned_data.get('fantasia'):
+            form.instance.fantasia = form.cleaned_data.get('razao_social')
         response = super().form_valid(form)
         cliente = form.instance
         certificados = self.request.FILES.getlist('certificados')
@@ -2391,9 +2523,14 @@ class ClienteQuickCreateView(LoginRequiredMixin, View):
 
         if not (form.cleaned_data.get('fantasia') or form.cleaned_data.get('razao_social')):
             return JsonResponse({'error': 'Informe ao menos a razão social ou o nome fantasia.'}, status=400)
+        
+        if not form.cleaned_data.get('fantasia'):
+            form.instance.fantasia = form.cleaned_data.get('razao_social')
 
         cliente = form.save()
         return JsonResponse({'ok': True, 'id': cliente.id, 'text': _cliente_label(cliente)})
+    
+    
 
 
 # ─── API: busca de clientes retornando id + nome (para o modal rápido) ────────

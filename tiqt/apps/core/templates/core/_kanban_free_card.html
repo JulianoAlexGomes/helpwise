@@ -1,6 +1,8 @@
 <div class="card ticket-card free-card z-depth-1 {% if done or card.concluido %}card-done{% endif %}"
      {% if draggable %}draggable="true"{% endif %}
-     data-card-id="{{ card.id }}" data-concluido="{% if card.concluido %}1{% else %}0{% endif %}">
+     data-card-id="{{ card.id }}" data-concluido="{% if card.concluido %}1{% else %}0{% endif %}"
+     data-resp="{{ card.responsavel_id|default_if_none:'' }}"
+     data-membros="{% for m in card.membros.all %}{{ m.id }}{% if not forloop.last %},{% endif %}{% endfor %}">
   <div class="card-actions">
     <button class="card-label-btn" type="button" title="Etiquetas" data-card-id="{{ card.id }}">
       <i class="material-icons" translate="no">label</i>

@@ -2,7 +2,9 @@
 <div class="card ticket-card nota-card z-depth-1 {% if done or card.concluido %}card-done{% endif %}"
      {% if draggable %}draggable="true"{% endif %}
      data-card-id="{{ card.id }}" data-nota-id="{{ nota.id }}"
-     data-concluido="{% if card.concluido %}1{% else %}0{% endif %}">
+     data-concluido="{% if card.concluido %}1{% else %}0{% endif %}"
+     data-resp="{{ nota.responsavel_id|default_if_none:'' }}"
+     data-membros="{% for m in card.membros.all %}{{ m.id }}{% if not forloop.last %},{% endif %}{% endfor %}">
   <div class="card-actions">
     <button class="card-kb-btn" type="button" title="Membros e comentários do Kanban" data-card-id="{{ card.id }}">
       <i class="material-icons" translate="no">groups</i>

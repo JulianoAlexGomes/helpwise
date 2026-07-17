@@ -1045,9 +1045,41 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .col-header-right { display: flex; align-items: center; gap: 6px; }
-  .col-menu-btn { display: inline-flex; line-height: 0; }
+  .col-menu-btn { display: inline-flex; line-height: 0; position: relative; }
   .col-menu-btn i { color: #fff; font-size: 20px; opacity: .85; }
   .col-menu-btn:hover i { opacity: 1; }
+  /* Ponto que avisa que a coluna está com filtro (só para você) ativo */
+  .col-menu-btn.has-filtro::after {
+    content: ''; position: absolute; top: -1px; right: -1px;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #ffca28; border: 1.5px solid rgba(0,0,0,.28);
+  }
+
+  /* ── Filtro geral do quadro (funil ao lado de "Meus tickets") ───────── */
+  .kb-board-filtro { position: relative; display: inline-flex; }
+  .kb-bf-pop {
+    display: none; position: absolute; top: calc(100% + 6px); right: 0; z-index: 1200;
+    width: 240px; padding: 10px; border-radius: 10px;
+    background: rgba(18,20,26,.97); backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,.1); box-shadow: 0 8px 26px rgba(0,0,0,.4);
+  }
+  .kb-bf-pop.open { display: block; }
+  .kb-bf-pop input {
+    width: 100%; box-sizing: border-box; height: 34px; padding: 0 10px;
+    border: 1.5px solid rgba(255,255,255,.14); border-radius: 7px;
+    background: rgba(0,0,0,.35); color: #fff; font-size: 12.5px;
+  }
+  .kb-bf-pop input::placeholder { color: #7b838c; }
+  .kb-bf-pop input:focus { outline: none; border-color: var(--hw-brand); }
+  .kb-bf-pop .kb-f-limpar { display: block; margin-top: 8px; }
+
+  /* Bloco de filtro dentro do modal de coluna */
+  #coluna-filtro-wrap .coluna-filtro-lbl {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.82rem; font-weight: 600; color: #444;
+  }
+  #coluna-filtro-wrap .coluna-filtro-lbl i { font-size: 18px; color: var(--hw-brand); }
+  html.dark #coluna-filtro-wrap .coluna-filtro-lbl { color: var(--hw-text2) !important; }
 
   /* Adicionar coluna */
   .kanban-add-col { flex: 0 0 200px; min-width: 200px; padding-top: 0; }
@@ -1272,6 +1304,18 @@ por pixel fixo (right: 16/210/320), o que não escala ao acrescentar botões.{% 
     <i class="material-icons" translate="no">{% if meus_selecionado %}check_box{% else %}check_box_outline_blank{% endif %}</i>
     Meus tickets
   </a>
+
+  {# Filtro geral do quadro — só na sua tela, filtra por nº ou título #}
+  <span class="kb-board-filtro">
+    <button type="button" id="btn-kanban-filtro" class="kanban-exit-fab"
+            title="Filtrar cards por nº ou título (só para você)">
+      <i class="material-icons" translate="no">filter_list</i> Filtrar
+    </button>
+    <div class="kb-bf-pop" id="kb-bf-pop">
+      <input type="text" id="kb-bf-q" placeholder="Nº do ticket ou título...">
+      <a href="#!" id="kb-bf-limpar" class="kb-f-limpar">Limpar filtro</a>
+    </div>
+  </span>
 
   {% if quadro_atual.departamento_entrada %}
   <button type="button" id="btn-kanban-inbox" class="kanban-exit-fab"
@@ -1528,6 +1572,16 @@ por pixel fixo (right: 16/210/320), o que não escala ao acrescentar botões.{% 
           <option value="3">Cancelado</option>
         </select>
         <p style="font-size:0.72rem; color:#999; margin:6px 0 0;">Ao mover um card para esta coluna, o ticket assume o status escolhido.</p>
+      </div>
+
+      <div id="coluna-filtro-wrap" style="margin-top:16px; display:none;">
+        <label for="coluna-filtro" class="coluna-filtro-lbl">
+          <i class="material-icons" translate="no">filter_list</i> Filtrar cards desta coluna
+        </label>
+        <input type="text" id="coluna-filtro" class="browser-default coluna-input"
+               placeholder="Nº do ticket ou título...">
+        <a href="#!" id="coluna-filtro-limpar" class="kb-f-limpar" style="display:inline-block; margin-top:6px;">Limpar filtro da coluna</a>
+        <p style="font-size:0.72rem; color:#999; margin:6px 0 0;">Mostra só os cards que batem com a busca. É temporário e só na sua tela — não altera o quadro nem o que os outros veem.</p>
       </div>
     </div>
     <div class="modal-footer">
@@ -3013,6 +3067,8 @@ window.kanbanUrl = function (url) {
   const colTitulo = document.getElementById('modal-coluna-titulo');
   const btnExcluirCol = document.getElementById('btn-excluir-coluna');
   const btnSalvarCol  = document.getElementById('btn-salvar-coluna');
+  const colFiltroWrap  = document.getElementById('coluna-filtro-wrap');
+  const colFiltroInput = document.getElementById('coluna-filtro');
 
   document.getElementById('btn-add-col').addEventListener('click', () => {
     colId.value = '';
@@ -3022,6 +3078,7 @@ window.kanbanUrl = function (url) {
     colTitulo.textContent = 'Nova coluna';
     btnExcluirCol.style.display = 'none';
     colStatusWrap.style.display = isPadraoBoard ? 'none' : 'block';
+    colFiltroWrap.style.display = 'none';   // coluna ainda não existe: sem filtro
     colModalInst.open();
     setTimeout(() => colNome.focus(), 120);
   });
@@ -3036,6 +3093,9 @@ window.kanbanUrl = function (url) {
       colTitulo.textContent = 'Editar coluna';
       btnExcluirCol.style.display = btn.dataset.fixa === '1' ? 'none' : '';
       colStatusWrap.style.display = isPadraoBoard ? 'none' : 'block';
+      // Filtro (só para você) da coluna — carrega o termo atual, se houver
+      colFiltroWrap.style.display = 'block';
+      colFiltroInput.value = colFilters[btn.dataset.colunaId] || '';
       colModalInst.open();
     });
   });
@@ -4142,6 +4202,87 @@ window.kanbanUrl = function (url) {
     });
   }
 
+  // ── Filtros locais (só na sua tela): geral do quadro + por coluna ─────
+  // Não tocam no servidor nem no que os outros veem — só escondem/mostram
+  // cards via CSS. Combinam: um card aparece se casar com o filtro geral E
+  // com o filtro da sua coluna. Reaplicados após cada auto-refresh (que
+  // reescreve o innerHTML das colunas e apagaria o display:none).
+  const colFilters = {};   // { colunaId: termo }
+  let filtroGeral = '';
+
+  function cardCasa(card, termo) {
+    if (!termo) return true;
+    const q = termo.trim().toLowerCase();
+    if (!q) return true;
+    const pk = (card.dataset.pk || '').toLowerCase();          // nº do ticket
+    const tit = (card.querySelector('.card-title')?.textContent || '').toLowerCase();
+    return ('#' + pk).includes(q) || pk.includes(q) || tit.includes(q);
+  }
+
+  function aplicarFiltros() {
+    document.querySelectorAll('.kanban-col').forEach(col => {
+      const colId = col.dataset.colunaId;
+      const termoCol = colFilters[colId] || '';
+      const zone = col.querySelector('.kanban-drop-zone');
+      if (!zone) return;
+      zone.querySelectorAll('.ticket-card').forEach(card => {
+        const ok = cardCasa(card, filtroGeral) && cardCasa(card, termoCol);
+        card.style.display = ok ? '' : 'none';
+      });
+      // Grupo some quando nenhum card interno passa no filtro
+      zone.querySelectorAll('.card-grupo').forEach(grupo => {
+        const algum = Array.from(grupo.querySelectorAll('.ticket-card'))
+                           .some(c => c.style.display !== 'none');
+        grupo.style.display = algum ? '' : 'none';
+      });
+      // Ponto no menu (⋮) avisando que a coluna tem filtro ativo
+      col.querySelector('.col-menu-btn')?.classList.toggle('has-filtro', !!termoCol);
+    });
+  }
+
+  // Filtro geral (funil ao lado de "Meus tickets")
+  const bfBtn   = document.getElementById('btn-kanban-filtro');
+  const bfPop   = document.getElementById('kb-bf-pop');
+  const bfInput = document.getElementById('kb-bf-q');
+  if (bfBtn) {
+    bfBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      bfPop.classList.toggle('open');
+      if (bfPop.classList.contains('open')) setTimeout(() => bfInput.focus(), 40);
+    });
+    bfPop.addEventListener('click', e => e.stopPropagation());
+    document.addEventListener('click', () => bfPop.classList.remove('open'));
+    bfInput.addEventListener('input', () => {
+      filtroGeral = bfInput.value;
+      bfBtn.classList.toggle('ativo', !!filtroGeral.trim());
+      aplicarFiltros();
+    });
+    document.getElementById('kb-bf-limpar').addEventListener('click', e => {
+      e.preventDefault();
+      bfInput.value = ''; filtroGeral = '';
+      bfBtn.classList.remove('ativo');
+      aplicarFiltros();
+    });
+  }
+
+  // Filtro por coluna (dentro do modal do ⋮): aplica ao vivo enquanto digita;
+  // como o modal cobre o quadro, o resultado aparece ao fechar.
+  if (colFiltroInput) {
+    colFiltroInput.addEventListener('input', () => {
+      const id = colId.value;
+      if (!id) return;
+      const termo = colFiltroInput.value.trim();
+      if (termo) colFilters[id] = termo; else delete colFilters[id];
+      aplicarFiltros();
+    });
+    document.getElementById('coluna-filtro-limpar').addEventListener('click', e => {
+      e.preventDefault();
+      colFiltroInput.value = '';
+      delete colFilters[colId.value];
+      aplicarFiltros();
+    });
+  }
+
   // ── Auto-refresh silencioso dos cards a cada 5s (igual agenda/mural) ──
   // Troca só o conteúdo de cada coluna (preserva a drop-zone e seus listeners de
   // drag) e re-liga o draggable. Pausa enquanto arrasta, com modal/popover aberto
@@ -4190,6 +4331,7 @@ window.kanbanUrl = function (url) {
       if (inboxBadge && novoBadge) setBadge(parseInt(novoBadge.textContent, 10) || 0);
 
       reaplicarSelecao();   // os cards são novos: repinta o que estava selecionado
+      aplicarFiltros();     // os cards são novos: reaplica os filtros locais
     } catch (e) {}
   }
   setInterval(atualizarCards, REFRESH_MS);

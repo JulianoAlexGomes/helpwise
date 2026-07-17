@@ -54,6 +54,16 @@
     </div>
   </div>
 
+  {% if ticket.grupo %}
+    <div class="sol-card" style="margin-bottom:14px; display:flex; align-items:center; gap:10px; border-left:4px solid #2e7d32;">
+      <i class="material-icons" translate="no" style="color:#2e7d32;">link</i>
+      <span style="font-size:13.5px; color:#44474c;">
+        Este ticket está agrupado. Esta solução encerrará também
+        {% for t in ticket.grupo.tickets.all %}{% if t.pk != ticket.pk %}<b>#{{ t.pk }}</b>{% if not forloop.last %}, {% endif %}{% endif %}{% endfor %}.
+      </span>
+    </div>
+  {% endif %}
+
   <form method="post" class="sol-card" novalidate>
     {% csrf_token %}
     <label class="sol-label" for="id_solucao">Solução <span style="color:#e53935;">*</span></label>

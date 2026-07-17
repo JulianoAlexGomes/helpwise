@@ -233,7 +233,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function preencherCnpj(data) {
       var campos = {
         'id_razao_social': data.razao_social,
-        'id_fantasia':     data.fantasia,
+        'id_fantasia':     data.fantasia || data.razao_social,
         'id_email':        data.email,
         'id_telefone':     data.telefone,
         'id_endereco':     data.logradouro,

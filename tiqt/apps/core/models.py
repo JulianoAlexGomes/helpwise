@@ -114,9 +114,42 @@ class Cliente(models.Model):
     certificado_digital = models.FileField(upload_to='certificados/', null=True, blank=True, default=None)
     plano = models.ForeignKey(Plano, on_delete=models.PROTECT, null=True, blank=True, default=1)
 
+    def save(self, *args, **kwargs):
+        if not (self.fantasia or '').strip():
+            self.fantasia = self.razao_social
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.fantasia or ''} - {self.cidade or ''}/{self.uf or ''}"
-    
+
+
+
+class TicketGrupo(models.Model):
+    """Tickets do MESMO cliente agrupados para tratar e encerrar juntos.
+
+    A mesma solução vale para todo o grupo: encerrar qualquer membro encerra os
+    demais com o mesmo texto. Espelha a ideia do KanbanGrupo (cards que andam
+    juntos), mas aqui o vínculo vive no próprio Ticket (`Ticket.grupo`).
+
+    Invariante garantida nas views (não no banco): todos os tickets do grupo têm
+    o mesmo `cliente`. Grupo que fica com menos de 2 tickets é desfeito."""
+
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='ticket_grupos')
+    nome = models.CharField(max_length=80, blank=True, default='')
+    criado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.nome or f"Grupo #{self.pk}"
+
+    def dissolver_se_pequeno(self):
+        """Desfaz o grupo quando sobra menos de 2 tickets — um ticket sozinho não
+        é grupo. Ao deletar, o on_delete=SET_NULL de Ticket.grupo solta o que
+        restou. Retorna True se dissolveu."""
+        if self.tickets.count() < 2:
+            self.delete()
+            return True
+        return False
 
 
 class Ticket(models.Model):
@@ -149,6 +182,9 @@ class Ticket(models.Model):
     cancelado = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='cancelado_por', editable=True)
     kanban_coluna = models.ForeignKey('KanbanColuna', on_delete=models.SET_NULL, null=True, blank=True, related_name='tickets')
     kanban_ordem = models.PositiveIntegerField(default=0)
+    # Agrupamento de tickets do MESMO cliente, tratados/encerrados juntos (a mesma
+    # solução vale para todo o grupo). Nulo = ticket solto. Ver TicketGrupo.
+    grupo = models.ForeignKey('TicketGrupo', on_delete=models.SET_NULL, null=True, blank=True, related_name='tickets')
 
 
     class Meta:

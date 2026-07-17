@@ -279,7 +279,7 @@
   }
   .td-grupo-box > i { color: var(--hw-brand); font-size: 18px; }
   .td-grupo-txt { flex: 1; }
-  .td-grupo-txt a { color: var(--hw-brand-2); font-weight: 700; }
+  .td-grupo-txt a { color: var(--hw-brand-2); font-weight: 700; margin-right: 6px; }
   .td-grupo-x { color: #e53935 !important; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
   html.dark .td-grupo-box { background: rgba(0,150,136,.12); border-color: rgba(0,150,136,.35); color: var(--hw-text); }
 
@@ -507,8 +507,7 @@
             <div class="td-grupo-box">
               <i class="material-icons" translate="no">link</i>
               <span class="td-grupo-txt">Agrupado com
-                {% for t in object.grupo.tickets.all %}{% if t.pk != object.pk %}<a href="{% url 'ticket_detail' t.pk %}">#{{ t.pk }}</a>{% if not forloop.last %}, {% endif %}{% endif %}{% endfor %}
-                — ao encerrar, a mesma solução vale para o grupo.</span>
+                {% for t in object.grupo.tickets.all %}{% if t.pk != object.pk %}<a href="{% url 'ticket_detail' t.pk %}">#{{ t.pk }}</a>{% endif %}{% endfor %}</span>
               <a href="#!" id="btn-desagrupar" class="td-grupo-x" title="Tirar este ticket do grupo">Desagrupar</a>
             </div>
           {% endif %}

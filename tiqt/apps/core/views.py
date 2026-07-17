@@ -881,18 +881,20 @@ class KanbanView(LoginRequiredMixin, TemplateView):
         usuario        = self.request.user
         responsavel_id = self.request.GET.get('responsavel', '')
         atendente_id   = self.request.GET.get('atendente', '')
+        membro_id      = self.request.GET.get('membro', '')
         tipo_id        = self.request.GET.get('tipo', '')
-        # "Meus tickets": onde eu sou responsável OU atendente (mesma semântica do
-        # MeusTicketsFilterForm, em forms.py).
+        # "Meus tickets": onde eu sou responsável OU atendente OU membro de um card
+        # (membro é conceito de card, só existe em quadro personalizado).
         meus           = self.request.GET.get('meus') == '1'
 
         # cliente__cidade/uf: Cliente.__str__ monta "fantasia - cidade/uf", então sem
         # isso cada cliente exibido dispara 2 queries extras (era o N+1 do kanban).
+        # `qs` só carrega os filtros AND que valem para ticket (responsável/atendente/
+        # tipo). `meus` e `membro` entram depois, porque envolvem card (membro) e
+        # dependem do tipo de quadro.
         qs = Ticket.objects.select_related(
             'cliente', 'cliente__cidade', 'cliente__uf',
             'prioridade', 'responsavel', 'atendente', 'tipo')
-        if meus:
-            qs = qs.filter(Q(responsavel=usuario) | Q(atendente=usuario))
         if responsavel_id:
             qs = qs.filter(responsavel_id=responsavel_id)
         if atendente_id:
@@ -915,9 +917,16 @@ class KanbanView(LoginRequiredMixin, TemplateView):
         colunas = list(quadro_atual.colunas.all()) if quadro_atual else []
 
         if quadro_atual and quadro_atual.is_padrao:
-            # Quadro padrão: tickets vêm do status (+ override em Ticket.kanban_coluna)
+            # Quadro padrão: tickets vêm do status (+ override em Ticket.kanban_coluna).
+            # `meus` aqui é responsável|atendente (o quadro padrão não tem membros de
+            # card); `membro` é conceito de card, então não casa com nenhum ticket.
+            qs_padrao = qs
+            if meus:
+                qs_padrao = qs_padrao.filter(Q(responsavel=usuario) | Q(atendente=usuario))
+            if membro_id:
+                qs_padrao = qs_padrao.none()
             for coluna in colunas:
-                tickets = tickets_da_coluna_padrao(coluna, qs)
+                tickets = tickets_da_coluna_padrao(coluna, qs_padrao)
                 coluna.total = tickets.count()
                 coluna.lista = list(tickets[:CARDS_POR_COLUNA])
                 coluna.qtd = coluna.total
@@ -928,31 +937,64 @@ class KanbanView(LoginRequiredMixin, TemplateView):
                 coluna.encerrada = coluna.status_associado == Ticket.ENCERRADO
         else:
             # Quadro personalizado: cards explicitamente adicionados (tickets, notas ou avulsos)
-            tem_filtro = bool(responsavel_id or atendente_id or tipo_id or meus)
-            ids_permitidos = set(qs.values_list('id', flat=True)) if tem_filtro else None
+            tem_and = bool(responsavel_id or atendente_id or tipo_id)
+            tem_filtro = bool(tem_and or meus or membro_id)
+            # AND (responsável/atendente/tipo) já filtrado em `qs`, sobre o ticket.
+            ids_permitidos = set(qs.values_list('id', flat=True)) if tem_and else None
 
-            def linha_visivel(ticket_id, nota_resp_id, nota_id, autor_id):
+            # Sets de cards por MEMBRO (membro é do card, não do ticket):
+            #  - membro_card_ids: cards da pessoa escolhida no filtro por membro
+            #  - meus_card_ids / meus_ticket_ids: para o "Meus tickets" (resp|atend|membro)
+            membro_card_ids = None
+            if membro_id:
+                membro_card_ids = set(KanbanCard.objects
+                    .filter(coluna__quadro=quadro_atual, membros__id=membro_id)
+                    .values_list('id', flat=True))
+            meus_card_ids, meus_ticket_ids = set(), set()
+            if meus:
+                meus_card_ids = set(KanbanCard.objects
+                    .filter(coluna__quadro=quadro_atual, membros=usuario)
+                    .values_list('id', flat=True))
+                meus_ticket_ids = set(Ticket.objects
+                    .filter(Q(responsavel=usuario) | Q(atendente=usuario))
+                    .values_list('id', flat=True))
+
+            def linha_visivel(card_id, ticket_id, nota_resp_id, nota_id, autor_id):
                 """Filtros do quadro personalizado, aplicados sobre uma linha leve.
 
-                Cards de ticket seguem o filtro completo (o `qs` já foi filtrado, então
-                basta olhar `ids_permitidos`). Notas e cards avulsos não têm atendente nem
-                tipo, então usam uma única "pessoa" — o responsável da nota ou quem criou o
-                card — comparada tanto ao filtro de responsável quanto ao de atendente, e
-                ao "Meus tickets". O filtro de tipo, que eles não têm como satisfazer, os esconde.
+                Cards de ticket seguem o AND (responsável/atendente/tipo) via
+                `ids_permitidos`. `membro` filtra pelo membro do card. `meus` casa se
+                sou responsável/atendente do ticket OU membro do card. Notas e cards
+                avulsos usam uma única "pessoa" (responsável da nota / autor do card).
                 """
                 if not tem_filtro:
                     return True
-                if ticket_id:
-                    return ticket_id in ids_permitidos
-                if tipo_id:
+                # AND: responsável/atendente/tipo (sobre o ticket)
+                if ids_permitidos is not None:
+                    if ticket_id:
+                        if ticket_id not in ids_permitidos:
+                            return False
+                    else:
+                        if tipo_id:
+                            return False
+                        pessoa_id = nota_resp_id if nota_id else autor_id
+                        if responsavel_id and str(pessoa_id) != responsavel_id:
+                            return False
+                        if atendente_id and str(pessoa_id) != atendente_id:
+                            return False
+                # Filtro por membro (pessoa escolhida): card precisa ter aquele membro
+                if membro_card_ids is not None and card_id not in membro_card_ids:
                     return False
-                pessoa_id = nota_resp_id if nota_id else autor_id
-                if pessoa_id is None:
-                    return False
-                if meus and pessoa_id != usuario.id:
-                    return False
-                # Cada filtro de pessoa ativo precisa bater, igual ao AND dos cards de ticket.
-                return all(str(pessoa_id) == f for f in (responsavel_id, atendente_id) if f)
+                # Meus tickets: responsável OU atendente do ticket OU membro do card
+                if meus:
+                    if ticket_id:
+                        if ticket_id not in meus_ticket_ids and card_id not in meus_card_ids:
+                            return False
+                    else:
+                        pessoa_id = nota_resp_id if nota_id else autor_id
+                        if pessoa_id != usuario.id and card_id not in meus_card_ids:
+                            return False
+                return True
 
             # Duas etapas, para não carregar do banco o que não vai para a tela:
             #  1) uma query LEVE (só ids) diz o total de cada coluna e QUAIS cards
@@ -970,7 +1012,7 @@ class KanbanView(LoginRequiredMixin, TemplateView):
             totais = defaultdict(int)
             ids_visiveis = defaultdict(list)
             for cid, col_id, tk_id, nota_id, autor_id, nota_resp in leves:
-                if not linha_visivel(tk_id, nota_resp, nota_id, autor_id):
+                if not linha_visivel(cid, tk_id, nota_resp, nota_id, autor_id):
                     continue
                 totais[col_id] += 1
                 if len(ids_visiveis[col_id]) < CARDS_POR_COLUNA:
@@ -1025,6 +1067,7 @@ class KanbanView(LoginRequiredMixin, TemplateView):
         context['qs_meus']                 = params.urlencode()
         context['responsavel_selecionado'] = responsavel_id
         context['atendente_selecionado']   = atendente_id
+        context['membro_selecionado']      = membro_id
         context['tipo_selecionado']        = tipo_id
         return context
 
@@ -2024,7 +2067,15 @@ class CloseTicketView(LoginRequiredMixin, View):
         if form.is_valid():
             solucao_texto = form.cleaned_data['solucao']
             # Ticket agrupado: a mesma solução encerra todos os do grupo.
-            _encerrar_grupo(ticket, solucao_texto, request.user, origem='detalhe')
+            encerrados, ignorados = _encerrar_grupo(ticket, solucao_texto, request.user, origem='detalhe')
+            # Avisa quando o grupo tinha irmãos que não puderam ser encerrados
+            # (ex.: card no quadro de Desenvolvimento) — senão o usuário fica sem
+            # saber por que aquele ticket não fechou junto.
+            if len(encerrados) > 1:
+                messages.success(request, 'Grupo encerrado: %s tickets.' % len(encerrados))
+            if ignorados:
+                ids = ', '.join('#%s (%s)' % (i['id'], i['motivo']) for i in ignorados)
+                messages.warning(request, 'Não encerrados no grupo: %s' % ids)
             return HttpResponseRedirect(reverse("ticket_detail", kwargs={"pk": pk}))
         return render(request, 'core/ticket_close_form.html', {'form': form, 'ticket': ticket})
 

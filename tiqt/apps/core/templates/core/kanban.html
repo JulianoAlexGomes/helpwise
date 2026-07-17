@@ -1071,7 +1071,23 @@
   }
   .kb-bf-pop input::placeholder { color: #7b838c; }
   .kb-bf-pop input:focus { outline: none; border-color: var(--hw-brand); }
-  .kb-bf-pop .kb-f-limpar { display: block; margin-top: 8px; }
+  .kb-bf-pop .kb-f-limpar { display: block; margin-top: 10px; }
+  .kb-bf-lbl {
+    color: #9099a1; font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .4px; margin: 10px 0 5px;
+  }
+  .kb-bf-lbl:first-child { margin-top: 0; }
+  .kb-bf-sel {
+    width: 100%; box-sizing: border-box; height: 34px; margin-bottom: 6px; padding: 0 8px;
+    border: 1.5px solid rgba(255,255,255,.14); border-radius: 7px;
+    background: rgba(0,0,0,.35); color: #fff; font-size: 12.5px; color-scheme: dark;
+  }
+  .kb-bf-sel:focus { outline: none; border-color: var(--hw-brand); }
+  .kb-bf-aplicar {
+    width: 100%; height: 34px; margin-top: 4px; border: none; border-radius: 7px;
+    background: var(--hw-brand); color: #fff; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  }
+  .kb-bf-aplicar:hover { background: var(--hw-brand-2); }
 
   /* Bloco de filtro dentro do modal de coluna */
   #coluna-filtro-wrap .coluna-filtro-lbl {
@@ -1305,15 +1321,34 @@ por pixel fixo (right: 16/210/320), o que não escala ao acrescentar botões.{% 
     Meus tickets
   </a>
 
-  {# Filtro geral do quadro — só na sua tela, filtra por nº ou título #}
+  {# Filtro do quadro: nº/título (só na sua tela) + pessoa (responsável/atendente/membro) #}
   <span class="kb-board-filtro">
-    <button type="button" id="btn-kanban-filtro" class="kanban-exit-fab"
-            title="Filtrar cards por nº ou título (só para você)">
+    <button type="button" id="btn-kanban-filtro"
+            class="kanban-exit-fab {% if responsavel_selecionado or atendente_selecionado or membro_selecionado %}ativo{% endif %}"
+            title="Filtrar cards por nº/título ou por pessoa">
       <i class="material-icons" translate="no">filter_list</i> Filtrar
     </button>
     <div class="kb-bf-pop" id="kb-bf-pop">
+      <div class="kb-bf-lbl">Buscar (só para você)</div>
       <input type="text" id="kb-bf-q" placeholder="Nº do ticket ou título...">
-      <a href="#!" id="kb-bf-limpar" class="kb-f-limpar">Limpar filtro</a>
+
+      <div class="kb-bf-lbl">Filtrar por pessoa</div>
+      <select id="kb-bf-papel" class="kb-bf-sel browser-default">
+        <option value="responsavel" {% if responsavel_selecionado %}selected{% endif %}>Responsável</option>
+        <option value="atendente" {% if atendente_selecionado %}selected{% endif %}>Atendente</option>
+        <option value="membro" {% if membro_selecionado %}selected{% endif %}>Membro</option>
+      </select>
+      <select id="kb-bf-pessoa" class="kb-bf-sel browser-default">
+        <option value="">Ninguém</option>
+        {% for u in usuarios %}
+          <option value="{{ u.id }}"
+            {% if responsavel_selecionado == u.id|stringformat:'s' or atendente_selecionado == u.id|stringformat:'s' or membro_selecionado == u.id|stringformat:'s' %}selected{% endif %}>
+            {{ u.get_full_name|default:u.username }}</option>
+        {% endfor %}
+      </select>
+      <button type="button" id="kb-bf-aplicar" class="kb-bf-aplicar">Aplicar filtro de pessoa</button>
+
+      <a href="#!" id="kb-bf-limpar" class="kb-f-limpar">Limpar filtros</a>
     </div>
   </span>
 
@@ -1580,8 +1615,26 @@ por pixel fixo (right: 16/210/320), o que não escala ao acrescentar botões.{% 
         </label>
         <input type="text" id="coluna-filtro" class="browser-default coluna-input"
                placeholder="Nº do ticket ou título...">
-        <a href="#!" id="coluna-filtro-limpar" class="kb-f-limpar" style="display:inline-block; margin-top:6px;">Limpar filtro da coluna</a>
-        <p style="font-size:0.72rem; color:#999; margin:6px 0 0;">Mostra só os cards que batem com a busca. É temporário e só na sua tela — não altera o quadro nem o que os outros veem.</p>
+
+        <label class="coluna-filtro-lbl" style="margin-top:12px;">
+          <i class="material-icons" translate="no">person_search</i> Filtrar por pessoa (só nesta coluna)
+        </label>
+        <div style="display:flex; gap:8px;">
+          <select id="coluna-filtro-papel" class="browser-default coluna-input" style="flex:0 0 40%;">
+            <option value="responsavel">Responsável</option>
+            <option value="atendente">Atendente</option>
+            <option value="membro">Membro</option>
+          </select>
+          <select id="coluna-filtro-pessoa" class="browser-default coluna-input" style="flex:1;">
+            <option value="">Ninguém</option>
+            {% for u in usuarios %}
+              <option value="{{ u.id }}">{{ u.get_full_name|default:u.username }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <a href="#!" id="coluna-filtro-limpar" class="kb-f-limpar" style="display:inline-block; margin-top:8px;">Limpar filtro da coluna</a>
+        <p style="font-size:0.72rem; color:#999; margin:6px 0 0;">Mostra só os cards que batem. É temporário e só na sua tela — não altera o quadro nem o que os outros veem.</p>
       </div>
     </div>
     <div class="modal-footer">
@@ -3067,8 +3120,10 @@ window.kanbanUrl = function (url) {
   const colTitulo = document.getElementById('modal-coluna-titulo');
   const btnExcluirCol = document.getElementById('btn-excluir-coluna');
   const btnSalvarCol  = document.getElementById('btn-salvar-coluna');
-  const colFiltroWrap  = document.getElementById('coluna-filtro-wrap');
-  const colFiltroInput = document.getElementById('coluna-filtro');
+  const colFiltroWrap   = document.getElementById('coluna-filtro-wrap');
+  const colFiltroInput  = document.getElementById('coluna-filtro');
+  const colFiltroPessoa = document.getElementById('coluna-filtro-pessoa');
+  const colFiltroPapel  = document.getElementById('coluna-filtro-papel');
 
   document.getElementById('btn-add-col').addEventListener('click', () => {
     colId.value = '';
@@ -3093,9 +3148,12 @@ window.kanbanUrl = function (url) {
       colTitulo.textContent = 'Editar coluna';
       btnExcluirCol.style.display = btn.dataset.fixa === '1' ? 'none' : '';
       colStatusWrap.style.display = isPadraoBoard ? 'none' : 'block';
-      // Filtro (só para você) da coluna — carrega o termo atual, se houver
+      // Filtro (só para você) da coluna — carrega o estado atual, se houver
       colFiltroWrap.style.display = 'block';
-      colFiltroInput.value = colFilters[btn.dataset.colunaId] || '';
+      const f = colFilters[btn.dataset.colunaId] || {};
+      colFiltroInput.value  = f.termo  || '';
+      colFiltroPessoa.value = f.pessoa || '';
+      colFiltroPapel.value  = f.papel  || 'responsavel';
       colModalInst.open();
     });
   });
@@ -4207,7 +4265,8 @@ window.kanbanUrl = function (url) {
   // cards via CSS. Combinam: um card aparece se casar com o filtro geral E
   // com o filtro da sua coluna. Reaplicados após cada auto-refresh (que
   // reescreve o innerHTML das colunas e apagaria o display:none).
-  const colFilters = {};   // { colunaId: termo }
+  // Filtro por coluna: { colunaId: { termo, pessoa, papel } }
+  const colFilters = {};
   let filtroGeral = '';
 
   function cardCasa(card, termo) {
@@ -4219,14 +4278,26 @@ window.kanbanUrl = function (url) {
     return ('#' + pk).includes(q) || pk.includes(q) || tit.includes(q);
   }
 
+  // Casa por pessoa (só na coluna): usa os ids em data-resp/atend/membros do card.
+  function cardCasaPessoa(card, pessoa, papel) {
+    if (!pessoa) return true;
+    if (papel === 'atendente') return card.dataset.atend === pessoa;
+    if (papel === 'membro')
+      return (card.dataset.membros || '').split(',').filter(Boolean).includes(pessoa);
+    return card.dataset.resp === pessoa;   // responsável (padrão)
+  }
+
   function aplicarFiltros() {
     document.querySelectorAll('.kanban-col').forEach(col => {
       const colId = col.dataset.colunaId;
-      const termoCol = colFilters[colId] || '';
+      const f = colFilters[colId] || {};
+      const termoCol = f.termo || '';
       const zone = col.querySelector('.kanban-drop-zone');
       if (!zone) return;
       zone.querySelectorAll('.ticket-card').forEach(card => {
-        const ok = cardCasa(card, filtroGeral) && cardCasa(card, termoCol);
+        const ok = cardCasa(card, filtroGeral)
+                && cardCasa(card, termoCol)
+                && cardCasaPessoa(card, f.pessoa, f.papel);
         card.style.display = ok ? '' : 'none';
       });
       // Grupo some quando nenhum card interno passa no filtro
@@ -4236,7 +4307,7 @@ window.kanbanUrl = function (url) {
         grupo.style.display = algum ? '' : 'none';
       });
       // Ponto no menu (⋮) avisando que a coluna tem filtro ativo
-      col.querySelector('.col-menu-btn')?.classList.toggle('has-filtro', !!termoCol);
+      col.querySelector('.col-menu-btn')?.classList.toggle('has-filtro', !!(termoCol || f.pessoa));
     });
   }
 
@@ -4257,27 +4328,57 @@ window.kanbanUrl = function (url) {
       bfBtn.classList.toggle('ativo', !!filtroGeral.trim());
       aplicarFiltros();
     });
+    // Filtro por pessoa (responsável/atendente/membro): recarrega server-side,
+    // preservando quadro/board e os demais parâmetros.
+    const PAPEIS = ['responsavel', 'atendente', 'membro'];
+    const bfAplicar = document.getElementById('kb-bf-aplicar');
+    if (bfAplicar) bfAplicar.addEventListener('click', () => {
+      const pessoa = document.getElementById('kb-bf-pessoa').value;
+      const papel  = document.getElementById('kb-bf-papel').value;
+      const url = new URL(window.location.href);
+      PAPEIS.forEach(p => url.searchParams.delete(p));
+      if (pessoa) url.searchParams.set(papel, pessoa);
+      window.location.href = url.toString();
+    });
+
     document.getElementById('kb-bf-limpar').addEventListener('click', e => {
       e.preventDefault();
+      // Limpa a busca por nº/título (client-side)
       bfInput.value = ''; filtroGeral = '';
       bfBtn.classList.remove('ativo');
       aplicarFiltros();
+      // Se houver filtro de pessoa na URL, recarrega sem ele
+      const url = new URL(window.location.href);
+      const tinhaPessoa = PAPEIS.some(p => url.searchParams.has(p));
+      if (tinhaPessoa) {
+        PAPEIS.forEach(p => url.searchParams.delete(p));
+        window.location.href = url.toString();
+      }
     });
   }
 
-  // Filtro por coluna (dentro do modal do ⋮): aplica ao vivo enquanto digita;
-  // como o modal cobre o quadro, o resultado aparece ao fechar.
+  // Filtro por coluna (dentro do modal do ⋮): nº/título + pessoa (resp/atend/
+  // membro), tudo só naquela coluna. Aplica ao vivo; como o modal cobre o quadro,
+  // o resultado aparece ao fechar.
   if (colFiltroInput) {
-    colFiltroInput.addEventListener('input', () => {
+    function setColFiltro() {
       const id = colId.value;
       if (!id) return;
-      const termo = colFiltroInput.value.trim();
-      if (termo) colFilters[id] = termo; else delete colFilters[id];
+      const termo  = colFiltroInput.value.trim();
+      const pessoa = colFiltroPessoa.value;
+      const papel  = colFiltroPapel.value;
+      if (termo || pessoa) colFilters[id] = { termo, pessoa, papel };
+      else delete colFilters[id];
       aplicarFiltros();
-    });
+    }
+    colFiltroInput.addEventListener('input', setColFiltro);
+    colFiltroPessoa.addEventListener('change', setColFiltro);
+    colFiltroPapel.addEventListener('change', setColFiltro);
     document.getElementById('coluna-filtro-limpar').addEventListener('click', e => {
       e.preventDefault();
       colFiltroInput.value = '';
+      colFiltroPessoa.value = '';
+      colFiltroPapel.value = 'responsavel';
       delete colFilters[colId.value];
       aplicarFiltros();
     });

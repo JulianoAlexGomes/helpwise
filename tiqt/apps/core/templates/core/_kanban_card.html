@@ -4,6 +4,9 @@
      data-pk="{{ ticket.pk }}"
      {% if card_id %}data-card-id="{{ card_id }}"{% endif %}
      data-concluido="{% if card.concluido %}1{% else %}0{% endif %}"
+     data-resp="{{ ticket.responsavel_id|default_if_none:'' }}"
+     data-atend="{{ ticket.atendente_id|default_if_none:'' }}"
+     data-membros="{% if card %}{% for m in card.membros.all %}{{ m.id }}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}"
      data-status="{{ ticket.status }}">
   {% if card_id %}
   <div class="card-actions">
